@@ -7,3 +7,4 @@ next-env.d.ts
 .heurial-data/
 .DS_Store
 node_modules.nosync/
+catalyst-debug.log
