@@ -5,13 +5,13 @@ import { MotionLink } from "./route-transition";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
-  { href: "/services", label: "Studio" },
-  { href: "/resources", label: "Learn" },
+  { href: "/services", label: "How it works" },
+  { href: "/products", label: "Demos" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 
-export const links = [...primaryLinks, { href: "/products", label: "Intelligence" }];
+export const links = [...primaryLinks, { href: "/resources", label: "Guides" }];
 
 export function ButtonLink({ href, children, secondary = false }: { href: string; children: React.ReactNode; secondary?: boolean }) {
   return <MotionLink className={`button ${secondary ? "secondary" : "primary"}`} href={href}>{children}<Icon name={secondary ? "diagonal" : "arrow"} size={17} /></MotionLink>;
@@ -22,7 +22,7 @@ export function Header() {
     <div className="wrap header-inner">
       <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></MotionLink>
       <Navigation links={primaryLinks} />
-      <MotionLink href="/contact" className="masthead-project">Start a project <Icon name="diagonal" size={16} /></MotionLink>
+      <MotionLink href="/contact" className="masthead-project">Book a free call <Icon name="diagonal" size={16} /></MotionLink>
     </div>
   </header>;
 }
@@ -32,13 +32,14 @@ export function Footer() {
     <div className="wrap footer-inner">
       <div className="footer-identity">
         <MotionLink href="/" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} /></MotionLink>
-        <p>AI consulting & engineering</p>
+        <p>Make work flow better.</p>
+        <p><a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a></p>
       </div>
       <nav aria-label="Footer navigation">
         {links.slice(1).map(({ href, label }) => <MotionLink key={href} href={href}>{label}<Icon name="diagonal" size={13} /></MotionLink>)}
       </nav>
     </div>
-    <div className="wrap footer-end mono"><span>© HEURIAL</span><a href="#top">Back to top ↑</a></div>
+    <div className="wrap footer-end mono"><span>© {new Date().getFullYear()} HEURIAL Studio</span><a href="#top">Back to top ↑</a></div>
   </footer>;
 }
 
@@ -57,8 +58,8 @@ export function PageIntro({ label, title, description }: { label: string; title:
 export function Closing() {
   return <section className="closing">
     <div className="wrap closing-inner">
-      <div><Eyebrow>Start a conversation</Eyebrow><h2>What should work better?</h2><p>Bring us one workflow, bottleneck, or idea. We’ll use it to frame a practical first step.</p></div>
-      <ButtonLink href="/contact">Discuss a project</ButtonLink>
+      <div><Eyebrow>Free 20-minute call</Eyebrow><h2>Got a task you’re tired of doing?</h2><p>Tell me about it. If I can help, I’ll show you exactly how. If not, I’ll point you somewhere useful.</p></div>
+      <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
     </div>
   </section>;
 }

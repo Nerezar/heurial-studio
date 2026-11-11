@@ -23,7 +23,7 @@ export function Dashboard() {
   const stages = ["Qualified", "Discovery", "Proposal", "Closed won"];
 
   return <div className="dashboard" id="demo">
-    <div className="dash-top"><span className="dash-product"><Icon name="grid" size={15} /> HEURIAL / INTELLIGENCE</span><span className="demo-badge"><i /> Interactive demo</span></div>
+    <div className="dash-top"><span className="dash-product"><Icon name="grid" size={15} /> Heurial Intelligence</span><span className="demo-badge"><i /> Interactive demo</span></div>
     <div className="dash-layout">
       <nav className="dash-side" aria-label="Dashboard views">
         <span className="mono dash-label">WORKSPACE</span>

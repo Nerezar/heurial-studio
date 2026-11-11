@@ -1,0 +1,10 @@
+{
+	"name": "inquiries",
+	"version": "1.0.0",
+	"main": "index.js",
+	"author": "hello@heurial.studio",
+	"dependencies": {
+		"@zcatalyst/auth": "1.0.0",
+		"@zcatalyst/datastore": "1.0.0"
+	}
+}

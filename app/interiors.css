@@ -2,6 +2,8 @@
   --interior-rule: var(--paper-line, #bcbab1);
   --interior-muted: #525049;
   --interior-link: #22549c;
+  --hover-color: #1f5fd1;
+  --link-hover: #0f2747;
   --focus-color: var(--interior-link);
   color-scheme: light;
   color: var(--ink, #101010);
@@ -252,9 +254,7 @@
 
 .about-principles li,
 .contact-guide li {
-  display: grid;
-  grid-template-columns: 2rem 1fr;
-  gap: .75rem;
+  display: block;
   padding-block: 1.1rem;
   border-bottom: 1px solid var(--interior-rule);
 }
@@ -295,12 +295,16 @@
 }
 
 .contact-editorial .panel input,
-.contact-editorial .panel textarea {
+.contact-editorial .panel textarea,
+.contact-editorial .panel select {
   color-scheme: light;
   color: var(--ink, #101010);
   background: #f7f6f1;
   border-color: #76746b;
 }
+
+.contact-editorial .button.primary { background: var(--ink, #101010); color: var(--paper, #ecebe5); }
+.contact-editorial .button.primary:hover { background: #1f5fd1; color: #fff; }
 
 .contact-editorial .panel textarea::placeholder {
   color: var(--interior-muted);

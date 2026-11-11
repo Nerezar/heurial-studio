@@ -44,15 +44,14 @@ export function Navigation({ links }: { links: NavLink[] }) {
     </button>
     <dialog id="mobile-menu" className="masthead-dialog" ref={menu} aria-labelledby="menu-heading" onClose={() => setOpen(false)}>
       <div className="menu-masthead">
-        <p id="menu-heading" className="mono">HEURIAL / Navigation</p>
+        <p id="menu-heading" className="mono">Menu</p>
         <button className="masthead-menu" type="button" autoFocus onClick={() => menu.current?.close()}>
           Close <span aria-hidden="true">×</span>
         </button>
       </div>
       <nav aria-label="Main navigation">
-        {[...links, { href: "/products", label: "Intelligence" }].map(({ href, label }, index) =>
+        {links.map(({ href, label }) =>
           <MotionLink key={href} href={href} aria-current={path === href ? "page" : undefined} onClick={() => menu.current?.close()}>
-            <span className="mono" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             {label}
             <Icon name="diagonal" size={22} />
           </MotionLink>

@@ -5,7 +5,7 @@ import "../interiors.css";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Learn how HEURIAL brings AI consulting, engineering, and operations together.",
+  description: "HEURIAL Studio is a small AI workflow studio founded by Uriyah Moore. Practical tools, built around how you already work.",
 };
 
 const principles = [
@@ -18,23 +18,21 @@ export default function About() {
   return (
     <>
       <PageIntro
-        label="03 / About Heurial"
+        label="About"
         title="AI built around how you work."
-        description="Heurial brings consulting, engineering, and operations together to help businesses turn specific problems into systems their teams can use."
+        description="I’m Uriyah Moore, founder of HEURIAL Studio. I help small businesses use AI in practical ways: less busywork, fewer dropped balls, and tools people actually use."
       />
       <section className="interior-paper" aria-labelledby="about-method">
         <div className="wrap interior-band about-editorial">
           <figure className="identity-plate">
             <Image src="/brand/emblem.svg" alt="Heurial’s tiger emblem" width={407} height={269} />
-            <figcaption className="interior-label"><span>Heurial</span><span>Fig. 01 / Emblem</span></figcaption>
           </figure>
           <div className="about-principles">
             <p className="interior-label">Our approach</p>
-            <h2 id="about-method">How we work</h2>
+            <h2 id="about-method">How I work</h2>
             <ol>
-              {principles.map(({ title, body }, index) => (
+              {principles.map(({ title, body }) => (
                 <li key={title}>
-                  <span className="interior-label" aria-hidden="true">0{index + 1}</span>
                   <div><h3>{title}</h3><p>{body}</p></div>
                 </li>
               ))}
@@ -45,10 +43,10 @@ export default function About() {
       <section className="wrap interior-band about-studio" aria-labelledby="about-studio-title">
         <div>
           <p className="interior-label">Heurial Studio</p>
-          <h2 id="about-studio-title">From scope to handoff.</h2>
-          <p>Studio is where we work with businesses to plan, build, and operate AI systems and automations.</p>
+          <h2 id="about-studio-title">One task at a time.</h2>
+          <p>Start with one repetitive task. I’ll build a workflow for it in your own tools in about a week.</p>
         </div>
-        <ButtonLink href="/services" secondary>Explore Studio</ButtonLink>
+        <ButtonLink href="/services" secondary>See how it works</ButtonLink>
       </section>
       <Closing />
     </>

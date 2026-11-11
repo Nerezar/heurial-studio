@@ -2,16 +2,21 @@
   --masthead-height: 72px;
 }
 
-html { view-transition-name: none; }
-#main { view-transition-name: route-content; }
-
 .site-header {
   position: sticky;
   inset-block-start: 0;
   z-index: 20;
-  background: var(--ink, #101010);
+  margin-bottom: calc(var(--masthead-height) * -1);
   color: var(--paper, #ecebe5);
-  border-bottom: 1px solid var(--line, #383838);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background-color .35s ease, border-color .35s ease, backdrop-filter .35s ease;
+}
+html[data-scrolled] .site-header {
+  background: rgb(12 14 18 / .8);
+  border-bottom-color: rgb(255 255 255 / .08);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
 }
 
 .site-header .header-inner {
@@ -126,7 +131,7 @@ html { view-transition-name: none; }
 
 .page-intro {
   background: transparent;
-  padding: clamp(70px, 10vw, 154px) 0 clamp(42px, 7vw, 95px);
+  padding: calc(var(--masthead-height) + clamp(70px, 10vw, 154px)) 0 clamp(42px, 7vw, 95px);
   border-bottom: 1px solid var(--line, #383838);
 }
 .page-intro-grid { display: grid; justify-items: start; }
@@ -165,28 +170,55 @@ html { view-transition-name: none; }
 .closing p { margin-top: 14px; }
 .closing .eyebrow { margin-top: 0; }
 
-::view-transition {
+/* Page change: a panel wipes up over the old page, then pulls away to reveal the new one. */
+.route-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
   pointer-events: none;
-  clip-path: inset(var(--masthead-height) 0 0);
+  background: linear-gradient(180deg, #151c29 0%, #0d1016 100%);
+  box-shadow: 0 -40px 80px rgb(0 0 0 / .45), 0 40px 80px rgb(0 0 0 / .45);
+  transform: translateY(101%);
+  visibility: hidden;
 }
-::view-transition-group(route-content) { animation: none; }
-::view-transition-old(route-content) { animation: 320ms ease both route-out; }
-::view-transition-new(route-content) { animation: 320ms var(--ease-out) both route-in; }
-::view-transition-old(route-content),
-::view-transition-new(route-content) {
-  object-fit: none;
-  object-position: top left;
-  mix-blend-mode: normal;
+.route-cover.is-active { visibility: visible; }
+.route-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--signal, #91b6ff), transparent);
+  opacity: .7;
 }
-html:active-view-transition { scroll-behavior: auto; }
+.route-cover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(220px, 40vw);
+  height: 2px;
+  translate: -50% -50%;
+  background: linear-gradient(90deg, transparent 0%, var(--signal, #91b6ff) 50%, transparent 100%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: route-progress 1.1s linear infinite;
+  transition: opacity .2s ease;
+}
+.route-cover.is-waiting::after { opacity: .8; }
+@keyframes route-progress {
+  from { background-position: -100% 0; }
+  to { background-position: 200% 0; }
+}
 
-@keyframes route-out {
-  to { opacity: .48; }
+/* Text and blocks rise into place as they scroll into view. */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .75s var(--ease-out), transform .75s var(--ease-out);
 }
-@keyframes route-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+.reveal.is-visible { opacity: 1; transform: none; }
+
 @keyframes intro-mask {
   from { transform: translateY(.22em); clip-path: inset(100% 0 0); }
   to { transform: translateY(0); clip-path: inset(0 0 -14%); }
@@ -197,9 +229,7 @@ html:active-view-transition { scroll-behavior: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) { animation: none; }
+  .reveal { opacity: 1; transform: none; }
 }
 
 @media (max-width: 760px) {
@@ -250,7 +280,7 @@ html:active-view-transition { scroll-behavior: auto; }
   .masthead-dialog nav a {
     min-height: 64px;
     display: grid;
-    grid-template-columns: 2ch 1fr auto;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 12px;
     border-bottom: 1px solid var(--line, #383838);
@@ -258,7 +288,6 @@ html:active-view-transition { scroll-behavior: auto; }
     letter-spacing: -.055em;
   }
   .masthead-dialog nav a[aria-current="page"] { color: var(--signal, #91b6ff); }
-  .masthead-dialog nav a .mono { color: var(--muted, #b0b0a9); font-size: .67rem; }
   .site-footer .footer-inner { grid-template-columns: 1fr; }
   .closing-inner { flex-direction: column; align-items: start; }
 }

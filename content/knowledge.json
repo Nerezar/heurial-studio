@@ -2,14 +2,26 @@
   {
     "id": "company-overview",
     "title": "Company overview",
-    "keywords": "what does company overview business industries clients offerings services do provide",
-    "text": "HEURIAL works with businesses across industries on AI consulting, engineering, workflow automation, revenue diagnostics, and managed services. Engagements start by identifying a business problem, the people responsible for the work, and what would count as an improvement."
+    "keywords": "what does company overview business industries clients offerings services do provide who founder uriyah small business",
+    "text": "HEURIAL Studio is a small AI workflow studio founded by Uriyah Moore. It helps small businesses take repetitive work off their plate, like lead follow-up, answering the same customer questions, copying information between tools, scattered notes, and weekly reporting, with small AI-powered workflows built around the tools they already use."
   },
   {
-    "id": "revenue-diagnostics",
-    "title": "Revenue diagnostics",
-    "keywords": "crm diagnose diagnostics diagnostic analysis funnel revenue pipeline leads sales conversion bottlenecks reporting data",
-    "text": "Revenue diagnostics begins with the funnel definitions and data a business already uses. Useful inputs can include CRM deal stages, timestamps, outcomes, and handoff rules. HEURIAL uses the baseline to identify bottlenecks to validate with the people who own the work."
+    "id": "founding-offer",
+    "title": "Founding offer and pricing",
+    "keywords": "price pricing cost costs how much offer founding 495 dollars pay payment deposit timeline long week deliverables get receive include included",
+    "text": "For its first three clients, HEURIAL builds one useful workflow in the client's existing tools for $495, paid 50% to start and 50% at handoff. It takes about one week from kickoff. You receive a simple map of how the task works today, one working automation or assistant, setup inside your own tools, a plain-English guide, a handoff call, and 14 days of support. Any tool subscriptions are billed to your own accounts and disclosed up front."
+  },
+  {
+    "id": "getting-started",
+    "title": "Starting a project",
+    "keywords": "start started starting getting contact consultation discovery project process engagement kick off hire talk prepare submit inquiry book call free 20-minute",
+    "text": "Book a free 20-minute call from the Contact page. Describe the task that eats up your time and the tools you use for it today. On the call, HEURIAL will say honestly whether it can help, and if it's a fit, you'll get a short written scope before any work starts."
+  },
+  {
+    "id": "data-and-trust",
+    "title": "Your data and ownership",
+    "keywords": "data safe safety secure security privacy password passwords own ownership access ai services openai trust",
+    "text": "You own everything HEURIAL builds, and it lives in your accounts. HEURIAL never asks for your passwords; you invite it as a user instead. It only touches the data a task needs, and before work starts it tells you which AI services your data will pass through. If HEURIAL isn't the right fit, it will say so."
   },
   {
     "id": "automation",
@@ -21,7 +33,13 @@
     "id": "knowledge-assistants",
     "title": "Retrieval-based assistants",
     "keywords": "rag retrieval assistant assistants knowledge document documents citations chatbot sources grounding grounded engineer engineering privacy",
-    "text": "A retrieval-based assistant looks up relevant passages from an approved document collection before answering. Citations let readers open the passages used. For an internal deployment, access to source documents, handling of sensitive information, and evaluation on representative questions belong in the project scope."
+    "text": "A knowledge assistant looks up relevant passages from an approved set of documents before answering, and links to the passages it used. HEURIAL can build one around your own FAQs or guides so customers or staff stop asking the same questions. The assistant on this site is a demo that answers from these public guides."
+  },
+  {
+    "id": "revenue-diagnostics",
+    "title": "Revenue diagnostics",
+    "keywords": "crm diagnose diagnostics diagnostic analysis funnel revenue pipeline leads sales conversion bottlenecks reporting data",
+    "text": "Revenue diagnostics begins with the funnel definitions and data a business already uses. Useful inputs can include CRM deal stages, timestamps, outcomes, and handoff rules. HEURIAL uses the baseline to identify bottlenecks to validate with the people who own the work."
   },
   {
     "id": "managed-services",
@@ -34,11 +52,5 @@
     "title": "Heurial Intelligence demo guide",
     "keywords": "demo dashboard intelligence interactive prototype metrics period overview signals sample dataset live real numbers customer results",
     "text": "Heurial Intelligence is presented here as an interactive revenue intelligence prototype. It uses a fixed sample dataset. Switch between 30-day and 90-day periods or open Overview, Pipeline, and Signals to inspect the example metrics and observations."
-  },
-  {
-    "id": "getting-started",
-    "title": "Starting a project",
-    "keywords": "start started starting getting contact consultation discovery project process engagement kick off hire talk prepare submit inquiry",
-    "text": "Use the Contact page to describe a workflow, bottleneck, or idea. Include what happens today, what you want to improve, and the systems involved. A first discussion can establish scope, data availability, a business owner, and how to evaluate the work."
   }
 ]

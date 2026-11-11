@@ -12,6 +12,7 @@ const paths: Record<string, ReactNode> = {
   spark: <path d="M12 2c.7 6 3.3 8.6 9 10-5.7 1.4-8.3 4-9 10-.7-6-3.3-8.6-9-10 5.7-1.4 8.3-4 9-10Z" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   book: <><path d="M6 4h13v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm-2 14c0-1.1.9-2 2-2h13M8 8h7" /></>,
+  check: <path d="m5 12.5 4.5 4.5L19 7" />,
   send: <path d="m3 10 18-7-7 18-3-8-8-3Zm8 3L21 3" />,
 };
 

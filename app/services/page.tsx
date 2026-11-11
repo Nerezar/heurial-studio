@@ -4,60 +4,70 @@ import { Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
 export const metadata: Metadata = {
-  title: "Studio",
-  description: "Explore HEURIAL Studio’s AI consulting, revenue diagnostics, workflow automation, engineering, and managed services.",
+  title: "How it works",
+  description: "How HEURIAL’s founding offer works: a free 20-minute call, one AI-powered workflow built in your own tools, and a simple handoff. $495 for the first three clients.",
 };
 
-const services = [
+const steps = [
   {
-    id: "consulting",
-    title: "AI consulting",
-    body: "Map where AI can help, identify the data and permissions you have, and choose a use case with a clear owner and a way to measure it.",
-    output: "A prioritized scope and evaluation plan.",
+    id: "talk",
+    title: "Talk",
+    body: "We start with a free 20-minute call. You walk me through your week and the task you wish would just happen. I’ll tell you honestly whether I can help.",
+    output: "A clear yes or no, and a short written scope if it’s a fit.",
   },
   {
-    id: "diagnostics",
-    title: "Revenue diagnostics",
-    body: "Review funnel definitions and CRM data to find where deals stall, stages vary, and handoffs need a closer look.",
-    output: "A baseline and a shortlist of bottlenecks to validate.",
+    id: "build",
+    title: "Build",
+    body: "I set up one workflow using the tools you already have, like email, spreadsheets, forms, or your CRM. I test it on real examples, add a human check where it matters, and send you an update mid-week.",
+    output: "One working automation or assistant, set up in your own accounts.",
   },
   {
-    id: "automation",
-    title: "Workflow automation",
-    body: "Connect business systems around a specific task. Define triggers, approvals, and what happens when something fails.",
-    output: "A documented workflow with human review where it matters.",
-  },
-  {
-    id: "engineering",
-    title: "AI engineering",
-    body: "Build integrations, internal tools, and retrieval-based assistants around approved sources. Evaluate them on representative work before a wider rollout.",
-    output: "A working system with evaluation and handoff documentation.",
-  },
-  {
-    id: "managed-services",
-    title: "Managed services",
-    body: "Set responsibilities for monitoring alerts, maintaining integrations, and reevaluating the system as data and workflows change.",
-    output: "An operating plan with owners and a review schedule.",
+    id: "hand-off",
+    title: "Hand off",
+    body: "We do a short call where I show you how it works. You get a plain-English guide, and I’m on hand for 14 days if anything comes up.",
+    output: "A handoff call, a written guide, and 14 days of support.",
   },
 ];
 
-export default function Services() {
+const questions = [
+  {
+    id: "cost",
+    title: "What does it cost?",
+    body: "$495 for my first three clients: 50% to start and 50% at handoff. Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.",
+  },
+  {
+    id: "examples",
+    title: "What kind of task?",
+    body: "Things like replying to new inquiries and logging them in a spreadsheet, nudging leads who went quiet, answering common customer questions from your own documents, turning meeting notes into a to-do list, or a weekly report that pulls numbers into one email.",
+  },
+  {
+    id: "data",
+    title: "Is my data safe?",
+    body: "I work inside your accounts, I only touch what the task needs, and I never ask for your passwords. You invite me as a user instead. Before we start, I’ll tell you which AI services your data passes through.",
+  },
+  {
+    id: "after",
+    title: "What if it breaks later?",
+    body: "The guide explains how it works and what to check. After the 14 days of support, you can ask me for small fixes or another workflow.",
+  },
+];
+
+export default function HowItWorks() {
   return (
     <>
       <PageIntro
-        label="01 / Heurial Studio"
-        title="Build around the work."
-        description="Start with a specific business problem. Heurial Studio can help you diagnose it, build a system to address it, and decide how to operate it."
+        label="How it works"
+        title="One annoying task, handled."
+        description="We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff, $495 for my first three clients."
       />
-      <section className="interior-paper" aria-labelledby="studio-capabilities">
+      <section className="interior-paper" aria-labelledby="steps-title">
         <div className="wrap interior-band studio-catalog">
           <div className="studio-directory">
-            <p className="interior-label">Studio / Capabilities</p>
-            <h2 id="studio-capabilities">What we do</h2>
-            <nav aria-label="Studio capabilities">
-              {services.map(({ id, title }, index) => (
+            <p className="interior-label">Three steps</p>
+            <h2 id="steps-title">From call to handoff</h2>
+            <nav aria-label="Steps and questions">
+              {[...steps, ...questions].map(({ id, title }) => (
                 <a className="interior-index-link" href={`#${id}`} key={id}>
-                  <span className="interior-index-number" aria-hidden="true">0{index + 1}</span>
                   <span>{title}</span>
                   <Icon name="diagonal" size={14} />
                 </a>
@@ -65,15 +75,26 @@ export default function Services() {
             </nav>
           </div>
           <div className="studio-entries">
-            {services.map(({ id, title, body, output }, index) => (
+            {steps.map(({ id, title, body, output }, index) => (
               <article className="studio-entry" id={id} key={id}>
                 <div>
-                  <p className="interior-label" aria-hidden="true">0{index + 1} / Service</p>
+                  <p className="interior-label">Step {index + 1}</p>
                   <h3>{title}</h3>
                 </div>
                 <div className="studio-description">
                   <p>{body}</p>
-                  <p className="studio-output"><span className="interior-label">Deliverable</span>{output}</p>
+                  <p className="studio-output"><span className="interior-label">You get</span>{output}</p>
+                </div>
+              </article>
+            ))}
+            {questions.map(({ id, title, body }) => (
+              <article className="studio-entry" id={id} key={id}>
+                <div>
+                  <p className="interior-label">Question</p>
+                  <h3>{title}</h3>
+                </div>
+                <div className="studio-description">
+                  <p>{body}</p>
                 </div>
               </article>
             ))}

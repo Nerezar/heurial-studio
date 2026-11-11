@@ -1,52 +1,317 @@
-const turn = Math.PI * 2;
+"use client";
 
-function project(longitude: number, latitude: number) {
-  const radius = 192 + 54 * Math.cos(latitude) + 12 * Math.sin(3 * longitude);
-  const x = radius * Math.cos(longitude);
-  const y = radius * Math.sin(longitude);
-  const height = 51 * Math.sin(latitude) + 24 * Math.sin(2 * longitude);
-  const tilted = y * .54 - height * .84;
-  const depth = y * .84 + height * .54;
-  const perspective = 920 / (920 - depth);
-  return [
-    428 + (x * .96 + tilted * .28) * perspective,
-    247 + (tilted * .96 - x * .28) * perspective,
-  ].map((coordinate) => coordinate.toFixed(1)).join(",");
+import { useEffect, useRef } from "react";
+
+/*
+ * Homepage hero visual: a wireframe "system" ring.
+ * Loose dots (scattered tasks) drift in from around the ring, get pulled onto
+ * the blue signal contours, and travel around them as pulses: messy work
+ * becoming a flowing workflow. Drawn on a canvas in an 850×516 design space.
+ */
+
+const W = 850;
+const H = 516;
+const CX = 428;
+const CY = 247;
+const TURN = Math.PI * 2;
+const LAT_COUNT = 23;
+const RIB_COUNT = 24;
+const SIGNAL_TRACKS = [4, 16].map((index) => index * TURN / LAT_COUNT);
+const MAX_PULSES = 14;
+
+type Pose = { t: number; spin: number; pitch: number };
+type Point = { x: number; y: number; d: number };
+type Pulse = { lon: number; track: number; speed: number; age: number; fade: number };
+type Inbound = { sx: number; sy: number; bend: number; lon: number; track: number; age: number; duration: number };
+
+function project(lon: number, lat: number, pose: Pose): Point {
+  const r = 192 + 54 * Math.cos(lat) + 12 * Math.sin(3 * lon + pose.t * .35);
+  const a = lon + pose.spin;
+  const x = r * Math.cos(a);
+  const y = r * Math.sin(a);
+  const h = 51 * Math.sin(lat) + 24 * Math.sin(2 * lon + pose.t * .22);
+  const tiltAngle = 1.0 + pose.pitch;
+  const c = Math.cos(tiltAngle);
+  const s = Math.sin(tiltAngle);
+  const tilted = y * c - h * s;
+  const depth = y * s + h * c;
+  const p = 920 / (920 - depth);
+  return {
+    x: CX + (x * .96 + tilted * .28) * p,
+    y: CY + (tilted * .96 - x * .28) * p,
+    d: depth,
+  };
 }
 
-function trace(samples: number, point: (angle: number) => string) {
-  return Array.from({ length: samples + 1 }, (_, index) => point(index * turn / samples)).join(" ");
-}
-
-const latitudes = Array.from({ length: 23 }, (_, index) =>
-  trace(88, (angle) => project(angle, index * turn / 23)),
-);
-const ribs = Array.from({ length: 24 }, (_, index) =>
-  trace(26, (angle) => project(index * turn / 24, angle)),
-);
-const planeLines = Array.from({ length: 11 }, (_, index) => {
-  const offset = index * 40;
-  return `M${80 + offset} ${321 + offset * .32}l400 -128 M${80 + offset} ${321 - offset * .32}l400 128`;
-}).join(" ");
+const easeInOut = (v: number) => v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+const easeOut = (v: number) => 1 - Math.pow(1 - v, 3);
+const depthBucket = (d: number) => Math.max(0, Math.min(3, Math.floor((d + 260) / 130)));
+const BUCKET_ALPHA = [.35, .6, .85, 1];
 
 export function SystemField() {
-  return <svg className="field-svg" viewBox="0 0 850 516" fill="none" aria-hidden="true">
-    <g className="field-plane">
-      <path d={planeLines} />
-      <path d="M80 321 480 193 880 321 480 449Z" />
-      <path d="M428 29v425M40 247h748" strokeDasharray="2 8" />
-    </g>
-    <g className="field-model">
-      {ribs.map((points, index) => <polyline key={index} points={points} className="field-rib" />)}
-      {latitudes.map((points, index) => <polyline key={index} points={points} className={index === 4 || index === 16 ? "field-contour is-signal" : "field-contour"} />)}
-      <polyline className="field-pulse" points={latitudes[4]} pathLength="100" />
-    </g>
-    <g className="field-annotations">
-      <path d="M132 155h66l34 32M630 340l34 40h82M428 65v19m-9-9h18M419 247h18m-9-9v18" />
-      <circle cx="232" cy="187" r="3" /><circle cx="630" cy="340" r="3" />
-      <text x="132" y="144">01 / INPUTS</text>
-      <text x="666" y="399">02 / SIGNAL</text>
-      <text x="479" y="448">H / SYSTEM STUDY</text>
-    </g>
-  </svg>;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const signal = getComputedStyle(document.documentElement).getPropertyValue("--signal").trim() || "#8fb0ff";
+
+    let scale = 1;
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = canvas.clientWidth || W;
+      scale = width / W;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(width * (H / W) * dpr);
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    };
+    resize();
+    const resizeObserver = new ResizeObserver(() => { resize(); if (reduced) draw(0); });
+    resizeObserver.observe(canvas);
+
+    // Pointer parallax (the hero field ignores pointer events, so listen on the window).
+    let targetSpin = 0;
+    let targetPitch = 0;
+    let pointerSpin = 0;
+    let pointerPitch = 0;
+    const onPointer = (event: PointerEvent) => {
+      targetSpin = (event.clientX / window.innerWidth - .5) * .22;
+      targetPitch = (event.clientY / window.innerHeight - .5) * .1;
+    };
+    if (!reduced) window.addEventListener("pointermove", onPointer, { passive: true });
+
+    const pulses: Pulse[] = SIGNAL_TRACKS.flatMap((_, track) =>
+      [0, 1, 2].map((i) => ({ lon: (i / 3) * TURN + track * .9, track, speed: .32 + i * .05, age: 0, fade: 1 })),
+    );
+    const inbound: Inbound[] = [];
+    let spawnTimer = .8;
+
+    const spawn = (pose: Pose) => {
+      const track = Math.random() < .5 ? 0 : 1;
+      const angle = Math.random() * TURN;
+      const dist = 300 + Math.random() * 120;
+      const lon = Math.random() * TURN;
+      inbound.push({
+        sx: CX + Math.cos(angle) * dist * 1.1,
+        sy: CY + Math.sin(angle) * dist * .55,
+        bend: (Math.random() - .5) * 160,
+        lon: lon - pose.spin,
+        track,
+        age: 0,
+        duration: 2.2 + Math.random() * 1.2,
+      });
+    };
+
+    const strokeBuckets = (paths: Path2D[], color: string, width: number, alpha: number) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      paths.forEach((path, b) => { ctx.globalAlpha = alpha * BUCKET_ALPHA[b]; ctx.stroke(path); });
+    };
+
+    const nearestOnTrack = (lat: number, pose: Pose, tx: number, ty: number) => {
+      let best = project(0, lat, pose);
+      let bestDist = Infinity;
+      for (let i = 0; i < 90; i++) {
+        const point = project(i / 90 * TURN, lat, pose);
+        const dist = (point.x - tx) ** 2 + (point.y - ty) ** 2;
+        if (dist < bestDist) { bestDist = dist; best = point; }
+      }
+      return best;
+    };
+
+    function draw(t: number) {
+      const reveal = reduced ? 1 : easeInOut(Math.min(1, t / 1.8));
+      const pose: Pose = { t, spin: t * .05 + pointerSpin, pitch: pointerPitch };
+      ctx!.clearRect(0, 0, W, H);
+      ctx!.lineCap = "round";
+      ctx!.lineJoin = "round";
+
+      // Ground plane and guides.
+      ctx!.globalAlpha = 1;
+      ctx!.strokeStyle = "#25292f";
+      ctx!.lineWidth = .75;
+      ctx!.beginPath();
+      for (let i = 0; i < 11; i++) {
+        const o = i * 40;
+        ctx!.moveTo(80 + o, 321 + o * .32); ctx!.lineTo(480 + o, 193 + o * .32);
+        ctx!.moveTo(80 + o, 321 - o * .32); ctx!.lineTo(480 + o, 449 - o * .32);
+      }
+      ctx!.stroke();
+
+      // Wireframe, bucketed by depth so the back of the ring recedes.
+      const ribs = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+      const contours = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+      const signals = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+      const segment = (paths: Path2D[], a: Point, b: Point) => {
+        const path = paths[depthBucket((a.d + b.d) / 2)];
+        path.moveTo(a.x, a.y);
+        path.lineTo(b.x, b.y);
+      };
+
+      const lonLimit = reveal * TURN;
+      for (let r = 0; r < RIB_COUNT; r++) {
+        const lon = r * TURN / RIB_COUNT;
+        if (lon > lonLimit) break;
+        let prev = project(lon, 0, pose);
+        for (let i = 1; i <= 26; i++) {
+          const next = project(lon, i / 26 * TURN, pose);
+          segment(ribs, prev, next);
+          prev = next;
+        }
+      }
+      for (let l = 0; l < LAT_COUNT; l++) {
+        const lat = l * TURN / LAT_COUNT;
+        const target = l === 4 || l === 16 ? signals : contours;
+        const steps = Math.max(1, Math.round(88 * reveal));
+        let prev = project(0, lat, pose);
+        for (let i = 1; i <= steps; i++) {
+          const next = project(i / 88 * TURN, lat, pose);
+          segment(target, prev, next);
+          prev = next;
+        }
+      }
+      strokeBuckets(ribs, "#8e929c", .65, .35);
+      strokeBuckets(contours, "#b4b8c1", .75, .48);
+      strokeBuckets(signals, "#608deb", 1.2, .95);
+
+      // Crosshairs.
+      ctx!.globalAlpha = .9;
+      ctx!.strokeStyle = "#626a76";
+      ctx!.lineWidth = .75;
+      ctx!.beginPath();
+      ctx!.moveTo(428, 65); ctx!.lineTo(428, 84); ctx!.moveTo(419, 75); ctx!.lineTo(437, 75);
+      ctx!.moveTo(419, 247); ctx!.lineTo(437, 247); ctx!.moveTo(428, 238); ctx!.lineTo(428, 256);
+      ctx!.stroke();
+
+      // Callouts that stay attached to the signal lines as the ring turns.
+      if (reveal > .95) {
+        ctx!.globalAlpha = Math.min(1, (reveal - .95) * 20);
+        const a = nearestOnTrack(SIGNAL_TRACKS[0], pose, 232, 187);
+        const b = nearestOnTrack(SIGNAL_TRACKS[1], pose, 630, 340);
+        ctx!.beginPath();
+        ctx!.moveTo(a.x, a.y); ctx!.lineTo(a.x - 34, a.y - 32); ctx!.lineTo(a.x - 100, a.y - 32);
+        ctx!.moveTo(b.x, b.y); ctx!.lineTo(b.x + 34, b.y + 40); ctx!.lineTo(b.x + 116, b.y + 40);
+        ctx!.stroke();
+        ctx!.fillStyle = signal;
+        for (const p of [a, b]) { ctx!.beginPath(); ctx!.arc(p.x, p.y, 3, 0, TURN); ctx!.fill(); }
+      }
+
+      // Pulses travelling along the signal contours.
+      if (reveal >= 1) {
+        for (const pulse of pulses) {
+          const lat = SIGNAL_TRACKS[pulse.track];
+          const alpha = Math.min(1, pulse.age * 2) * pulse.fade;
+          if (alpha <= 0) continue;
+          let prev = project(pulse.lon - .42, lat, pose);
+          for (let i = 1; i <= 12; i++) {
+            const next = project(pulse.lon - .42 + i / 12 * .42, lat, pose);
+            ctx!.globalAlpha = alpha * (i / 12) * .9;
+            ctx!.strokeStyle = "#c2d5ff";
+            ctx!.lineWidth = 1 + i / 12 * 1.4;
+            ctx!.beginPath(); ctx!.moveTo(prev.x, prev.y); ctx!.lineTo(next.x, next.y); ctx!.stroke();
+            prev = next;
+          }
+          const head = prev;
+          const glow = ctx!.createRadialGradient(head.x, head.y, 0, head.x, head.y, 12);
+          glow.addColorStop(0, "rgba(194,213,255,.85)");
+          glow.addColorStop(1, "rgba(96,141,235,0)");
+          ctx!.globalAlpha = alpha * (.55 + .45 * BUCKET_ALPHA[depthBucket(head.d)]);
+          ctx!.fillStyle = glow;
+          ctx!.beginPath(); ctx!.arc(head.x, head.y, 12, 0, TURN); ctx!.fill();
+          ctx!.fillStyle = "#eef3ff";
+          ctx!.beginPath(); ctx!.arc(head.x, head.y, 1.8, 0, TURN); ctx!.fill();
+        }
+
+        // Loose tasks drifting in and snapping onto the ring.
+        for (const item of inbound) {
+          const progress = Math.min(1, item.age / item.duration);
+          const k = easeInOut(progress);
+          const end = project(item.lon, SIGNAL_TRACKS[item.track], pose);
+          const mx = (item.sx + end.x) / 2 + item.bend;
+          const my = (item.sy + end.y) / 2 - item.bend * .4;
+          const qx = (1 - k) ** 2 * item.sx + 2 * (1 - k) * k * mx + k * k * end.x;
+          const qy = (1 - k) ** 2 * item.sy + 2 * (1 - k) * k * my + k * k * end.y;
+          ctx!.globalAlpha = easeOut(Math.min(1, progress * 4)) * .9;
+          ctx!.fillStyle = progress > .7 ? "#c2d5ff" : "#9b9fa7";
+          ctx!.beginPath(); ctx!.arc(qx, qy, 1.6 + k, 0, TURN); ctx!.fill();
+          ctx!.globalAlpha *= .35;
+          ctx!.strokeStyle = "#9b9fa7";
+          ctx!.lineWidth = .75;
+          ctx!.beginPath(); ctx!.arc(qx, qy, 5 + (1 - k) * 4, 0, TURN); ctx!.stroke();
+        }
+      }
+      ctx!.globalAlpha = 1;
+    }
+
+    function step(dt: number, t: number) {
+      pointerSpin += (targetSpin - pointerSpin) * Math.min(1, dt * 2.5);
+      pointerPitch += (targetPitch - pointerPitch) * Math.min(1, dt * 2.5);
+      if (t < 1.8) return;
+      for (const pulse of pulses) { pulse.lon += pulse.speed * dt; pulse.age += dt; }
+      // Retire the oldest pulses when the ring gets busy.
+      const live = pulses.filter((p) => p.fade >= 1);
+      if (live.length > MAX_PULSES) live.slice(0, live.length - MAX_PULSES).forEach((p) => { p.fade = .999; });
+      for (const pulse of pulses) if (pulse.fade < 1) pulse.fade -= dt * .8;
+      for (let i = pulses.length - 1; i >= 0; i--) if (pulses[i].fade <= 0) pulses.splice(i, 1);
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawn({ t, spin: t * .05 + pointerSpin, pitch: pointerPitch });
+        spawnTimer = 1.1 + Math.random() * 1.1;
+      }
+      for (let i = inbound.length - 1; i >= 0; i--) {
+        const item = inbound[i];
+        item.age += dt;
+        if (item.age >= item.duration) {
+          inbound.splice(i, 1);
+          pulses.push({ lon: item.lon + .42, track: item.track, speed: .3 + Math.random() * .12, age: .5, fade: 1 });
+        }
+      }
+    }
+
+    if (reduced) {
+      draw(0);
+      return () => resizeObserver.disconnect();
+    }
+
+    let frame = 0;
+    let visible = true;
+    let clock = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(.05, (now - last) / 1000);
+      last = now;
+      clock += dt;
+      step(dt, clock);
+      draw(clock);
+      frame = requestAnimationFrame(loop);
+    };
+    const start = () => {
+      if (frame || !visible || document.hidden) return;
+      last = performance.now();
+      frame = requestAnimationFrame(loop);
+    };
+    const stop = () => { cancelAnimationFrame(frame); frame = 0; };
+    const intersection = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) start(); else stop();
+    });
+    intersection.observe(canvas);
+    const onVisibility = () => { if (document.hidden) stop(); else start(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    start();
+
+    return () => {
+      stop();
+      intersection.disconnect();
+      resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pointermove", onPointer);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="field-svg field-canvas" aria-hidden="true" />;
 }

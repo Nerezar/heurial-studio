@@ -4,8 +4,8 @@ import { Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
 export const metadata: Metadata = {
-  title: "Heurial Intelligence",
-  description: "Explore an interactive revenue intelligence demo with sample pipeline, revenue trends, and diagnostic signals.",
+  title: "Demos",
+  description: "Try Heurial Intelligence, a sales dashboard demo with sample data that shows where deals get stuck.",
 };
 
 const views = [
@@ -18,22 +18,22 @@ export default function Products() {
   return (
     <>
       <PageIntro
-        label="Heurial Intelligence / Prototype"
-        title="Where does your pipeline stall?"
-        description="Explore a revenue intelligence prototype for reviewing trends, inspecting funnel stages, and identifying questions worth investigating."
+        label="Demo / Sample data"
+        title="Where do deals get stuck?"
+        description="Heurial Intelligence is a working demo of the kind of simple dashboard I can build. Every number below is sample data, not a real business."
       />
       <section className="wrap interior-band intelligence-lab" aria-label="Interactive revenue intelligence demo">
-        <div className="lab-heading"><p className="interior-label">01 / Interactive demo</p><p className="interior-label">Fixed sample dataset</p></div>
+        <div className="lab-heading"><p className="interior-label">Heurial Intelligence</p><p className="interior-label">Sample data</p></div>
         <Dashboard />
         <p className="lab-caption">Switch periods or views to explore the sample data.</p>
       </section>
       <section className="interior-paper" aria-labelledby="intelligence-guide">
         <div className="wrap interior-band lab-guide">
-          <div><p className="interior-label">02 / Demo guide</p><h2 id="intelligence-guide">Three ways to investigate.</h2></div>
+          <div><p className="interior-label">Demo guide</p><h2 id="intelligence-guide">Three ways to explore it.</h2></div>
           <div className="lab-guide-entries">
-            {views.map(({ label, title, description }, index) => (
+            {views.map(({ label, title, description }) => (
               <article key={label}>
-                <p className="interior-label">0{index + 1} / {label}</p>
+                <p className="interior-label">{label}</p>
                 <h3>{title}</h3>
                 <p>{description}</p>
               </article>
