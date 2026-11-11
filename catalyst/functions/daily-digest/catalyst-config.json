@@ -1,0 +1,11 @@
+{
+	"deployment": {
+		"name": "daily-digest",
+		"stack": "node20",
+		"type": "job",
+		"env_variables": {}
+	},
+	"execution": {
+		"main": "index.js"
+	}
+}

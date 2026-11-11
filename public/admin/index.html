@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>HEURIAL Pipeline</title>
+<script>
+  // Apply the saved theme before first paint so the page never flashes the wrong colours.
+  try { const t = localStorage.getItem("hp-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<style>
+  :root {
+    --bg: #f4f2ec; --bg-glow: #e7ecf7; --surface: #ffffff; --surface-2: #f3f1ea; --line: #e3dfd4; --line-strong: #d3cec1;
+    --text: #13161b; --muted: #5d6570; --faint: #8a919b;
+    --accent: #2f6fe0; --accent-soft: rgb(47 111 224 / .12); --accent-text: #ffffff;
+    --good: #16935a; --good-soft: rgb(22 147 90 / .12);
+    --warn: #b7741a; --warn-soft: rgb(183 116 26 / .13);
+    --bad: #d2404b; --bad-soft: rgb(210 64 75 / .1);
+    --violet: #7357d6; --violet-soft: rgb(115 87 214 / .12);
+    --shadow: 0 1px 2px rgb(20 24 30 / .05), 0 8px 24px rgb(20 24 30 / .06);
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --radius: 16px;
+    --ease: cubic-bezier(.22, .75, .25, 1);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a0d12; --bg-glow: #14233d; --surface: #11161e; --surface-2: #171e28; --line: #222c39; --line-strong: #2e3a4a;
+      --text: #eef1f5; --muted: #95a0ae; --faint: #66717f;
+      --accent: #91b6ff; --accent-soft: rgb(145 182 255 / .13); --accent-text: #0b1220;
+      --good: #5fd39a; --good-soft: rgb(95 211 154 / .13);
+      --warn: #f2c265; --warn-soft: rgb(242 194 101 / .13);
+      --bad: #ff8a8f; --bad-soft: rgb(255 138 143 / .12);
+      --violet: #b4a2ff; --violet-soft: rgb(180 162 255 / .13);
+      --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 10px 30px rgb(0 0 0 / .25);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0d12; --bg-glow: #14233d; --surface: #11161e; --surface-2: #171e28; --line: #222c39; --line-strong: #2e3a4a;
+    --text: #eef1f5; --muted: #95a0ae; --faint: #66717f;
+    --accent: #91b6ff; --accent-soft: rgb(145 182 255 / .13); --accent-text: #0b1220;
+    --good: #5fd39a; --good-soft: rgb(95 211 154 / .13);
+    --warn: #f2c265; --warn-soft: rgb(242 194 101 / .13);
+    --bad: #ff8a8f; --bad-soft: rgb(255 138 143 / .12);
+    --violet: #b4a2ff; --violet-soft: rgb(180 162 255 / .13);
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 10px 30px rgb(0 0 0 / .25);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
+    background: radial-gradient(1100px 520px at 85% -120px, var(--bg-glow), transparent 70%), var(--bg);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, p { margin: 0; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { width: min(100% - 32px, 1240px); margin-inline: auto; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Top bar */
+  .top { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid var(--line); }
+  .top-inner { display: flex; align-items: center; gap: 14px 22px; min-height: 64px; flex-wrap: wrap; padding-block: 10px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .brand b { font-weight: 700; letter-spacing: .14em; font-size: .92rem; }
+  .brand span { color: var(--muted); font-size: .92rem; }
+  .badge { font: 600 .64rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 3px 8px; border-radius: 999px; align-self: center; }
+  .tabs { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .tab { border: 0; background: transparent; padding: 7px 14px; border-radius: 9px; color: var(--muted); font-weight: 500; font-size: .88rem; transition: background .2s, color .2s; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { background: var(--text); color: var(--bg); }
+  .tools { display: flex; align-items: center; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 13px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface); text-decoration: none; font-size: .88rem; font-weight: 500; white-space: nowrap; transition: border-color .2s, color .2s, background .2s, transform .15s; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); color: var(--accent-text); }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { background: var(--surface-2); border-color: var(--line); color: var(--text); }
+  .btn.icon { padding: 0; width: 38px; justify-content: center; }
+  .btn.small { min-height: 32px; padding: 0 10px; font-size: .8rem; border-radius: 8px; }
+  .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+  select.btn { padding-right: 8px; }
+
+  main { padding: 24px 0 60px; }
+  .view[hidden] { display: none; }
+  .page-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .page-head h1 { font-size: clamp(1.6rem, 3.2vw, 2.2rem); font-weight: 450; letter-spacing: -.04em; line-height: 1.1; }
+  .page-head p { color: var(--muted); margin-top: 4px; font-size: .92rem; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .card h2 { font-size: .98rem; font-weight: 600; letter-spacing: -.01em; }
+  .card-head small { color: var(--muted); font-size: .78rem; }
+
+  /* KPI cards */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { position: relative; overflow: hidden; }
+  .kpi span.label { color: var(--muted); font-size: .8rem; }
+  .kpi strong { display: block; margin: 6px 0 6px; font-size: clamp(1.6rem, 2.6vw, 2.05rem); font-weight: 450; letter-spacing: -.04em; line-height: 1; }
+  .kpi small { color: var(--faint); font-size: .74rem; display: block; }
+  .delta { display: inline-flex; align-items: center; gap: 3px; font-size: .74rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; margin-right: 6px; }
+  .delta.up { color: var(--good); background: var(--good-soft); }
+  .delta.down { color: var(--bad); background: var(--bad-soft); }
+  .delta.flat { color: var(--muted); background: var(--surface-2); }
+  .kpi .spark { position: absolute; right: 0; bottom: 0; width: 46%; height: 42px; opacity: .55; pointer-events: none; }
+
+  .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
+
+  /* Follow-ups */
+  .rem-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .rem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid transparent; transition: border-color .2s; }
+  .rem:hover { border-color: var(--line-strong); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .dot.late { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-soft); }
+  .dot.today { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+  .rem .who { min-width: 0; background: none; border: 0; padding: 0; text-align: left; }
+  .rem .who b { display: block; font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rem .who:hover b { color: var(--accent); }
+  .rem .who small { display: block; color: var(--muted); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rem .when { font-size: .74rem; font-weight: 600; }
+  .when.late { color: var(--bad); } .when.today { color: var(--warn); } .when.soon { color: var(--accent); }
+  .acts { display: flex; gap: 6px; }
+  .sub { color: var(--muted); font-size: .76rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
+  .sub:first-child { margin-top: 0; }
+  .allclear { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .9rem; padding: 14px; border-radius: 12px; background: var(--surface-2); }
+  .allclear .i { color: var(--good); }
+  .later { color: var(--faint); font-size: .8rem; margin-top: 10px; }
+
+  /* Funnel */
+  .funnel { display: grid; gap: 10px; }
+  .stage { display: grid; grid-template-columns: 92px minmax(0, 1fr) 48px; align-items: center; gap: 12px; }
+  .stage-name { font-size: .84rem; color: var(--muted); }
+  .stage-track { height: 34px; border-radius: 9px; background: var(--surface-2); overflow: hidden; }
+  .stage-bar { height: 100%; border-radius: 9px; display: flex; align-items: center; padding-left: 12px; font-weight: 600; font-size: .9rem; color: var(--accent-text); min-width: 34px;
+    transition: width .8s var(--ease); }
+  .stage-rate { text-align: right; font-size: .8rem; color: var(--muted); }
+  .funnel-note { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { font-size: .76rem; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .pill b { color: var(--text); font-weight: 600; }
+
+  /* Bar charts */
+  .chart { position: relative; height: 190px; display: flex; align-items: flex-end; gap: 6px; padding-top: 8px; border-bottom: 1px solid var(--line); }
+  .chart .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); }
+  .chart .grid-line span { position: absolute; right: 0; top: -9px; font-size: .66rem; color: var(--faint); background: var(--surface); padding-left: 4px; }
+  .col { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; position: relative; z-index: 1; }
+  .bar { width: 40%; max-width: 18px; border-radius: 5px 5px 2px 2px; background: var(--accent); min-height: 3px; transform-origin: bottom; animation: grow .7s var(--ease) both; }
+  .bar.paid { background: var(--good); }
+  .col:hover .bar { filter: brightness(1.15); }
+  .x-labels { display: flex; gap: 6px; margin-top: 6px; }
+  .x-labels span { flex: 1; text-align: center; font-size: .66rem; color: var(--faint); white-space: nowrap; overflow: hidden; }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: .78rem; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; background: var(--accent); }
+  .legend i.paid { background: var(--good); }
+  @keyframes grow { from { transform: scaleY(0); } }
+  .settled .bar, .settled .stage-bar { animation: none; transition: none; }
+
+  /* Revenue area */
+  .area { width: 100%; height: 150px; display: block; overflow: visible; }
+  .area .fill { fill: url(#revGrad); }
+  .area .stroke { fill: none; stroke: var(--good); stroke-width: 2.2; vector-effect: non-scaling-stroke; }
+  .big { font-size: 1.7rem; font-weight: 450; letter-spacing: -.04em; }
+
+  /* Sources */
+  .src { display: grid; gap: 12px; }
+  .src-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+  .src-name { font-weight: 500; font-size: .9rem; }
+  .src-stats { font-size: .8rem; color: var(--muted); text-align: right; white-space: nowrap; }
+  .src-stats b { color: var(--text); font-weight: 600; }
+  .src-track { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: flex; }
+  .src-track .booked { background: var(--accent-soft); height: 100%; display: flex; }
+  .src-track .won { background: var(--good); height: 100%; border-radius: 99px; }
+
+  /* Rate per client */
+  .rate-row { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: .84rem; }
+  .rate-row + .rate-row { margin-top: 9px; }
+  .rate-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rate-track { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+  .rate-track div { height: 100%; background: linear-gradient(90deg, var(--violet), var(--accent)); border-radius: 99px; }
+
+  /* Board */
+  .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(238px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+  .lane { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; min-height: 260px; transition: border-color .2s, background .2s; }
+  .lane.over { border-color: var(--accent); background: var(--accent-soft); }
+  .lane-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 10px; }
+  .lane-head b { font-size: .86rem; display: flex; align-items: center; gap: 8px; }
+  .lane-head b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--accent)); }
+  .lane-head small { color: var(--muted); font-size: .76rem; }
+  .lane-list { display: grid; gap: 8px; min-height: 40px; }
+  .lead-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; cursor: grab; box-shadow: var(--shadow); transition: transform .15s, border-color .2s, box-shadow .2s; text-align: left; width: 100%; }
+  .lead-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+  .lead-card { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .lead-card.dragging { opacity: .35; }
+  .lead-card.lifted { transform: scale(1.03); border-color: var(--accent); }
+  .lead-card.ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; margin: 0; border-color: var(--accent);
+    box-shadow: 0 18px 40px rgb(0 0 0 / .3); transition: none; }
+  body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
+  .lead-card b { display: block; font-size: .9rem; font-weight: 600; }
+  .lead-card .biz { color: var(--muted); font-size: .8rem; display: block; margin-bottom: 8px; }
+  .lead-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .74rem; }
+  .chip { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .chip.val { color: var(--good); background: var(--good-soft); font-weight: 600; }
+  .chip.late { color: var(--bad); background: var(--bad-soft); }
+  .chip.soon { color: var(--accent); background: var(--accent-soft); }
+  .lane-empty { color: var(--faint); font-size: .8rem; text-align: center; padding: 18px 6px; border: 1px dashed var(--line-strong); border-radius: 10px; }
+
+  /* Clients table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: .76rem; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  th.r, td.r { text-align: right; }
+  tbody.rows tr { cursor: pointer; transition: background .15s; }
+  tbody.rows tr:hover td { background: var(--surface-2); }
+  .person { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: .74rem; font-weight: 700; flex: none; color: #fff; }
+  .person b { display: block; font-weight: 600; }
+  .person small { color: var(--muted); }
+  .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .76rem; font-weight: 600; white-space: nowrap; color: var(--c); background: var(--cs); }
+  .search { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 12px; width: min(100%, 280px); }
+  .empty { color: var(--muted); padding: 28px 8px; text-align: center; }
+
+  /* Side panel */
+  dialog.panel { margin: 0 0 0 auto; height: 100%; max-height: 100%; width: min(100%, 520px); max-width: 100%; border: 0; border-left: 1px solid var(--line); padding: 0;
+    background: var(--surface); color: var(--text); box-shadow: -20px 0 60px rgb(0 0 0 / .18); }
+  dialog.panel[open] { display: flex; flex-direction: column; animation: slide .32s var(--ease); }
+  dialog.panel::backdrop { background: rgb(8 10 14 / .45); backdrop-filter: blur(2px); }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+  .panel form { display: flex; flex-direction: column; height: 100%; }
+  .p-head { display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+  .p-head .avatar { width: 42px; height: 42px; font-size: .9rem; }
+  .p-head h2 { font-size: 1.1rem; font-weight: 600; letter-spacing: -.02em; }
+  .p-head p { color: var(--muted); font-size: .84rem; }
+  .p-head .btn { margin-left: auto; }
+  .p-body { flex: 1; overflow-y: auto; padding: 18px 22px 24px; display: grid; gap: 22px; align-content: start; }
+  .p-section h3 { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fields .span { grid-column: 1 / -1; }
+  label { display: grid; gap: 5px; font-size: .8rem; color: var(--muted); font-weight: 500; }
+  input, select, textarea { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; width: 100%; min-height: 40px; color: var(--text); transition: border-color .2s, background .2s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--surface); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea { resize: vertical; }
+  .status-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .status-pick label { display: block; }
+  .status-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; padding: 0; }
+  .status-pick span { display: inline-flex; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: .8rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .status-pick input:checked + span { color: var(--c); background: var(--cs); border-color: transparent; }
+  .status-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .time-add { display: grid; grid-template-columns: 1.2fr .7fr 1.6fr auto; gap: 8px; align-items: end; }
+  .time-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+  .time-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); font-size: .85rem; }
+  .time-list small { color: var(--muted); }
+  .time-total { margin-top: 10px; font-size: .84rem; color: var(--muted); }
+  .time-total b { color: var(--text); }
+  .link { background: none; border: 0; color: var(--faint); padding: 4px 6px; border-radius: 6px; }
+  .link:hover { color: var(--bad); }
+  .error { color: var(--bad); font-size: .85rem; min-height: 1.2em; }
+  .p-foot { display: flex; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface); }
+  .p-foot .spacer { flex: 1; }
+
+  .inbox-item { align-items: start; }
+  .inbox-msg { margin-top: 6px; font-size: .84rem; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .inbox-item .who b, .inbox-item .who small { white-space: normal; }
+  .signin { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: radial-gradient(900px 500px at 80% -100px, var(--bg-glow), transparent 70%), var(--bg); }
+  .signin[hidden] { display: none; }
+  .signin-card { width: min(100%, 380px); display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); }
+  .signin-card h1 { font-size: 1.6rem; font-weight: 450; letter-spacing: -.03em; }
+  .signin-card .btn { justify-content: center; }
+  dialog.digest { width: min(100% - 24px, 680px); max-height: 92vh; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  dialog.digest[open] { display: flex; flex-direction: column; }
+  dialog.digest::backdrop { background: rgb(8 10 14 / .45); }
+  dialog.digest p { color: var(--muted); font-size: .84rem; }
+  dialog.digest iframe { border: 0; width: 100%; height: min(60vh, 560px); background: #f4f2ec; }
+  .toast { position: fixed; left: 50%; bottom: 22px; translate: -50% 0; z-index: 50; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .88rem;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); transition: opacity .25s, transform .25s; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: none; }
+  .foot { color: var(--faint); font-size: .78rem; margin-top: 18px; }
+
+  @media (max-width: 980px) {
+    .s4, .s5, .s6, .s7, .s8 { grid-column: span 12; }
+  }
+  @media (max-width: 720px) {
+    .top-inner { gap: 10px; }
+    .tabs { order: 3; width: 100%; }
+    .tab { flex: 1; }
+    .tools .label-text { display: none; }
+    .rem { grid-template-columns: auto minmax(0, 1fr); }
+    .rem .acts { grid-column: 2; }
+    .hide-sm { display: none; }
+    .fields { grid-template-columns: 1fr; }
+    .time-add { grid-template-columns: 1fr 1fr; }
+    .time-add label:nth-child(3) { grid-column: 1 / -1; }
+    dialog.panel { width: 100%; border-left: 0; }
+    .stage { grid-template-columns: 74px minmax(0, 1fr) 42px; gap: 8px; }
+    .kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kpi { padding: 14px; }
+    .kpi .spark { display: none; }
+    .kpi small { line-height: 1.7; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand"><b>HEURIAL</b><span>Pipeline</span><span class="badge" id="demoBadge" hidden>Demo data</span></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-view="overview" aria-selected="true">Overview</button>
+      <button class="tab" role="tab" data-view="board" aria-selected="false">Pipeline</button>
+      <button class="tab" role="tab" data-view="clients" aria-selected="false">Clients</button>
+    </nav>
+    <div class="tools">
+      <select class="btn" id="range" aria-label="Time range">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+        <option value="365">12 months</option>
+        <option value="all">All time</option>
+      </select>
+      <button class="btn icon ghost" id="themeBtn" type="button" aria-label="Switch light or dark mode"><svg class="i"><use href="#i-moon"/></svg></button>
+      <button class="btn ghost" id="exportBtn" type="button" aria-label="Export CSV"><svg class="i"><use href="#i-down"/></svg><span class="label-text">Export</span></button>
+      <button class="btn ghost" id="signOutBtn" type="button">Sign out</button>
+      <button class="btn primary" id="addBtn" type="button"><svg class="i"><use href="#i-plus"/></svg><span class="label-text">Add call</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Overview -->
+  <section class="view" id="view-overview" aria-label="Overview">
+    <div class="page-head">
+      <div><h1 id="greeting">Your pipeline</h1><p id="periodText"></p></div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid">
+      <section class="card s7" aria-labelledby="remTitle">
+        <div class="card-head"><h2 id="remTitle">Needs you</h2><span><small id="remCount"></small> <button class="btn small ghost" id="digestBtn" type="button">Email preview</button></span></div>
+        <div id="inbox"></div>
+        <div id="reminders"></div>
+      </section>
+      <section class="card s5" aria-labelledby="funTitle">
+        <div class="card-head"><h2 id="funTitle">Funnel</h2><small>calls booked in this period</small></div>
+        <div class="funnel" id="funnel"></div>
+        <div class="funnel-note" id="funnelNote"></div>
+      </section>
+
+      <section class="card s8" aria-labelledby="weekTitle">
+        <div class="card-head"><h2 id="weekTitle">Calls per week</h2><div class="legend"><span><i></i>Booked</span><span><i class="paid"></i>Paid</span></div></div>
+        <div class="chart" id="weekChart" role="img" aria-label="Calls booked and paid per week, last 12 weeks"></div>
+        <div class="x-labels" id="weekLabels"></div>
+      </section>
+      <section class="card s4" aria-labelledby="revTitle">
+        <div class="card-head"><h2 id="revTitle">Revenue, 12 weeks</h2></div>
+        <div class="big num" id="revTotal"></div>
+        <p class="muted" style="font-size:.8rem;margin:2px 0 12px" id="revSub"></p>
+        <svg class="area" id="revChart" viewBox="0 0 300 120" preserveAspectRatio="none" role="img" aria-label="Revenue per week, last 12 weeks">
+          <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--good)" stop-opacity=".35"/><stop offset="1" stop-color="var(--good)" stop-opacity="0"/></linearGradient></defs>
+          <path class="fill" id="revFill"/><path class="stroke" id="revLine"/>
+        </svg>
+      </section>
+
+      <section class="card s6" aria-labelledby="srcTitle">
+        <div class="card-head"><h2 id="srcTitle">Where clients come from</h2><small>close rate · revenue</small></div>
+        <div class="src" id="sources"></div>
+      </section>
+      <section class="card s6" aria-labelledby="rateTitle">
+        <div class="card-head"><h2 id="rateTitle">What each paid job earned per hour</h2></div>
+        <div id="rates"></div>
+      </section>
+    </div>
+    <p class="foot">Numbers cover calls booked in the selected period. Arrows compare with the same length of time just before it.</p>
+  </section>
+
+  <!-- Pipeline board -->
+  <section class="view" id="view-board" aria-label="Pipeline" hidden>
+    <div class="page-head"><div><h1>Pipeline</h1><p>Drag a card to change its status (on a phone, press and hold first). Click or tap a card to open its details.</p></div></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- Clients -->
+  <section class="view" id="view-clients" aria-label="Clients" hidden>
+    <div class="page-head">
+      <div><h1>Clients</h1><p>Everyone who booked a call in this period.</p></div>
+      <input class="search" id="search" type="search" placeholder="Search name, business, source" aria-label="Search clients">
+    </div>
+    <div class="card" style="padding:6px 8px">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Source</th><th class="hide-sm">Booked</th><th class="hide-sm">Call</th><th>Status</th><th class="r">Value</th><th class="r hide-sm">Hours</th></tr></thead>
+        <tbody class="rows" id="rows"></tbody>
+      </table></div>
+      <div class="empty" id="empty" hidden>No calls here yet. Click "Add call" when you book your first one.</div>
+    </div>
+  </section>
+</main>
+
+<dialog class="panel" id="dlg" aria-labelledby="dlgTitle">
+  <form id="form" novalidate>
+    <div class="p-head">
+      <div class="avatar" id="dlgAvatar">+</div>
+      <div><h2 id="dlgTitle">Add call</h2><p id="dlgSub">A new booked call</p></div>
+      <button class="btn icon ghost" type="button" id="closeBtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="p-body">
+      <div class="p-section">
+        <h3>Status</h3>
+        <div class="status-pick" id="statusPick" role="radiogroup" aria-label="Status"></div>
+      </div>
+      <div class="p-section">
+        <h3>Contact</h3>
+        <div class="fields">
+          <label>Name *<input name="name" required maxlength="120" autocomplete="off"></label>
+          <label>Business<input name="business" maxlength="120" autocomplete="off"></label>
+          <label>Email<input name="email" type="email" maxlength="254" autocomplete="off"></label>
+          <label>Where they came from
+            <input name="source" list="sources-list" maxlength="60" placeholder="Referral, Cold outreach…" autocomplete="off">
+            <datalist id="sources-list"><option>Referral</option><option>Personal network</option><option>Cold outreach</option><option>Website</option><option>Social media</option><option>Partner</option><option>Other</option></datalist>
+          </label>
+        </div>
+      </div>
+      <div class="p-section">
+        <h3>Deal</h3>
+        <div class="fields">
+          <label>Date booked<input name="booked_at" type="date"></label>
+          <label>Call date<input name="call_at" type="date"></label>
+          <label class="span">Value paid or quoted ($)<input name="value" type="number" min="0" step="1" inputmode="decimal"></label>
+        </div>
+      </div>
+      <div class="p-section">
+        <h3>Follow-up</h3>
+        <div class="fields">
+          <label>Follow up on<input name="follow_up_at" type="date"></label>
+          <label>Reminder<input name="follow_up_note" maxlength="300" placeholder="What to do or say"></label>
+        </div>
+      </div>
+      <div class="p-section">
+        <h3>Notes</h3>
+        <textarea name="notes" rows="4" maxlength="4000" aria-label="Notes" placeholder="What they need, what you discussed…"></textarea>
+      </div>
+      <div class="p-section" id="timeBox" hidden>
+        <h3>Time spent</h3>
+        <div class="time-add">
+          <label>Date<input type="date" id="tDate"></label>
+          <label>Hours<input type="number" id="tHours" min="0.25" max="24" step="0.25" inputmode="decimal"></label>
+          <label>What you did<input type="text" id="tNote" maxlength="300"></label>
+          <button class="btn" type="button" id="tAdd">Log</button>
+        </div>
+        <ul class="time-list" id="tList"></ul>
+        <p class="time-total" id="tTotal"></p>
+      </div>
+      <p class="error" id="err" role="alert"></p>
+    </div>
+    <div class="p-foot">
+      <button class="btn danger" type="button" id="delBtn" hidden>Delete</button>
+      <span class="spacer"></span>
+      <button class="btn" type="button" id="cancelBtn">Cancel</button>
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="signin" id="signin" hidden>
+  <form class="signin-card" id="signinForm">
+    <p class="brand"><b>HEURIAL</b><span>Pipeline</span></p>
+    <h1>Sign in</h1>
+    <label>Password<input id="pw" type="password" autocomplete="current-password" required maxlength="200"></label>
+    <p class="error" id="signinErr" role="alert"></p>
+    <button class="btn primary" type="submit">Sign in</button>
+  </form>
+</div>
+
+<dialog class="digest" id="digestDlg" aria-labelledby="digestSubject">
+  <div class="p-head"><div><h2 id="digestSubject">Today's email</h2><p>Preview of the daily summary. Nothing is sent until you click Send now.</p></div></div>
+  <iframe id="digestFrame" title="Email preview" sandbox=""></iframe>
+  <div class="p-foot"><span class="spacer"></span><button class="btn" id="digestClose" type="button">Close</button><button class="btn primary" id="digestSend" type="button">Send now</button></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ORDER = ["booked", "held", "proposal", "paid", "lost", "no_show"];
+const STATUS = {
+  booked: { label: "Call booked", c: "--warn" }, held: { label: "Call held", c: "--violet" }, proposal: { label: "Proposal sent", c: "--accent" },
+  paid: { label: "Paid", c: "--good" }, lost: { label: "Lost", c: "--bad" }, no_show: { label: "No-show", c: "--bad" },
+};
+const FOLLOW_PLAN = { held: [3, "Send a follow-up after the call"], proposal: [3, "Check in on the proposal"], paid: [14, "Ask for a testimonial"] };
+const AVATAR = ["#3478f6", "#7357d6", "#16935a", "#d2404b", "#b7741a", "#0e8a9a", "#c0478a"];
+let data = null, editing = null, view = "overview";
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (cents) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
+const hrs = (h) => (Math.round(h * 10) / 10).toString();
+const niceDate = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "–";
+const addDays = (s, n) => {
+  const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const dayDiff = (a, b) => Math.round((new Date(a + "T12:00:00") - new Date(b + "T12:00:00")) / 864e5);
+const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
+const avatarColor = (name) => AVATAR[[...name].reduce((s, c) => s + c.charCodeAt(0), 0) % AVATAR.length];
+const statusStyle = (s) => `--c: var(${STATUS[s].c}); --cs: color-mix(in srgb, var(${STATUS[s].c}) 14%, transparent)`;
+const statusPill = (s) => `<span class="status" style="${statusStyle(s)}">${STATUS[s].label}</span>`;
+
+async function api(path, method = "GET", body) {
+  const url = path.replace(/^\/api\//, "/api/admin/");
+  const res = await fetch(url, { method, credentials: "same-origin", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) { showSignIn(); throw new Error(json.error || "Please sign in."); }
+  if (!res.ok) throw new Error(json.error || "Request failed.");
+  return json;
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+/* ---------- Theme ---------- */
+function currentTheme() {
+  return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+function paintThemeIcon() { $("themeBtn").innerHTML = `<svg class="i"><use href="#i-${currentTheme() === "dark" ? "sun" : "moon"}"/></svg>`; }
+$("themeBtn").addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("hp-theme", next); } catch {}
+  paintThemeIcon();
+});
+paintThemeIcon();
+
+/* ---------- Views ---------- */
+function setView(next) {
+  view = next;
+  document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === next)));
+  document.querySelectorAll(".view").forEach((v) => { v.hidden = v.id !== "view-" + next; });
+  try { localStorage.setItem("hp-view", next); } catch {}
+}
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => setView(t.dataset.view)));
+try { const v = localStorage.getItem("hp-view"); if (v && $("view-" + v)) setView(v); } catch {}
+
+/* ---------- Data ---------- */
+async function load() {
+  data = await api("/api/data?range=" + $("range").value);
+  $("demoBadge").hidden = !data.demo;
+  render();
+}
+
+let firstRender = true;
+function render() {
+  // Charts animate in once; later refreshes (after edits) update in place.
+  if (!firstRender) $("view-overview").classList.add("settled");
+  firstRender = false;
+  renderHead(); renderKpis(); renderInbox(); renderReminders(); renderFunnel(); renderWeekly(); renderRevenue(); renderSources(); renderRates(); renderBoard(); renderRows();
+}
+
+function renderHead() {
+  const h = new Date().getHours();
+  $("greeting").textContent = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const r = $("range");
+  $("periodText").textContent = `${new Date(data.today + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${r.options[r.selectedIndex].text === "All time" ? "all time" : "last " + r.options[r.selectedIndex].text}`;
+}
+
+function delta(cur, prev, kind) {
+  if (!data.previous) return "";
+  if (kind === "rate") {
+    if (cur == null || prev == null) return "";
+    const d = Math.round((cur - prev) * 100);
+    if (!d) return `<span class="delta flat">no change</span>`;
+    return `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)} pts</span>`;
+  }
+  if (!prev) return cur ? `<span class="delta ${kind === "neutral" ? "flat" : "up"}">new</span>` : "";
+  const d = Math.round(((cur - prev) / prev) * 100);
+  if (!d) return `<span class="delta flat">no change</span>`;
+  const cls = kind === "neutral" ? "flat" : d > 0 ? "up" : "down";
+  return `<span class="delta ${cls}">${d > 0 ? "↑" : "↓"} ${Math.abs(d)}%</span>`;
+}
+
+function spark(values, color) {
+  const max = Math.max(1, ...values), n = values.length - 1 || 1;
+  const pts = values.map((v, i) => `${(i / n) * 100},${40 - (v / max) * 34}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 100 42" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(${color})" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+
+function renderKpis() {
+  const s = data.summary, p = data.previous;
+  const rate = (a, b) => (b ? a / b : null);
+  const perHour = s.hours > 0 ? s.revenue_cents / s.hours : 0;
+  const prevPerHour = p && p.hours > 0 ? p.revenue_cents / p.hours : 0;
+  const w = data.weekly;
+  const cards = [
+    ["Calls booked", s.booked, delta(s.booked, p?.booked, "count"), "", spark(w.map((x) => x.booked), "--accent")],
+    ["Show-up rate", pct(s.held, s.booked), delta(rate(s.held, s.booked), p && rate(p.held, p.booked), "rate"), `${s.held} calls held`, ""],
+    ["Close rate", pct(s.paid, s.booked), delta(rate(s.paid, s.booked), p && rate(p.paid, p.booked), "rate"), `${s.paid} paid job${s.paid === 1 ? "" : "s"}`, ""],
+    ["Revenue", money(s.revenue_cents), delta(s.revenue_cents, p?.revenue_cents, "money"), s.paid ? money(s.revenue_cents / s.paid) + " per job" : "", spark(w.map((x) => x.revenue_cents), "--good")],
+    ["Hours logged", hrs(s.hours), delta(s.hours, p?.hours, "neutral"), s.paid ? hrs(s.hours / s.paid) + " h per paid job" : "", ""],
+    ["Revenue per hour", perHour ? money(perHour) : "–", delta(perHour, prevPerHour, "money"), "across all logged hours", ""],
+  ];
+  $("kpis").innerHTML = cards.map(([label, value, d, note, sp]) => `
+    <div class="card kpi"><span class="label">${label}</span><strong class="num">${esc(value)}</strong>
+    <small>${d}${esc(note)}</small>${sp}</div>`).join("");
+}
+
+/* ---------- Website inbox ---------- */
+function renderInbox() {
+  const box = $("inbox");
+  if (!data.inbox.length) { box.innerHTML = ""; return; }
+  const ago = (iso) => {
+    const h = Math.round((Date.now() - Date.parse(iso)) / 36e5);
+    return h < 1 ? "just now" : h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+  };
+  box.innerHTML = `<p class="sub">New from the website</p><ul class="rem-list">` + data.inbox.map((i) => `
+    <li class="rem inbox-item"><span class="dot today"></span>
+      <div class="who" style="cursor:default"><b>${esc(i.name)}${i.company ? " · " + esc(i.company) : ""}</b>
+        <small><span class="when today">${esc(i.source)}</span> · ${ago(i.created_at)} · ${esc(i.email)}</small>
+        <p class="inbox-msg">${esc(i.message)}</p></div>
+      <div class="acts"><button class="btn small primary" type="button" data-inbox="convert" data-id="${i.id}">Add to pipeline</button>
+      <button class="btn small" type="button" data-inbox="dismiss" data-id="${i.id}">Dismiss</button></div></li>`).join("") + `</ul>`;
+}
+$("inbox").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-inbox]"); if (!btn) return;
+  const item = data.inbox.find((i) => i.id === btn.dataset.id);
+  if (btn.dataset.inbox === "dismiss" && !confirm(`Dismiss the inquiry from ${item?.name || "this person"}? It stays in Catalyst but leaves your inbox.`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api(`/api/inbox/${btn.dataset.id}/${btn.dataset.inbox}`, "POST");
+    toast(btn.dataset.inbox === "convert" ? `Added ${item?.name || "lead"} · reply to schedule the call` : "Dismissed");
+    await load();
+    if (r.leadId) openById(r.leadId);
+  } catch (err) { btn.disabled = false; toast(err.message); }
+});
+
+/* ---------- Daily email preview ---------- */
+$("digestBtn").addEventListener("click", async () => {
+  try {
+    const d = await api("/api/digest?preview=1", "POST");
+    $("digestSubject").textContent = d.subject;
+    $("digestFrame").srcdoc = d.html;
+    $("digestDlg").showModal();
+  } catch (err) { toast(err.message); }
+});
+$("digestSend").addEventListener("click", async () => {
+  try { const r = await api("/api/digest", "POST"); toast(`Sent: ${r.subject}`); $("digestDlg").close(); }
+  catch (err) { toast(err.message); }
+});
+$("digestClose").addEventListener("click", () => $("digestDlg").close());
+
+/* ---------- Sign in / out, export ---------- */
+function showSignIn() { $("signin").hidden = false; $("pw").focus(); }
+$("signinForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("signinErr").textContent = "";
+  const res = await fetch("/api/admin/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("pw").value }) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) { $("signinErr").textContent = json.error || "Couldn't sign in."; return; }
+  $("pw").value = ""; $("signin").hidden = true;
+  load().catch((err) => toast(err.message));
+});
+$("signOutBtn").addEventListener("click", async () => {
+  await fetch("/api/admin/session", { method: "DELETE", credentials: "same-origin" });
+  data = null; showSignIn();
+});
+$("exportBtn").addEventListener("click", () => {
+  if (!data) return;
+  const cell = (v) => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = ["name", "business", "email", "source", "status", "booked_at", "call_at", "follow_up_at", "follow_up_note", "value_usd", "hours", "notes"];
+  const rows = data.leads.map((l) => [l.name, l.business, l.email, l.source, l.status, l.booked_at, l.call_at, l.follow_up_at, l.follow_up_note, (l.value_cents / 100).toFixed(2), l.hours, l.notes].map(cell).join(","));
+  const url = URL.createObjectURL(new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `heurial-pipeline-${data.today}.csv` });
+  a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+/* ---------- Follow-ups ---------- */
+function renderReminders() {
+  const t = data.today;
+  const soon = data.followups.filter((f) => f.follow_up_at <= addDays(t, 7));
+  const later = data.followups.length - soon.length;
+  const label = (f) => {
+    const d = dayDiff(f.follow_up_at, t);
+    if (d < 0) return [`${-d} day${d === -1 ? "" : "s"} overdue`, "late"];
+    if (d === 0) return ["Due today", "today"];
+    if (d === 1) return ["Tomorrow", "soon"];
+    return [niceDate(f.follow_up_at), "soon"];
+  };
+  const who = (id, name, biz, line) => `<button class="who" type="button" data-open="${id}"><b>${esc(name)}${biz ? " · " + esc(biz) : ""}</b><small>${line}</small></button>`;
+
+  let html = "";
+  if (data.stale.length) {
+    html += `<p class="sub">Did these calls happen?</p><ul class="rem-list">` + data.stale.map((s) => `
+      <li class="rem"><span class="dot late"></span>
+      ${who(s.id, s.name, s.business, `<span class="when late">Call was ${niceDate(s.call_at)}</span> · still marked booked`)}
+      <div class="acts"><button class="btn small" type="button" data-stale="held" data-id="${s.id}">It happened</button>
+      <button class="btn small" type="button" data-stale="no_show" data-id="${s.id}">No-show</button></div></li>`).join("") + `</ul>`;
+  }
+  if (soon.length) {
+    html += `<p class="sub">Follow-ups</p><ul class="rem-list">` + soon.map((f) => {
+      const [text, cls] = label(f);
+      return `<li class="rem"><span class="dot ${cls}"></span>
+        ${who(f.id, f.name, f.business, `<span class="when ${cls}">${text}</span> · ${esc(f.follow_up_note || "Follow up")}`)}
+        <div class="acts"><button class="btn small" type="button" data-fu="done" data-id="${f.id}" aria-label="Mark done"><svg class="i"><use href="#i-check"/></svg></button>
+        <button class="btn small" type="button" data-fu="1" data-id="${f.id}">+1d</button>
+        <button class="btn small" type="button" data-fu="7" data-id="${f.id}">+1w</button></div></li>`;
+    }).join("") + `</ul>`;
+  }
+  if (!html) html = `<div class="allclear"><svg class="i"><use href="#i-check"/></svg>You're all caught up. Nothing due in the next 7 days.</div>`;
+  if (later) html += `<p class="later">${later} more follow-up${later === 1 ? "" : "s"} scheduled later.</p>`;
+  $("reminders").innerHTML = html;
+
+  const urgent = data.inbox.length + data.stale.length + data.followups.filter((f) => f.follow_up_at <= t).length;
+  $("remCount").textContent = urgent ? `${urgent} need${urgent === 1 ? "s" : ""} attention today` : "";
+  document.title = (urgent ? `(${urgent}) ` : "") + "HEURIAL Pipeline";
+}
+
+$("reminders").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button"); if (!btn) return;
+  try {
+    if (btn.dataset.open) return openById(btn.dataset.open);
+    const id = btn.dataset.id;
+    if (btn.dataset.fu) {
+      const next = btn.dataset.fu === "done" ? "" : addDays(data.today, Number(btn.dataset.fu));
+      await api("/api/leads/" + id, "PATCH", { follow_up_at: next, ...(next ? {} : { follow_up_note: "" }) });
+      toast(next ? `Moved to ${niceDate(next)}` : "Follow-up done");
+    } else if (btn.dataset.stale) {
+      const body = { status: btn.dataset.stale };
+      const row = data.stale.find((s) => s.id === id);
+      if (body.status === "held" && !row?.follow_up_at) { body.follow_up_at = addDays(data.today, 3); body.follow_up_note = FOLLOW_PLAN.held[1]; }
+      await api("/api/leads/" + id, "PATCH", body);
+      toast(body.follow_up_at ? `Marked held · follow-up set for ${niceDate(body.follow_up_at)}` : `Marked ${STATUS[body.status].label.toLowerCase()}`);
+    }
+    await load();
+  } catch (err) { toast(err.message); }
+});
+
+/* ---------- Funnel ---------- */
+function renderFunnel() {
+  const L = data.leads;
+  const reached = {
+    booked: L.length,
+    held: L.filter((l) => ["held", "proposal", "paid", "lost"].includes(l.status)).length,
+    proposal: L.filter((l) => ["proposal", "paid"].includes(l.status)).length,
+    paid: L.filter((l) => l.status === "paid").length,
+  };
+  const colors = { booked: "--warn", held: "--violet", proposal: "--accent", paid: "--good" };
+  const names = { booked: "Booked", held: "Showed up", proposal: "Proposal", paid: "Paid" };
+  const keys = Object.keys(reached);
+  $("funnel").innerHTML = keys.map((k, i) => {
+    const w = reached.booked ? Math.max(8, (reached[k] / reached.booked) * 100) : 0;
+    const step = i === 0 ? "" : pct(reached[k], reached[keys[i - 1]]);
+    return `<div class="stage"><span class="stage-name">${names[k]}</span>
+      <div class="stage-track"><div class="stage-bar num" style="width:${reached.booked ? w : 0}%;background:var(${colors[k]})">${reached[k]}</div></div>
+      <span class="stage-rate num" title="${i ? "Share of the stage before" : ""}">${step}</span></div>`;
+  }).join("");
+  const lost = L.filter((l) => l.status === "lost").length, noShow = L.filter((l) => l.status === "no_show").length, open = L.filter((l) => ["booked", "held", "proposal"].includes(l.status)).length;
+  $("funnelNote").innerHTML = `<span class="pill"><b>${open}</b> still open</span><span class="pill"><b>${lost}</b> lost</span><span class="pill"><b>${noShow}</b> no-show</span>`;
+}
+
+/* ---------- Charts ---------- */
+function renderWeekly() {
+  const w = data.weekly, peak = Math.max(1, ...w.map((x) => x.booked));
+  const top = Math.max(2, Math.ceil(peak / 2) * 2);
+  const lines = [top, top / 2].map((v) => `<div class="grid-line" style="bottom:${(v / top) * 100}%"><span>${v}</span></div>`).join("");
+  $("weekChart").innerHTML = lines + w.map((x, i) => `
+    <div class="col" title="Week of ${niceDate(x.week)}: ${x.booked} booked, ${x.paid} paid">
+      <div class="bar" style="height:${(x.booked / top) * 100}%;animation-delay:${i * 30}ms"></div>
+      <div class="bar paid" style="height:${(x.paid / top) * 100}%;animation-delay:${i * 30 + 60}ms"></div>
+    </div>`).join("");
+  $("weekLabels").innerHTML = w.map((x, i) => `<span>${i % 2 ? "" : niceDate(x.week)}</span>`).join("");
+}
+
+function renderRevenue() {
+  const w = data.weekly, vals = w.map((x) => x.revenue_cents), total = vals.reduce((a, b) => a + b, 0);
+  const max = Math.max(1, ...vals), n = vals.length - 1;
+  const pts = vals.map((v, i) => [(i / n) * 300, 112 - (v / max) * 100]);
+  // Smooth curve through the points.
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], cx = (x0 + x1) / 2;
+    d += ` C${cx},${y0} ${cx},${y1} ${x1},${y1}`;
+  }
+  $("revLine").setAttribute("d", d);
+  $("revFill").setAttribute("d", `${d} L300,120 L0,120 Z`);
+  $("revTotal").textContent = money(total);
+  const best = w.reduce((a, b) => (b.revenue_cents > a.revenue_cents ? b : a), w[0]);
+  $("revSub").textContent = total ? `Best week: ${niceDate(best.week)} (${money(best.revenue_cents)})` : "No paid jobs in the last 12 weeks yet.";
+}
+
+function renderSources() {
+  if (!data.sources.length) { $("sources").innerHTML = `<p class="empty">No calls in this period.</p>`; return; }
+  const maxBooked = Math.max(...data.sources.map((x) => x.booked));
+  $("sources").innerHTML = data.sources.map((x) => `
+    <div class="src-row">
+      <span class="src-name">${esc(x.source)}</span>
+      <span class="src-stats num"><b>${pct(x.paid, x.booked)}</b> close · <b>${money(x.revenue_cents)}</b></span>
+      <div class="src-track" title="${x.booked} booked, ${x.paid} paid">
+        <div class="booked" style="width:${(x.booked / maxBooked) * 100}%"><div class="won" style="width:${x.booked ? (x.paid / x.booked) * 100 : 0}%"></div></div>
+      </div>
+    </div>`).join("");
+}
+
+function renderRates() {
+  const rows = data.leads.filter((l) => l.status === "paid" && l.hours > 0)
+    .map((l) => ({ name: l.business || l.name, rate: l.value_cents / l.hours }))
+    .sort((a, b) => b.rate - a.rate).slice(0, 6);
+  if (!rows.length) { $("rates").innerHTML = `<p class="empty">Log hours on paid jobs to see what each one really earned per hour.</p>`; return; }
+  const max = rows[0].rate;
+  const avg = data.summary.hours ? data.summary.revenue_cents / data.summary.hours : 0;
+  $("rates").innerHTML = rows.map((r) => `
+    <div class="rate-row"><span title="${esc(r.name)}">${esc(r.name)}</span>
+    <div class="rate-track"><div style="width:${(r.rate / max) * 100}%"></div></div>
+    <span class="num" style="text-align:right;font-weight:600">${money(r.rate)}</span></div>`).join("")
+    + `<p class="muted" style="font-size:.8rem;margin-top:14px">Counting unpaid calls too, you made <b style="color:var(--text)">${money(avg)}</b> per hour overall. Use this to set your next price.</p>`;
+}
+
+/* ---------- Board ---------- */
+function renderBoard() {
+  $("board").innerHTML = ORDER.map((s) => {
+    const leads = data.leads.filter((l) => l.status === s);
+    const total = leads.reduce((a, l) => a + l.value_cents, 0);
+    return `<section class="lane" data-status="${s}" style="--c: var(${STATUS[s].c})" aria-label="${STATUS[s].label}">
+      <div class="lane-head"><b>${STATUS[s].label}</b><small class="num">${leads.length}${total ? " · " + money(total) : ""}</small></div>
+      <div class="lane-list">${leads.length ? leads.map(cardHtml).join("") : `<div class="lane-empty">Drop a card here</div>`}</div>
+    </section>`;
+  }).join("");
+}
+function cardHtml(l) {
+  let fu = "";
+  if (l.follow_up_at) {
+    const d = dayDiff(l.follow_up_at, data.today);
+    fu = `<span class="chip ${d < 0 ? "late" : "soon"}">${d < 0 ? "Overdue" : d === 0 ? "Today" : niceDate(l.follow_up_at)}</span>`;
+  }
+  return `<button class="lead-card" type="button" draggable="false" data-id="${l.id}">
+    <b>${esc(l.name)}</b><span class="biz">${esc(l.business || "No business name")}</span>
+    <div class="lead-meta"><span class="chip">${esc(l.source)}</span>${l.value_cents ? `<span class="chip val">${money(l.value_cents)}</span>` : ""}${fu}</div>
+  </button>`;
+}
+
+// Pointer-based dragging: works with mouse, trackpad and touch (press and hold on phones).
+const board = $("board");
+let drag = null, suppressClick = false;
+board.addEventListener("click", (e) => {
+  if (suppressClick) return;
+  const c = e.target.closest(".lead-card"); if (c) openById(c.dataset.id);
+});
+board.addEventListener("pointerdown", (e) => {
+  const card = e.target.closest(".lead-card");
+  if (!card || e.button !== 0) return;
+  const touch = e.pointerType === "touch";
+  drag = { card, id: card.dataset.id, x: e.clientX, y: e.clientY, pid: e.pointerId, active: false, ready: !touch };
+  if (touch) drag.timer = setTimeout(() => { if (drag && !drag.active) { drag.ready = true; card.classList.add("lifted"); navigator.vibrate?.(10); } }, 280);
+});
+window.addEventListener("pointermove", (e) => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  if (!drag.active) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    if (!drag.ready) return cancelDrag(); // a finger moved before the hold finished: it's a scroll
+    startDrag(e);
+  }
+  moveGhost(e);
+});
+window.addEventListener("pointerup", (e) => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  const { active, lane, id } = drag;
+  cancelDrag();
+  if (!active) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+  if (lane) moveLead(id, lane.dataset.status);
+});
+window.addEventListener("pointercancel", () => cancelDrag());
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && drag?.active) cancelDrag(); });
+board.addEventListener("touchmove", (e) => { if (drag?.ready) e.preventDefault(); }, { passive: false });
+// The browser's own drag-and-drop would swallow the release, so turn it off for the board.
+board.addEventListener("dragstart", (e) => e.preventDefault());
+
+function startDrag(e) {
+  drag.active = true;
+  const r = drag.card.getBoundingClientRect();
+  drag.ox = e.clientX - r.left; drag.oy = e.clientY - r.top;
+  const ghost = drag.card.cloneNode(true);
+  ghost.classList.add("ghost"); ghost.classList.remove("lifted"); ghost.style.width = r.width + "px";
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+  drag.card.classList.add("dragging");
+  document.body.classList.add("is-dragging");
+}
+function moveGhost(e) {
+  drag.ghost.style.transform = `translate(${e.clientX - drag.ox}px, ${e.clientY - drag.oy}px) rotate(1.5deg)`;
+  const lane = document.elementFromPoint(e.clientX, e.clientY)?.closest(".lane") || null;
+  board.querySelectorAll(".lane.over").forEach((l) => l !== lane && l.classList.remove("over"));
+  lane?.classList.add("over");
+  drag.lane = lane;
+  const b = board.getBoundingClientRect();
+  if (e.clientX > b.right - 48) board.scrollLeft += 14; else if (e.clientX < b.left + 48) board.scrollLeft -= 14;
+}
+function cancelDrag() {
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  drag.ghost?.remove();
+  drag.card.classList.remove("dragging", "lifted");
+  board.querySelectorAll(".lane.over").forEach((l) => l.classList.remove("over"));
+  document.body.classList.remove("is-dragging");
+  drag = null;
+}
+
+async function moveLead(id, status) {
+  const lead = data.leads.find((l) => l.id === id);
+  if (!lead || lead.status === status) return;
+  const body = { status };
+  const plan = FOLLOW_PLAN[status];
+  if (plan && !lead.follow_up_at) { body.follow_up_at = addDays(data.today, plan[0]); body.follow_up_note = plan[1]; }
+  lead.status = status; renderBoard();
+  try {
+    await api("/api/leads/" + id, "PATCH", body);
+    toast(`${lead.name} → ${STATUS[status].label}${body.follow_up_at ? ` · follow-up ${niceDate(body.follow_up_at)}` : ""}`);
+  } catch (err) { toast(err.message); }
+  await load();
+}
+
+/* ---------- Clients table ---------- */
+function renderRows() {
+  const q = $("search").value.trim().toLowerCase();
+  const rows = data.leads.filter((l) => !q || [l.name, l.business, l.source].some((v) => v.toLowerCase().includes(q)));
+  $("rows").innerHTML = rows.map((l) => `
+    <tr data-id="${l.id}" tabindex="0">
+      <td><div class="person"><span class="avatar" style="background:${avatarColor(l.name)}">${esc(initials(l.name))}</span><div><b>${esc(l.name)}</b><small>${esc(l.business)}</small></div></div></td>
+      <td>${esc(l.source)}</td>
+      <td class="hide-sm">${niceDate(l.booked_at)}</td>
+      <td class="hide-sm">${niceDate(l.call_at)}</td>
+      <td>${statusPill(l.status)}</td>
+      <td class="r num">${l.value_cents ? money(l.value_cents) : "–"}</td>
+      <td class="r num hide-sm">${l.hours ? hrs(l.hours) : "–"}</td>
+    </tr>`).join("");
+  $("empty").hidden = rows.length > 0;
+}
+$("rows").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) openById(tr.dataset.id); });
+$("rows").addEventListener("keydown", (e) => { if (e.key === "Enter") { const tr = e.target.closest("tr[data-id]"); if (tr) openById(tr.dataset.id); } });
+$("search").addEventListener("input", renderRows);
+
+/* ---------- Side panel ---------- */
+$("statusPick").innerHTML = ORDER.map((s) => `<label style="${statusStyle(s)}"><input type="radio" name="status" value="${s}"><span>${STATUS[s].label}</span></label>`).join("");
+
+async function openById(id) {
+  try { openLead(data.leads.find((l) => l.id === id) || await api("/api/leads/" + id)); } catch (err) { toast(err.message); }
+}
+
+async function openLead(lead) {
+  editing = lead;
+  const f = $("form");
+  $("err").textContent = "";
+  $("dlgTitle").textContent = lead ? lead.name : "Add call";
+  $("dlgSub").textContent = lead ? [lead.business, lead.source].filter(Boolean).join(" · ") : "A new booked call";
+  $("dlgAvatar").textContent = lead ? initials(lead.name) : "+";
+  $("dlgAvatar").style.background = lead ? avatarColor(lead.name) : "var(--accent)";
+  f.name.value = lead?.name ?? ""; f.business.value = lead?.business ?? ""; f.email.value = lead?.email ?? "";
+  f.source.value = lead?.source ?? ""; f.status.value = lead?.status ?? "booked";
+  f.value.value = lead ? lead.value_cents / 100 || "" : "";
+  f.booked_at.value = lead?.booked_at ?? data.today; f.call_at.value = lead?.call_at ?? ""; f.notes.value = lead?.notes ?? "";
+  f.follow_up_at.value = lead?.follow_up_at ?? ""; f.follow_up_note.value = lead?.follow_up_note ?? "";
+  $("delBtn").hidden = !lead; $("timeBox").hidden = !lead;
+  if (lead) { $("tDate").value = data.today; $("tHours").value = ""; $("tNote").value = ""; await loadTime(); }
+  if (!$("dlg").open) $("dlg").showModal();
+  if (!lead) f.name.focus();
+}
+
+async function loadTime() {
+  const list = await api(`/api/leads/${editing.id}/time`);
+  $("tList").innerHTML = list.length ? list.map((t) => `
+    <li><span>${niceDate(t.entry_date)} · <b class="num">${hrs(t.hours)} h</b> <small>${esc(t.note)}</small></span>
+    <button class="link" type="button" data-del="${t.id}" aria-label="Delete time entry"><svg class="i" style="width:15px;height:15px"><use href="#i-x"/></svg></button></li>`).join("")
+    : `<li><small>No time logged yet.</small></li>`;
+  const total = list.reduce((s, t) => s + t.hours, 0);
+  const value = editing.value_cents;
+  $("tTotal").innerHTML = total ? `Total <b>${hrs(total)} h</b>${value && editing.status === "paid" ? ` · <b>${money(value / total)}</b> per hour on this job` : ""}` : "";
+}
+
+const closePanel = () => $("dlg").close();
+$("closeBtn").addEventListener("click", closePanel);
+$("cancelBtn").addEventListener("click", closePanel);
+$("dlg").addEventListener("click", (e) => { if (e.target === $("dlg")) closePanel(); });
+$("addBtn").addEventListener("click", () => openLead(null));
+$("range").addEventListener("change", load);
+
+// Suggest a follow-up when the status changes, but only into empty fields.
+$("statusPick").addEventListener("change", (e) => {
+  const f = $("form"), plan = FOLLOW_PLAN[e.target.value];
+  if (!plan || f.follow_up_at.value) return;
+  f.follow_up_at.value = addDays(data.today, plan[0]);
+  if (!f.follow_up_note.value) f.follow_up_note.value = plan[1];
+});
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const body = { name: f.name.value, business: f.business.value, email: f.email.value, source: f.source.value, status: f.status.value,
+    value: f.value.value || 0, booked_at: f.booked_at.value, call_at: f.call_at.value, notes: f.notes.value,
+    follow_up_at: f.follow_up_at.value, follow_up_note: f.follow_up_note.value };
+  try {
+    if (editing) await api("/api/leads/" + editing.id, "PATCH", body); else await api("/api/leads", "POST", body);
+    closePanel(); toast(editing ? "Saved" : `Added ${body.name}`); await load();
+  } catch (err) { $("err").textContent = err.message; }
+});
+
+$("delBtn").addEventListener("click", async () => {
+  if (!editing || !confirm(`Delete ${editing.name} and their logged time? This can't be undone.`)) return;
+  try { await api("/api/leads/" + editing.id, "DELETE"); closePanel(); toast(`Deleted ${editing.name}`); await load(); }
+  catch (err) { $("err").textContent = err.message; }
+});
+
+$("tAdd").addEventListener("click", async () => {
+  try {
+    await api("/api/time", "POST", { lead_id: editing.id, entry_date: $("tDate").value, hours: $("tHours").value, note: $("tNote").value });
+    $("tHours").value = ""; $("tNote").value = ""; $("err").textContent = "";
+    await loadTime(); await load();
+  } catch (err) { $("err").textContent = err.message; }
+});
+$("tList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-del]"); if (!btn) return;
+  try { await api("/api/time/" + btn.dataset.del, "DELETE"); await loadTime(); await load(); } catch (err) { $("err").textContent = err.message; }
+});
+
+(async () => {
+  try {
+    const s = await (await fetch("/api/admin/session", { credentials: "same-origin" })).json();
+    if (!s.configured) { $("signinErr").textContent = "Sign-in isn't set up yet. Add ADMIN_PASSWORD_HASH and ADMIN_SESSION_SECRET to the site's settings."; showSignIn(); return; }
+    if (!s.signedIn) return showSignIn();
+    await load();
+  } catch (err) { toast(err.message); }
+})();
+</script>
+</body>
+</html>
