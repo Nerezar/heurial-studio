@@ -8,3 +8,10 @@ next-env.d.ts
 .DS_Store
 node_modules.nosync/
 catalyst-debug.log
+# Local Catalyst CLI and launch config (project and environment IDs stay on this Mac)
+.catalyst/
+.catalystrc
+catalyst.json
+catalyst/.catalystrc
+catalyst/catalyst.json
+.claude/

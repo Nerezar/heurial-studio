@@ -1,9 +1,0 @@
-{
-  "functions": {
-    "targets": [
-      "inquiries"
-    ],
-    "ignore": [],
-    "source": "functions"
-  }
-}
