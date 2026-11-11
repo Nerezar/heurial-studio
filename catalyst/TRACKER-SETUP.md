@@ -24,6 +24,14 @@ Catalyst job "daily-digest" (every morning) ──▶ pipeline /digest ──▶
 Status (2026-11-11): built and tested locally against a stand-in back end. **Not deployed.** Nothing below has been run
 against Project-Rainfall.
 
+**Deploy this to Production.** Project-Rainfall's Production environment is active (site at
+`heurial-mmoiyutd.onslate.com`, with its own `Inquiries` table). Do every step below in Production, not Development:
+the tables, the functions, the variables, the Mail sender and the cron. The CLI's `catalyst deploy` only deploys to
+Development, so deploy there first, test, then promote to Production from the Catalyst console the same way the site and
+`inquiries` were promoted. As of this writing `www.heurial.studio` still points to the Development deployment. Move the
+custom domain to Production first (see the checklist at the end), or the tracker will read a different `Inquiries`
+table than the one your visitors write to.
+
 ## 1. Create two tables (Catalyst console → CloudScale → Data Store)
 
 **`Leads`**: all optional, no public access:
@@ -132,3 +140,9 @@ When promoting:
 5. Verify the Mail sender in Production. Recreate the job pool and daily cron there.
 6. Redeploy the site. Send a `?src=referral` test inquiry, find it in `/admin`, dismiss it.
 7. Development rows (including test inquiries) don't move over by themselves. Copy any real ones you want to keep.
+8. Point the custom domain `www.heurial.studio` at the **Production** Slate deployment, then repeat the test from step 6
+   on `www.heurial.studio`. Until this is done, real visitors' inquiries keep landing in Development.
+
+Progress (2026-11-11, reported by ChatGPT): steps 1–6 are done for the site and `inquiries`. Production works at
+`heurial-mmoiyutd.onslate.com` and a referral test reached the Production `Inquiries` table. Step 8 (custom domain) is
+still open. `pipeline` and `daily-digest` aren't deployed anywhere yet.
