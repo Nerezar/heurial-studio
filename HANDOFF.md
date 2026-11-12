@@ -7,8 +7,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - `origin/main` = `fb0e919` (AI drafts, Twilio, inbound email, installable app and notifications). Not deployed:
   the live site is still `46d6c31`. `tracker-pwa` was fast-forwarded into main on 2026-11-12.
 - The iCloud checkout is ChatGPT's deployment copy, clean on `fb0e919` (2026-11-12). `CLAUDE.md` and `HANDOFF.md` are in git so both agents read the same notes.
-- Deploy is blocked on credentials (ChatGPT, 2026-11-12): no Anthropic key, Twilio values or inbound mail provider
-  yet. Catalyst Production settings are read-only; change Development, then promote.
+- Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
+  git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
+  Production is read-only: the table and settings reach it only by promotion.
+- Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
 ## Merged to main at `fb0e919`: installable app and notifications, not deployed
 - PWA: `public/admin/manifest.webmanifest`, icons in `public/admin/icons/`, `public/admin-sw.js` (scope `/admin`,
@@ -64,8 +66,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - AI drafts, Twilio and inbound email are built on `tracker-ai` but untested against the real services.
 
 ## Next task
-1. Deploy `fb0e919` when the user says so. It works without new credentials: each feature stays off until its settings exist. Cheapest first step: VAPID keys + `PushSubscriptions` table (free).
-2. Deploy needs an explicit go-ahead and credentials. Then: `ANTHROPIC_API_KEY`, Twilio values, inbound mail
-   provider, VAPID keys and the `PushSubscriptions` table on the pipeline function; install the app on a phone,
-   turn notifications on, and send a test.
-3. Later (if clients want it): the tracker as a delivered workflow per client, then a multi-tenant app.
+1. With the user's go-ahead: promote Development to Production (table + pipeline settings) and deploy `e4f0cf5`
+   (same app code as `fb0e919`). Each feature stays off until its settings exist.
+2. Then on a phone: install the app from `/admin`, Connections → Notifications → Turn on → Send test.
+3. Later, when the user wants to pay for them: Anthropic key, Twilio, inbound email provider.
+4. Later (if clients want it): the tracker as a delivered workflow per client, then a multi-tenant app.
