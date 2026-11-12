@@ -1,48 +1,38 @@
 import type { Metadata } from "next";
 import { Assistant } from "@/components/assistant";
-import { Icon } from "@/components/icon";
-import { Closing, PageIntro } from "@/components/shell";
+import { Chip, Closing, PageIntro } from "@/components/shell";
 import knowledge from "@/content/knowledge.json";
 import "../interiors.css";
 
 export const metadata: Metadata = {
   title: "Guides",
-  description: "Ask the HEURIAL Knowledge Assistant a question and read the public guides behind its answers."
+  description: "Ask the HEURIAL knowledge assistant a question and read the public guides behind its answers.",
 };
 
 export default function Resources() {
   return (
     <>
       <PageIntro
+        ghost="Guides"
         label="Guides"
         title="Ask a question."
-        description="This is the Heurial Knowledge Assistant demo. Ask about working with HEURIAL, and it answers from the public guides below, with links to its sources."
+        description="This knowledge assistant is a demo. Ask about working with HEURIAL, and it answers from the public guides below, with a link to the passage it used."
       />
-      <div className="wrap interior-band learn-console">
-        <div className="learn-side">
-          <p className="interior-label">Ask</p>
-          <p>The assistant looks up relevant passages in our public documents and links to the sources it uses.</p>
-          <a className="interior-index-link" href="#source-title">Browse the documents <Icon name="diagonal" size={15} /></a>
+      <section className="section is-tight" aria-label="Knowledge assistant">
+        <div className="wrap is-narrow">
+          <Assistant />
         </div>
-        <Assistant />
-      </div>
-      <section className="interior-paper" aria-labelledby="source-title">
-        <div className="wrap interior-band learn-library">
-          <div className="learn-library-index">
-            <p className="interior-label">Source library</p>
+      </section>
+      <section className="section" aria-labelledby="source-title">
+        <div className="wrap">
+          <header className="section-head">
+            <Chip color="violet">Source library</Chip>
             <h2 id="source-title">Read the sources</h2>
-            <nav aria-label="Source index">
-              {knowledge.map(({ id, title }) => (
-                <a className="interior-index-link" href={`#${id}`} key={id}>
-                  <span>{title}</span>
-                  <Icon name="diagonal" size={14} />
-                </a>
-              ))}
-            </nav>
-          </div>
-          <div className="learn-entries">
+            <p>Everything the assistant can say comes from these passages.</p>
+          </header>
+          <div className="source-grid">
             {knowledge.map(({ id, title, text }) => (
-              <article id={id} key={id}>
+              <article className="glass source-card" id={id} key={id}>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </article>

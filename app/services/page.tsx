@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Faq } from "@/components/faq";
-import { Icon } from "@/components/icon";
-import { Closing, PageIntro } from "@/components/shell";
+import { MotionLink } from "@/components/route-transition";
+import { Chip, Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
 export const metadata: Metadata = {
@@ -57,40 +57,41 @@ export default function HowItWorks() {
   return (
     <>
       <PageIntro
+        ghost="How"
         label="How it works"
         title="One annoying task, handled."
         description="We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff, $495 for my first three clients."
       />
-      <section className="interior-paper" aria-labelledby="steps-title">
-        <div className="wrap interior-band studio-catalog">
-          <div className="studio-directory">
-            <p className="interior-label">Three steps</p>
+      <section className="section is-tight" aria-labelledby="steps-title">
+        <div className="wrap">
+          <header className="section-head">
+            <Chip color="cyan">Three steps</Chip>
             <h2 id="steps-title">From call to handoff</h2>
-            <nav aria-label="Steps and questions">
-              {[...steps, ...questions].map(({ id, title }) => (
-                <a className="interior-index-link" href={`#${id}`} key={id}>
-                  <span>{title}</span>
-                  <Icon name="diagonal" size={14} />
-                </a>
-              ))}
-            </nav>
-          </div>
-          <div className="studio-entries">
+          </header>
+          <ol className="timeline">
             {steps.map(({ id, title, body, output }, index) => (
-              <article className="studio-entry studio-step" id={id} key={id}>
-                <div className="studio-step-head">
-                  <span className="studio-step-number" aria-hidden="true">{index + 1}</span>
+              <li id={id} key={id}>
+                <span className="step-orb" aria-hidden="true">{index + 1}</span>
+                <article className="glass timeline-card">
                   <h3><span className="sr-only">Step {index + 1}: </span>{title}</h3>
-                </div>
-                <div className="studio-description">
-                  <p>{body}</p>
-                  <p className="studio-output"><span className="interior-label">You get</span>{output}</p>
-                </div>
-              </article>
+                  <div>
+                    <p>{body}</p>
+                    <p className="you-get"><span>You get</span>{output}</p>
+                  </div>
+                </article>
+              </li>
             ))}
-            <h3 className="faq-title">Common questions</h3>
-            <Faq questions={questions} />
-          </div>
+          </ol>
+        </div>
+      </section>
+      <section className="section" aria-labelledby="faq-title">
+        <div className="wrap faq-layout">
+          <header className="section-head">
+            <Chip color="violet">Questions</Chip>
+            <h2 id="faq-title">Common questions</h2>
+            <p>Don’t see yours? <MotionLink href="/contact" className="text-link">Ask me directly</MotionLink>.</p>
+          </header>
+          <Faq questions={questions} />
         </div>
       </section>
       <Closing />

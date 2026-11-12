@@ -83,11 +83,11 @@ function catalystStore(url: string, key: string): InquiryStore {
           cache: "no-store",
         });
       } catch {
-        throw new RequestError(503, "We couldn’t reach the inquiry inbox. Please try again, or email hello@heurial.studio.");
+        throw new RequestError(503, "The inquiry inbox couldn’t be reached. Please try again, or email hello@heurial.studio.");
       }
       if (response.status !== 201) {
         console.error(`Inquiry inbox returned ${response.status}`);
-        throw new RequestError(503, "We couldn’t save your inquiry. Please try again, or email hello@heurial.studio.");
+        throw new RequestError(503, "Your message couldn’t be saved. Please try again, or email hello@heurial.studio.");
       }
     },
   };

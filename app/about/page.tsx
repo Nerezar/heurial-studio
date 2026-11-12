@@ -1,7 +1,8 @@
-import Image from "next/image";
 import type { Metadata } from "next";
-import { ButtonLink, Closing, PageIntro } from "@/components/shell";
+import Image from "next/image";
 import { Icon } from "@/components/icon";
+import { ButtonLink, Chip, Closing, PageIntro } from "@/components/shell";
+import { tone } from "@/lib/style";
 import "../interiors.css";
 
 export const metadata: Metadata = {
@@ -10,45 +11,52 @@ export const metadata: Metadata = {
 };
 
 const principles = [
-  { title: "Make the work visible.", body: "Start with a workflow, decision, or bottleneck. Learn who owns it, what tools it touches, and where a system could help." },
-  { title: "Prove it on real work.", body: "Choose examples that reflect what your team actually sees. Use them to check output quality, edge cases, and when a person should take over." },
-  { title: "Plan for ownership.", body: "Document how the system works, who responds to problems, and how your team can change it after launch." },
-];
+  { icon: "search", color: "signal", title: "Start with how it works today.", body: "Before I build anything, I map the task: who does it, which tools it touches, and where it slows down." },
+  { icon: "check", color: "green", title: "Prove it on real work.", body: "I test on real examples from your business, including the awkward ones, and add a human check wherever a mistake would matter." },
+  { icon: "book", color: "violet", title: "Leave you in control.", body: "You get a plain-English guide, so you know how it works, what to check, and how to change it later." },
+] as const;
 
 export default function About() {
   return (
     <>
       <PageIntro
+        ghost="About"
         label="About"
         title="AI built around how you work."
         description="I’m Uriyah Moore, founder of HEURIAL Studio. I help small businesses use AI in practical ways: less busywork, fewer dropped balls, and tools people actually use."
       />
-      <section className="interior-paper" aria-labelledby="about-method">
-        <div className="wrap interior-band about-editorial">
-          <figure className="identity-plate">
-            <Image src="/brand/emblem.svg" alt="Heurial’s tiger emblem" width={407} height={269} />
+      <section className="section is-tight" aria-labelledby="about-method">
+        <div className="wrap about-grid">
+          <figure className="glass is-glow glow-bottom identity-plate">
+            <Image src="/brand/emblem.svg" alt="HEURIAL’s tiger emblem" width={407} height={269} />
           </figure>
           <div className="about-principles">
-            <p className="interior-label">Our approach</p>
-            <h2 id="about-method">How I work</h2>
-            <ol>
-              {principles.map(({ title, body }) => (
-                <li key={title}>
-                  <span className="principle-mark" aria-hidden="true"><Icon name="check" size={16} /></span>
+            <header className="section-head">
+              <Chip>My approach</Chip>
+              <h2 id="about-method">How I work</h2>
+            </header>
+            <div className="note-list">
+              {principles.map(({ icon, color, title, body }) => (
+                <article className="note" key={title} style={tone(color)}>
+                  <span className="icon-tile"><Icon name={icon} size={20} /></span>
                   <div><h3>{title}</h3><p>{body}</p></div>
-                </li>
+                </article>
               ))}
-            </ol>
+            </div>
           </div>
         </div>
       </section>
-      <section className="wrap interior-band about-studio" aria-labelledby="about-studio-title">
-        <div>
-          <p className="interior-label">Heurial Studio</p>
-          <h2 id="about-studio-title">One task at a time.</h2>
-          <p>Start with one repetitive task. I’ll build a workflow for it in your own tools in about a week.</p>
+      <section className="section is-tight" aria-labelledby="about-studio-title">
+        <div className="wrap">
+          <div className="glass strip">
+            <div>
+              <Chip color="cyan">HEURIAL Studio</Chip>
+              <h2 id="about-studio-title">One task at a time.</h2>
+              <p>Start with one repetitive task. I’ll build a workflow for it in your own tools in about a week.</p>
+            </div>
+            <ButtonLink href="/services" secondary>See how it works</ButtonLink>
+          </div>
         </div>
-        <ButtonLink href="/services" secondary>See how it works</ButtonLink>
       </section>
       <Closing />
     </>

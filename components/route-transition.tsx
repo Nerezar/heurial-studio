@@ -22,8 +22,8 @@ const COVER_OUT = { duration: 620, easing: "cubic-bezier(.76, 0, .24, 1)" };
 const MAX_WAIT = 4000;
 
 // Blocks that rise into view. Nested matches are skipped so a card moves as one piece.
-const REVEAL = "h2, h3, p, li, blockquote, figure, article, .button, .panel, .dashboard";
-const REVEAL_SKIP = ".hero-field, dialog, [data-no-reveal]";
+const REVEAL = "h2, h3, p, li, figure, article, .button, .glass, .note";
+const REVEAL_SKIP = ".hero-visual, dialog, [data-no-reveal]";
 
 /** Page changes (cover wipe), sticky-header state, and scroll reveal for the whole site. */
 export function RouteMotion({ children }: { children: ReactNode }) {
@@ -45,6 +45,32 @@ export function RouteMotion({ children }: { children: ReactNode }) {
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
+  }, []);
+
+  // Cards light up under the pointer: pass its position to the card it is over.
+  useEffect(() => {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    let frame = 0;
+    let latest: PointerEvent | null = null;
+    const apply = () => {
+      frame = 0;
+      const target = latest?.target;
+      if (!(target instanceof Element)) return;
+      const card = target.closest<HTMLElement>(".glass, .note");
+      if (!card || !latest) return;
+      const box = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${latest.clientX - box.left}px`);
+      card.style.setProperty("--my", `${latest.clientY - box.top}px`);
+    };
+    const onMove = (event: PointerEvent) => {
+      latest = event;
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Tell a pending navigation that the new page has rendered.

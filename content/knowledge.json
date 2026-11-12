@@ -32,25 +32,19 @@
   {
     "id": "knowledge-assistants",
     "title": "Retrieval-based assistants",
-    "keywords": "rag retrieval assistant assistants knowledge document documents citations chatbot sources grounding grounded engineer engineering privacy",
+    "keywords": "rag retrieval assistant assistants knowledge document documents citations chatbot chatbots bot bots sources grounded faq faqs questions answers guides",
     "text": "A knowledge assistant looks up relevant passages from an approved set of documents before answering, and links to the passages it used. HEURIAL can build one around your own FAQs or guides so customers or staff stop asking the same questions. The assistant on this site is a demo that answers from these public guides."
   },
   {
-    "id": "revenue-diagnostics",
-    "title": "Revenue diagnostics",
-    "keywords": "crm diagnose diagnostics diagnostic analysis funnel revenue pipeline leads sales conversion bottlenecks reporting data",
-    "text": "Revenue diagnostics begins with the funnel definitions and data a business already uses. Useful inputs can include CRM deal stages, timestamps, outcomes, and handoff rules. HEURIAL uses the baseline to identify bottlenecks to validate with the people who own the work."
+    "id": "after-handoff",
+    "title": "After handoff",
+    "keywords": "after handoff support ongoing maintenance maintain fix fixes breaks break broken later changes change help guide days",
+    "text": "Every project includes 14 days of support after handoff, and a plain-English guide that explains how the workflow works and what to check. After that, you can ask HEURIAL for small fixes or another workflow."
   },
   {
-    "id": "managed-services",
-    "title": "Managed services",
-    "keywords": "managed manage maintenance maintain support ongoing operate monitoring after launch alerts scale",
-    "text": "Managed services can cover reviewing alerts, maintaining integrations, and reevaluating an AI system when the data or workflow changes. The operating scope defines who owns each responsibility, how issues are escalated, and how often the system is reviewed."
-  },
-  {
-    "id": "intelligence-demo",
-    "title": "Follow-up tracker demo guide",
-    "keywords": "demo dashboard intelligence interactive prototype metrics period overview signals sample dataset live real numbers customer results",
+    "id": "tracker-demo",
+    "title": "Follow-up tracker demo",
+    "keywords": "demo tracker follow-up followup follow leads pipeline board reminders daily email sample interactive try",
     "text": "The follow-up tracker is shown here as an interactive demo on made-up sample data. It lists new website inquiries, calls that need a status update and follow-ups that are due. A Pipeline board lets you drag leads between stages, and Email preview shows the daily summary. Nothing in the demo is saved or sent."
   }
 ]

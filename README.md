@@ -1,12 +1,10 @@
-# HEURIAL
+# HEURIAL Studio
 
-HEURIAL’s local site includes Home, Studio, Learn, About, Contact, and a follow-up tracker demo. It uses Next.js App Router, React, TypeScript, and a custom CSS design system. The demo (`public/demo/tracker`) runs entirely in the browser on made-up sample data; nothing is saved or sent.
-
-The [reference audit](REFERENCE-AUDIT.md) records the source observations behind the redesign. The homepage uses an original SVG wireframe and a scroll-linked workflow diagram. Page changes use browser view transitions when supported, and the site respects the system’s reduced-motion setting.
+The website for HEURIAL Studio: Home, How it works, Demos, About, Contact, and Guides. It uses Next.js (App Router), React, and TypeScript, with a hand-written dark "glass" design system and no UI framework.
 
 ## Run locally
 
-Use Node.js 20.9 or later. Open this directory in VS Code and run:
+Use Node.js 20.9 or later.
 
 ```sh
 npm ci
@@ -15,20 +13,45 @@ npm run dev
 
 Visit [http://127.0.0.1:3000](http://127.0.0.1:3000). Run `npm run lint` and `npm run build` to check the project. To run the production build locally, use `npm start`.
 
+Keep the project out of iCloud-synced folders (such as Documents with "Optimize Mac Storage" on). iCloud offloads `node_modules`, and builds then hang.
+
+## Where things are
+
+| Area | Files |
+| --- | --- |
+| Design system: colours, type, chips, buttons, glass cards, notes, forms | `app/globals.css` |
+| Navigation pill, footer, page intros, closing panel, page-change motion | `app/shell.css`, `components/shell.tsx`, `components/navigation.tsx`, `components/route-transition.tsx` |
+| Homepage sections | `app/page.tsx`, `app/home.css` |
+| Interior pages | `app/*/page.tsx`, `app/interiors.css` |
+| Hero ring animation | `components/system-field.tsx` |
+| "Watch one run" example workflow | `components/workflow-demo.tsx` |
+| Time-savings calculator | `components/savings-calculator.tsx` |
+| Follow-up tracker demo (runs in the browser on sample data) | `public/demo/tracker/`, `components/demo-frame.tsx` |
+
+Accent colours are the CSS variables `--signal`, `--cyan`, `--green`, `--amber`, `--red`, and `--violet`. A chip, note, or icon tile takes its colour from `--c` (see `lib/style.ts`).
+
+The site respects the system's reduced-motion setting: page-change wipes, scroll reveals, the ring, and the example workflow all stop or simplify.
+
+## Time-savings calculator
+
+The calculator is plain arithmetic on the visitor's own numbers. Its assumptions are constants at the top of `components/savings-calculator.tsx` and are shown to the visitor under the sliders: a $495 price, a workflow taking over about 70% of the task, and 50 working weeks a year. If you change a constant, change the sentence under the sliders too.
+
 ## Knowledge assistant
 
-The public passages live in [content/knowledge.json](content/knowledge.json). Edit the text, titles, and keywords there. Keep each ID unique and stable because the same records render the public source pages and power citations. Keep confidential material out of this file.
+The public passages live in [content/knowledge.json](content/knowledge.json). Edit the text, titles, and keywords there. Each record renders on the Guides page and powers the assistant's citations, so keep IDs unique. Keep confidential material out of this file.
 
-The default server route ranks passages by keyword overlap and returns the top matching excerpt or a no-match result. For optional model reranking, copy `.env.example` to `.env.local` and set `OLLAMA_MODEL` to an installed model. The server calls the [Ollama chat API](https://docs.ollama.com/api/chat) on the same machine at `127.0.0.1:11434`. It sends the question and up to four retrieved public excerpts. It accepts only IDs from those excerpts and renders the stored text and citations. If the model is unavailable or its response is invalid, keyword retrieval takes over. Keep Ollama bound to loopback.
+The server route ranks passages by keyword overlap and returns the best match, or says it found nothing. A short list of topics the guides don't cover (guarantees, testimonials, and similar) always returns "not found"; see `lib/retrieval.ts`. For optional model reranking, copy `.env.example` to `.env.local` and set `OLLAMA_MODEL` to an installed model. The server calls Ollama on the same machine at `127.0.0.1:11434`, sends the question and up to four retrieved excerpts, and only ever renders the stored text.
 
-## Inquiry inbox
+## Inquiries
 
-Development stores submitted inquiries at `.heurial-data/inquiries.jsonl`. This directory is ignored by Git and is outside the public assets folder. Each saved line contains the inquiry reference, time, and submitted fields. The form confirms receipt after the server writes and syncs the record. It does not send an email or trigger a notification.
+The contact form records how each visitor arrived (`?src=` tag, UTM tags, or the referring site) and saves it with their message. See `lib/attribution.ts`.
 
-For a production server, set `CONTACT_FILE` to an absolute file path in a private persistent volume writable by the app. Arrange for an operator to review that file and handle retention. Without a configured path, the production contact page reports the inbox as unavailable. Stateless hosting needs a persistent inquiry backend before enabling the form. API limits are process-local. Add rate limiting at the edge for public traffic.
+- **Live site:** set `INQUIRY_FUNCTION_URL` and `INQUIRY_FUNCTION_KEY`. Inquiries go to the Catalyst function in `catalyst/functions/inquiries`, which saves them in the Data Store. Setup steps are in [catalyst/SETUP.md](catalyst/SETUP.md).
+- **Development:** inquiries are appended to `.heurial-data/inquiries.jsonl`, which Git ignores.
+- **Neither configured:** the Contact page shows an email link instead of the form.
 
-## Site and branding
+API limits are per server process. Add rate limiting at the edge for public traffic.
 
-Set `SITE_URL` to the final HTTPS origin before building for a public domain. It controls the sitemap, robots policy, and browser form origin. Without it the site disallows crawler indexing. The original supplied horizontal SVG is preserved under `public/brand/`. The interface uses background-free SVGs that preserve the original tiger, wordmark, and signature paths.
+## Site address and branding
 
-See [Next.js installation and script reference](https://nextjs.org/docs/app/getting-started/installation) for framework details.
+Set `SITE_URL` to the final HTTPS origin before building for a public domain. It controls the sitemap, the robots policy, and the form origin check. Without it the site asks crawlers not to index it. The original supplied logo files are preserved under `public/brand/`.

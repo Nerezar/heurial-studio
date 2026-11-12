@@ -57,7 +57,6 @@ export function SystemField() {
     if (!canvas || !ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const signal = getComputedStyle(document.documentElement).getPropertyValue("--signal").trim() || "#8fb0ff";
 
     let scale = 1;
     const resize = () => {
@@ -111,16 +110,6 @@ export function SystemField() {
       paths.forEach((path, b) => { ctx.globalAlpha = alpha * BUCKET_ALPHA[b]; ctx.stroke(path); });
     };
 
-    const nearestOnTrack = (lat: number, pose: Pose, tx: number, ty: number) => {
-      let best = project(0, lat, pose);
-      let bestDist = Infinity;
-      for (let i = 0; i < 90; i++) {
-        const point = project(i / 90 * TURN, lat, pose);
-        const dist = (point.x - tx) ** 2 + (point.y - ty) ** 2;
-        if (dist < bestDist) { bestDist = dist; best = point; }
-      }
-      return best;
-    };
 
     function draw(t: number) {
       const reveal = reduced ? 1 : easeInOut(Math.min(1, t / 1.8));
@@ -186,18 +175,6 @@ export function SystemField() {
       ctx!.moveTo(419, 247); ctx!.lineTo(437, 247); ctx!.moveTo(428, 238); ctx!.lineTo(428, 256);
       ctx!.stroke();
 
-      // Callouts that stay attached to the signal lines as the ring turns.
-      if (reveal > .95) {
-        ctx!.globalAlpha = Math.min(1, (reveal - .95) * 20);
-        const a = nearestOnTrack(SIGNAL_TRACKS[0], pose, 232, 187);
-        const b = nearestOnTrack(SIGNAL_TRACKS[1], pose, 630, 340);
-        ctx!.beginPath();
-        ctx!.moveTo(a.x, a.y); ctx!.lineTo(a.x - 34, a.y - 32); ctx!.lineTo(a.x - 100, a.y - 32);
-        ctx!.moveTo(b.x, b.y); ctx!.lineTo(b.x + 34, b.y + 40); ctx!.lineTo(b.x + 116, b.y + 40);
-        ctx!.stroke();
-        ctx!.fillStyle = signal;
-        for (const p of [a, b]) { ctx!.beginPath(); ctx!.arc(p.x, p.y, 3, 0, TURN); ctx!.fill(); }
-      }
 
       // Pulses travelling along the signal contours.
       if (reveal >= 1) {
@@ -313,5 +290,5 @@ export function SystemField() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="field-svg field-canvas" aria-hidden="true" />;
+  return <canvas ref={canvasRef} className="field-canvas" aria-hidden="true" />;
 }
