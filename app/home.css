@@ -26,12 +26,8 @@
 .hero-facts li { display: inline-flex; align-items: center; gap: 7px; }
 .hero-facts svg { color: var(--signal); }
 
-.hero-visual {
-  position: relative;
-  margin-right: calc(var(--gutter) * -1 - 4vw);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 22%);
-  mask-image: linear-gradient(to right, transparent, #000 22%);
-}
+/* The canvas fades its own edges, so no CSS mask (a mask would repaint every frame). */
+.hero-visual { position: relative; margin-right: calc(var(--gutter) * -1 - 4vw); }
 .field-canvas { width: 100%; height: auto; aspect-ratio: 850 / 516; }
 
 .hero-tools {

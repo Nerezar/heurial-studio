@@ -3,50 +3,91 @@
 import { useEffect, useRef } from "react";
 
 /*
- * Homepage hero visual: a wireframe "system" ring.
- * Loose dots (scattered tasks) drift in from around the ring, get pulled onto
- * the blue signal contours, and travel around them as pulses: messy work
- * becoming a flowing workflow. Drawn on a canvas in an 850×516 design space.
+ * Homepage hero visual: messy work becoming a workflow.
+ * Tangled lines on the left (scattered tasks) are combed into neat parallel lanes
+ * as they pass a checkpoint. Small dots travel along them: grey and loose before
+ * the checkpoint, blue with a short trail after it.
+ *
+ * Built to stay smooth: the lines are drawn once to an offscreen layer and only
+ * the moving dots are drawn each frame. Design space is 850×516.
  */
 
 const W = 850;
 const H = 516;
-const CX = 428;
-const CY = 247;
-const TURN = Math.PI * 2;
-const LAT_COUNT = 23;
-const RIB_COUNT = 24;
-const SIGNAL_TRACKS = [4, 16].map((index) => index * TURN / LAT_COUNT);
-const MAX_PULSES = 14;
+const LINES = 13;
+const GAP = 17;
+const CY = 262;
+const START_X = 20;
+const GATE_X = 470;
+const END_X = 846;
+const SAMPLES = 420;
+const MAX_DOTS = 26;
+const INTRO = 1.6;
 
-type Pose = { t: number; spin: number; pitch: number };
-type Point = { x: number; y: number; d: number };
-type Pulse = { lon: number; track: number; speed: number; age: number; fade: number };
-type Inbound = { sx: number; sy: number; bend: number; lon: number; track: number; age: number; duration: number };
+type Line = { xs: Float32Array; ys: Float32Array; gateAt: number };
+type Dot = { line: number; s: number; speed: number; age: number };
 
-function project(lon: number, lat: number, pose: Pose): Point {
-  const r = 192 + 54 * Math.cos(lat) + 12 * Math.sin(3 * lon + pose.t * .35);
-  const a = lon + pose.spin;
-  const x = r * Math.cos(a);
-  const y = r * Math.sin(a);
-  const h = 51 * Math.sin(lat) + 24 * Math.sin(2 * lon + pose.t * .22);
-  const tiltAngle = 1.0 + pose.pitch;
-  const c = Math.cos(tiltAngle);
-  const s = Math.sin(tiltAngle);
-  const tilted = y * c - h * s;
-  const depth = y * s + h * c;
-  const p = 920 / (920 - depth);
-  return {
-    x: CX + (x * .96 + tilted * .28) * p,
-    y: CY + (tilted * .96 - x * .28) * p,
-    d: depth,
+// Small seeded random so the tangle looks the same on every visit.
+function seeded(seed: number) {
+  return () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
   };
 }
 
-const easeInOut = (v: number) => v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
-const easeOut = (v: number) => 1 - Math.pow(1 - v, 3);
-const depthBucket = (d: number) => Math.max(0, Math.min(3, Math.floor((d + 260) / 130)));
-const BUCKET_ALPHA = [.35, .6, .85, 1];
+const smooth = (v: number) => v * v * (3 - 2 * v);
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+function buildLines(): Line[] {
+  const rand = seeded(7);
+  return Array.from({ length: LINES }, (_, i) => {
+    const laneY = CY + (i - (LINES - 1) / 2) * GAP;
+    const startY = 40 + rand() * (H - 80);
+    const amp = 18 + rand() * 46;
+    const freq = .012 + rand() * .018;
+    const phase = rand() * Math.PI * 2;
+    const yAt = (x: number) => {
+      if (x >= GATE_X) return laneY;
+      const k = smooth(clamp01((x - START_X) / (GATE_X - 60 - START_X)));
+      const wobble = amp * (1 - k) * Math.sin(x * freq + phase) * (1 - smooth(clamp01((x - (GATE_X - 120)) / 120)));
+      return startY + (laneY - startY) * k + wobble;
+    };
+    // Sample densely, then resample by arc length so dots move at an even pace.
+    const dense = 1600;
+    const px: number[] = [];
+    const py: number[] = [];
+    const len: number[] = [0];
+    for (let j = 0; j <= dense; j++) {
+      const x = START_X + (END_X - START_X) * (j / dense);
+      px.push(x);
+      py.push(yAt(x));
+      if (j) len.push(len[j - 1] + Math.hypot(x - px[j - 1], py[j] - py[j - 1]));
+    }
+    const total = len[dense];
+    const xs = new Float32Array(SAMPLES + 1);
+    const ys = new Float32Array(SAMPLES + 1);
+    let gateAt = 0;
+    for (let k = 0, j = 0; k <= SAMPLES; k++) {
+      const target = (k / SAMPLES) * total;
+      while (j < dense - 1 && len[j + 1] < target) j++;
+      const f = (target - len[j]) / Math.max(1e-6, len[j + 1] - len[j]);
+      xs[k] = px[j] + (px[j + 1] - px[j]) * f;
+      ys[k] = py[j] + (py[j + 1] - py[j]) * f;
+      if (!gateAt && xs[k] >= GATE_X) gateAt = k / SAMPLES;
+    }
+    return { xs, ys, gateAt };
+  });
+}
+
+function pointAt(line: Line, s: number) {
+  const f = clamp01(s) * SAMPLES;
+  const i = Math.min(SAMPLES - 1, Math.floor(f));
+  const t = f - i;
+  return { x: line.xs[i] + (line.xs[i + 1] - line.xs[i]) * t, y: line.ys[i] + (line.ys[i + 1] - line.ys[i]) * t };
+}
+
+// Fade in from the left edge and out at the right, baked into everything drawn.
+const edgeFade = (x: number) => smooth(clamp01((x - START_X) / 150)) * (1 - smooth(clamp01((x - (END_X - 70)) / 70)));
 
 export function SystemField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,209 +98,175 @@ export function SystemField() {
     if (!canvas || !ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lines = buildLines();
+    const layer = document.createElement("canvas");
+    const lctx = layer.getContext("2d")!;
+    let dpr = 1;
 
-    let scale = 1;
+    // The still part of the picture: guides, tangled lines, lanes and the checkpoint.
+    function paintLayer() {
+      layer.width = canvas!.width;
+      layer.height = canvas!.height;
+      lctx.setTransform(canvas!.width / W, 0, 0, canvas!.height / H, 0, 0);
+      lctx.clearRect(0, 0, W, H);
+      lctx.lineCap = "round";
+      lctx.lineJoin = "round";
+
+      // Faint horizontal guides.
+      lctx.strokeStyle = "rgba(145,182,255,.07)";
+      lctx.lineWidth = .75;
+      lctx.beginPath();
+      for (let y = 46; y < H; y += 42) { lctx.moveTo(0, y); lctx.lineTo(W, y); }
+      lctx.stroke();
+
+      for (const [index, line] of lines.entries()) {
+        const signal = index === 3 || index === 9;
+        // Before the checkpoint: loose grey.
+        lctx.beginPath();
+        let k = 0;
+        lctx.moveTo(line.xs[0], line.ys[0]);
+        for (k = 1; line.xs[k] < GATE_X && k <= SAMPLES; k++) lctx.lineTo(line.xs[k], line.ys[k]);
+        lctx.strokeStyle = "rgba(180,184,193,.5)";
+        lctx.lineWidth = .9;
+        lctx.stroke();
+        // After: ordered lanes, two of them in signal blue.
+        lctx.beginPath();
+        lctx.moveTo(GATE_X, line.ys[k]);
+        lctx.lineTo(END_X, line.ys[k]);
+        lctx.strokeStyle = signal ? "rgba(120,160,245,1)" : "rgba(96,141,235,.5)";
+        lctx.lineWidth = signal ? 1.4 : .9;
+        lctx.stroke();
+      }
+
+      // The checkpoint: a bracket across the lanes.
+      const top = CY - ((LINES - 1) / 2) * GAP - 14;
+      const bottom = CY + ((LINES - 1) / 2) * GAP + 14;
+      lctx.strokeStyle = "#7d8694";
+      lctx.lineWidth = 1;
+      lctx.beginPath();
+      lctx.moveTo(GATE_X - 8, top); lctx.lineTo(GATE_X, top); lctx.lineTo(GATE_X, bottom); lctx.lineTo(GATE_X - 8, bottom);
+      lctx.moveTo(GATE_X, top - 26); lctx.lineTo(GATE_X, top - 8);
+      lctx.moveTo(GATE_X, bottom + 8); lctx.lineTo(GATE_X, bottom + 26);
+      lctx.stroke();
+
+      // Bake the left and right fade into the layer.
+      lctx.globalCompositeOperation = "destination-in";
+      const fade = lctx.createLinearGradient(0, 0, W, 0);
+      fade.addColorStop(0, "rgba(0,0,0,0)");
+      fade.addColorStop(150 / W, "rgba(0,0,0,1)");
+      fade.addColorStop((END_X - 70) / W, "rgba(0,0,0,1)");
+      fade.addColorStop(1, "rgba(0,0,0,0)");
+      lctx.fillStyle = fade;
+      lctx.fillRect(0, 0, W, H);
+      lctx.globalCompositeOperation = "source-over";
+    }
+
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = canvas.clientWidth || W;
-      scale = width / W;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(width * (H / W) * dpr);
-      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
-    };
-    resize();
-    const resizeObserver = new ResizeObserver(() => { resize(); if (reduced) draw(0); });
-    resizeObserver.observe(canvas);
-
-    // Pointer parallax (the hero field ignores pointer events, so listen on the window).
-    let targetSpin = 0;
-    let targetPitch = 0;
-    let pointerSpin = 0;
-    let pointerPitch = 0;
-    const onPointer = (event: PointerEvent) => {
-      targetSpin = (event.clientX / window.innerWidth - .5) * .22;
-      targetPitch = (event.clientY / window.innerHeight - .5) * .1;
-    };
-    if (!reduced) window.addEventListener("pointermove", onPointer, { passive: true });
-
-    const pulses: Pulse[] = SIGNAL_TRACKS.flatMap((_, track) =>
-      [0, 1, 2].map((i) => ({ lon: (i / 3) * TURN + track * .9, track, speed: .32 + i * .05, age: 0, fade: 1 })),
-    );
-    const inbound: Inbound[] = [];
-    let spawnTimer = .8;
-
-    const spawn = (pose: Pose) => {
-      const track = Math.random() < .5 ? 0 : 1;
-      const angle = Math.random() * TURN;
-      const dist = 300 + Math.random() * 120;
-      const lon = Math.random() * TURN;
-      inbound.push({
-        sx: CX + Math.cos(angle) * dist * 1.1,
-        sy: CY + Math.sin(angle) * dist * .55,
-        bend: (Math.random() - .5) * 160,
-        lon: lon - pose.spin,
-        track,
-        age: 0,
-        duration: 2.2 + Math.random() * 1.2,
-      });
+      paintLayer();
     };
 
-    const strokeBuckets = (paths: Path2D[], color: string, width: number, alpha: number) => {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      paths.forEach((path, b) => { ctx.globalAlpha = alpha * BUCKET_ALPHA[b]; ctx.stroke(path); });
+    const dots: Dot[] = [];
+    const flashes = new Float32Array(LINES);
+    let spawnTimer = 0;
+    const rand = seeded(42);
+    const addDot = (s = 0) => {
+      // Keep a dot from starting right on top of another on the same line.
+      let line = Math.floor(rand() * LINES);
+      for (let tries = 0; tries < 4 && dots.some((d) => d.line === line && d.s < .08); tries++) line = Math.floor(rand() * LINES);
+      dots.push({ line, s, speed: .085 + rand() * .035, age: 0 });
     };
-
 
     function draw(t: number) {
-      const reveal = reduced ? 1 : easeInOut(Math.min(1, t / 1.8));
-      const pose: Pose = { t, spin: t * .05 + pointerSpin, pitch: pointerPitch };
-      ctx!.clearRect(0, 0, W, H);
-      ctx!.lineCap = "round";
-      ctx!.lineJoin = "round";
-
-      // Ground plane and guides.
-      ctx!.globalAlpha = 1;
-      ctx!.strokeStyle = "#25292f";
-      ctx!.lineWidth = .75;
-      ctx!.beginPath();
-      for (let i = 0; i < 11; i++) {
-        const o = i * 40;
-        ctx!.moveTo(80 + o, 321 + o * .32); ctx!.lineTo(480 + o, 193 + o * .32);
-        ctx!.moveTo(80 + o, 321 - o * .32); ctx!.lineTo(480 + o, 449 - o * .32);
+      const w = canvas!.width;
+      const h = canvas!.height;
+      ctx!.setTransform(1, 0, 0, 1, 0, 0);
+      ctx!.clearRect(0, 0, w, h);
+      const reveal = reduced ? 1 : smooth(clamp01(t / INTRO));
+      if (reveal > 0) {
+        const sw = Math.max(1, Math.round(w * reveal));
+        ctx!.drawImage(layer, 0, 0, sw, h, 0, 0, sw, h);
       }
-      ctx!.stroke();
+      ctx!.setTransform(w / W, 0, 0, h / H, 0, 0);
 
-      // Wireframe, bucketed by depth so the back of the ring recedes.
-      const ribs = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
-      const contours = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
-      const signals = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
-      const segment = (paths: Path2D[], a: Point, b: Point) => {
-        const path = paths[depthBucket((a.d + b.d) / 2)];
-        path.moveTo(a.x, a.y);
-        path.lineTo(b.x, b.y);
-      };
-
-      const lonLimit = reveal * TURN;
-      for (let r = 0; r < RIB_COUNT; r++) {
-        const lon = r * TURN / RIB_COUNT;
-        if (lon > lonLimit) break;
-        let prev = project(lon, 0, pose);
-        for (let i = 1; i <= 26; i++) {
-          const next = project(lon, i / 26 * TURN, pose);
-          segment(ribs, prev, next);
-          prev = next;
-        }
+      // Checkpoint marks light up as dots pass through them.
+      for (let i = 0; i < LINES; i++) {
+        const y = CY + (i - (LINES - 1) / 2) * GAP;
+        ctx!.globalAlpha = (.35 + flashes[i] * .65) * reveal;
+        ctx!.fillStyle = flashes[i] > .05 ? "#c2d5ff" : "#4a5260";
+        ctx!.fillRect(GATE_X - 2.5, y - 2.5, 5, 5);
       }
-      for (let l = 0; l < LAT_COUNT; l++) {
-        const lat = l * TURN / LAT_COUNT;
-        const target = l === 4 || l === 16 ? signals : contours;
-        const steps = Math.max(1, Math.round(88 * reveal));
-        let prev = project(0, lat, pose);
-        for (let i = 1; i <= steps; i++) {
-          const next = project(i / 88 * TURN, lat, pose);
-          segment(target, prev, next);
-          prev = next;
-        }
-      }
-      strokeBuckets(ribs, "#8e929c", .65, .35);
-      strokeBuckets(contours, "#b4b8c1", .75, .48);
-      strokeBuckets(signals, "#608deb", 1.2, .95);
 
-      // Crosshairs.
-      ctx!.globalAlpha = .9;
-      ctx!.strokeStyle = "#626a76";
-      ctx!.lineWidth = .75;
-      ctx!.beginPath();
-      ctx!.moveTo(428, 65); ctx!.lineTo(428, 84); ctx!.moveTo(419, 75); ctx!.lineTo(437, 75);
-      ctx!.moveTo(419, 247); ctx!.lineTo(437, 247); ctx!.moveTo(428, 238); ctx!.lineTo(428, 256);
-      ctx!.stroke();
-
-
-      // Pulses travelling along the signal contours.
-      if (reveal >= 1) {
-        for (const pulse of pulses) {
-          const lat = SIGNAL_TRACKS[pulse.track];
-          const alpha = Math.min(1, pulse.age * 2) * pulse.fade;
-          if (alpha <= 0) continue;
-          let prev = project(pulse.lon - .42, lat, pose);
-          for (let i = 1; i <= 12; i++) {
-            const next = project(pulse.lon - .42 + i / 12 * .42, lat, pose);
-            ctx!.globalAlpha = alpha * (i / 12) * .9;
-            ctx!.strokeStyle = "#c2d5ff";
-            ctx!.lineWidth = 1 + i / 12 * 1.4;
-            ctx!.beginPath(); ctx!.moveTo(prev.x, prev.y); ctx!.lineTo(next.x, next.y); ctx!.stroke();
-            prev = next;
-          }
-          const head = prev;
-          const glow = ctx!.createRadialGradient(head.x, head.y, 0, head.x, head.y, 12);
-          glow.addColorStop(0, "rgba(194,213,255,.85)");
-          glow.addColorStop(1, "rgba(96,141,235,0)");
-          ctx!.globalAlpha = alpha * (.55 + .45 * BUCKET_ALPHA[depthBucket(head.d)]);
-          ctx!.fillStyle = glow;
-          ctx!.beginPath(); ctx!.arc(head.x, head.y, 12, 0, TURN); ctx!.fill();
+      for (const dot of dots) {
+        const line = lines[dot.line];
+        const head = pointAt(line, dot.s);
+        const alpha = edgeFade(head.x) * Math.min(1, dot.age * 3);
+        if (alpha <= .01) continue;
+        const past = dot.s > line.gateAt;
+        if (past) {
+          // A short trail behind the dot, fading out.
+          const tail = pointAt(line, Math.max(line.gateAt, dot.s - .09));
+          const trail = ctx!.createLinearGradient(tail.x, tail.y, head.x, head.y);
+          trail.addColorStop(0, "rgba(96,141,235,0)");
+          trail.addColorStop(1, "rgba(160,192,255,.9)");
+          ctx!.globalAlpha = alpha;
+          ctx!.strokeStyle = trail;
+          ctx!.lineWidth = 2;
+          ctx!.beginPath(); ctx!.moveTo(tail.x, tail.y); ctx!.lineTo(head.x, head.y); ctx!.stroke();
           ctx!.fillStyle = "#eef3ff";
-          ctx!.beginPath(); ctx!.arc(head.x, head.y, 1.8, 0, TURN); ctx!.fill();
-        }
-
-        // Loose tasks drifting in and snapping onto the ring.
-        for (const item of inbound) {
-          const progress = Math.min(1, item.age / item.duration);
-          const k = easeInOut(progress);
-          const end = project(item.lon, SIGNAL_TRACKS[item.track], pose);
-          const mx = (item.sx + end.x) / 2 + item.bend;
-          const my = (item.sy + end.y) / 2 - item.bend * .4;
-          const qx = (1 - k) ** 2 * item.sx + 2 * (1 - k) * k * mx + k * k * end.x;
-          const qy = (1 - k) ** 2 * item.sy + 2 * (1 - k) * k * my + k * k * end.y;
-          ctx!.globalAlpha = easeOut(Math.min(1, progress * 4)) * .9;
-          ctx!.fillStyle = progress > .7 ? "#c2d5ff" : "#9b9fa7";
-          ctx!.beginPath(); ctx!.arc(qx, qy, 1.6 + k, 0, TURN); ctx!.fill();
-          ctx!.globalAlpha *= .35;
+          ctx!.beginPath(); ctx!.arc(head.x, head.y, 2.4, 0, Math.PI * 2); ctx!.fill();
+        } else {
+          ctx!.globalAlpha = alpha * .9;
+          ctx!.fillStyle = "#b4b8c1";
+          ctx!.beginPath(); ctx!.arc(head.x, head.y, 2, 0, Math.PI * 2); ctx!.fill();
+          ctx!.globalAlpha = alpha * .3;
           ctx!.strokeStyle = "#9b9fa7";
           ctx!.lineWidth = .75;
-          ctx!.beginPath(); ctx!.arc(qx, qy, 5 + (1 - k) * 4, 0, TURN); ctx!.stroke();
+          ctx!.beginPath(); ctx!.arc(head.x, head.y, 5, 0, Math.PI * 2); ctx!.stroke();
         }
       }
       ctx!.globalAlpha = 1;
     }
 
     function step(dt: number, t: number) {
-      pointerSpin += (targetSpin - pointerSpin) * Math.min(1, dt * 2.5);
-      pointerPitch += (targetPitch - pointerPitch) * Math.min(1, dt * 2.5);
-      if (t < 1.8) return;
-      for (const pulse of pulses) { pulse.lon += pulse.speed * dt; pulse.age += dt; }
-      // Retire the oldest pulses when the ring gets busy.
-      const live = pulses.filter((p) => p.fade >= 1);
-      if (live.length > MAX_PULSES) live.slice(0, live.length - MAX_PULSES).forEach((p) => { p.fade = .999; });
-      for (const pulse of pulses) if (pulse.fade < 1) pulse.fade -= dt * .8;
-      for (let i = pulses.length - 1; i >= 0; i--) if (pulses[i].fade <= 0) pulses.splice(i, 1);
-
+      for (let i = 0; i < LINES; i++) flashes[i] = Math.max(0, flashes[i] - dt * 1.6);
+      if (t < INTRO * .7) return;
       spawnTimer -= dt;
-      if (spawnTimer <= 0) {
-        spawn({ t, spin: t * .05 + pointerSpin, pitch: pointerPitch });
-        spawnTimer = 1.1 + Math.random() * 1.1;
-      }
-      for (let i = inbound.length - 1; i >= 0; i--) {
-        const item = inbound[i];
-        item.age += dt;
-        if (item.age >= item.duration) {
-          inbound.splice(i, 1);
-          pulses.push({ lon: item.lon + .42, track: item.track, speed: .3 + Math.random() * .12, age: .5, fade: 1 });
-        }
+      if (spawnTimer <= 0 && dots.length < MAX_DOTS) { addDot(); spawnTimer = .38 + rand() * .3; }
+      for (let i = dots.length - 1; i >= 0; i--) {
+        const dot = dots[i];
+        const line = lines[dot.line];
+        const before = dot.s <= line.gateAt;
+        // Loose work ambles; once it's through the checkpoint it moves steadily and a little faster.
+        dot.s += dot.speed * (before ? 1 : 1.25) * dt;
+        dot.age += dt;
+        if (before && dot.s > line.gateAt) flashes[dot.line] = 1;
+        if (dot.s >= 1) dots.splice(i, 1);
       }
     }
+
+    resize();
+    const resizeObserver = new ResizeObserver(() => { resize(); if (reduced) draw(INTRO); });
+    resizeObserver.observe(canvas);
 
     if (reduced) {
-      draw(0);
+      for (let i = 0; i < 16; i++) { addDot(rand()); dots[i].age = 1; }
+      draw(INTRO);
       return () => resizeObserver.disconnect();
     }
+
+    // Start with a few dots already on their way so the scene never looks empty.
+    for (let i = 0; i < 10; i++) { addDot(.15 + rand() * .75); }
 
     let frame = 0;
     let visible = true;
     let clock = 0;
-    let last = performance.now();
+    let last = 0;
     const loop = (now: number) => {
-      const dt = Math.min(.05, (now - last) / 1000);
+      const dt = last ? Math.min(.034, (now - last) / 1000) : 0;
       last = now;
       clock += dt;
       step(dt, clock);
@@ -268,7 +275,7 @@ export function SystemField() {
     };
     const start = () => {
       if (frame || !visible || document.hidden) return;
-      last = performance.now();
+      last = 0;
       frame = requestAnimationFrame(loop);
     };
     const stop = () => { cancelAnimationFrame(frame); frame = 0; };
@@ -286,7 +293,6 @@ export function SystemField() {
       intersection.disconnect();
       resizeObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pointermove", onPointer);
     };
   }, []);
 
