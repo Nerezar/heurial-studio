@@ -21,16 +21,16 @@ Catalyst job "daily-digest" (every morning) ──▶ pipeline /digest ──▶
   scheduled job you set up.
 - The browser never sees the pipeline key. Search engines are told not to index `/admin`.
 
-Status (2026-11-11): built and tested locally against a stand-in back end. **Not deployed.** Nothing below has been run
-against Project-Rainfall.
+Status (2026-11-12): the site side (`/admin`, sign-in, `/api/admin/*`) is merged into `main` and tested end to end against
+the local stand-in back end. `pipeline` and `daily-digest` are deployed to Catalyst **Development** only. Until the
+variables in step 3 are set on the Slate app, `/admin` shows "Sign-in isn't set up yet" and nothing else is reachable.
 
 **Deploy this to Production.** Project-Rainfall's Production environment is active (site at
 `heurial-mmoiyutd.onslate.com`, with its own `Inquiries` table). Do every step below in Production, not Development:
 the tables, the functions, the variables, the Mail sender and the cron. The CLI's `catalyst deploy` only deploys to
 Development, so deploy there first, test, then promote to Production from the Catalyst console the same way the site and
-`inquiries` were promoted. As of this writing `www.heurial.studio` still points to the Development deployment. Move the
-custom domain to Production first (see the checklist at the end), or the tracker will read a different `Inquiries`
-table than the one your visitors write to.
+`inquiries` were promoted. `www.heurial.studio` already points to Production, so the tracker must read Production's
+`Inquiries` table: use the Production pipeline URL everywhere.
 
 ## 1. Create two tables (Catalyst console → CloudScale → Data Store)
 
@@ -110,7 +110,7 @@ it **daily** (for example 7:30 AM Central). Then run it once by hand and check y
 
 ## 5. Deploy the site and check
 
-Merge branch `tracker-cloud`, redeploy the Slate app, then:
+The site code is already on `main`. Redeploy the Slate app with the step 3 variables set, then:
 
 1. Open `/admin`. It should ask for your password.
 2. Sign in. The dashboard should load (empty at first) and show any website inquiries under **New from the website**.
@@ -143,6 +143,7 @@ When promoting:
 8. Point the custom domain `www.heurial.studio` at the **Production** Slate deployment, then repeat the test from step 6
    on `www.heurial.studio`. Until this is done, real visitors' inquiries keep landing in Development.
 
-Progress (2026-11-11, reported by ChatGPT): steps 1–6 are done for the site and `inquiries`. Production works at
-`heurial-mmoiyutd.onslate.com` and a referral test reached the Production `Inquiries` table. Step 8 (custom domain) is
-still open. `pipeline` and `daily-digest` aren't deployed anywhere yet.
+Progress: steps 1–6 are done for the site and `inquiries`, and step 8 is done (`www.heurial.studio` serves Production,
+reported by ChatGPT on 2026-11-11). For the tracker (2026-11-12): `pipeline` and `daily-digest` are deployed to
+Development only; the `Leads` and `TimeEntries` tables, the variables, the Mail sender and the cron still need to be set up
+in Production, and the functions promoted there.
