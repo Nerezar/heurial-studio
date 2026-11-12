@@ -122,7 +122,7 @@ export function WorkflowDemo() {
       <ol className="flow-steps">
         {STAGES.map(({ key, icon, label, note }, index) => (
           <li key={key} className={index === active ? "is-active" : index < active ? "is-done" : undefined}>
-            <button type="button" aria-current={index === active ? "step" : undefined} onClick={() => { setActive(index); setStopped(true); }}>
+            <button type="button" aria-label={label} aria-current={index === active ? "step" : undefined} onClick={() => { setActive(index); setStopped(true); }}>
               <span className="flow-step-icon"><Icon name={index < active ? "check" : icon} size={17} /></span>
               <span className="flow-step-text"><b>{label}</b><small>{note}</small></span>
               <span className="flow-progress" aria-hidden="true"><i key={`${active}-${playing}`} /></span>
