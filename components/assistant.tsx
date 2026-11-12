@@ -5,8 +5,9 @@ import { useState } from "react";
 import { Icon } from "./icon";
 
 const suggestions = [
-  "What services does HEURIAL offer?",
-  "How does revenue diagnostics work?",
+  "What does HEURIAL do?",
+  "What does it cost?",
+  "Is my data safe?",
   "How do I start a project?",
 ];
 
@@ -42,28 +43,26 @@ export function Assistant() {
     }
   }
 
-  return <section className="assistant panel" aria-labelledby="assistant-title">
-    <div className="panel-bar"><Icon name="spark" size={18} /><h2 id="assistant-title">Knowledge assistant</h2><span className="mono">PUBLIC DOCS</span></div>
-    <div className="panel-body">
-      <form method="post" action="/api/ask" onSubmit={submit}>
-        <label htmlFor="question">What would you like to know about HEURIAL?</label>
-        <div className="question-row"><input id="question" name="question" value={question} onChange={(event) => setQuestion(event.target.value)} required minLength={3} maxLength={400} placeholder="Ask about a service or the demo" /><button type="submit" className="button primary" disabled={busy}>Ask <Icon name="send" size={16} /></button></div>
-      </form>
-      <p className="form-note">Use public information only. Answers link to the passages they use.</p>
-      <div className="suggestions" aria-label="Suggested questions">{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={busy} onClick={() => {
-        setQuestion(suggestion);
-        document.getElementById("question")?.focus();
-      }}>{suggestion}</button>)}</div>
-      <div className="answer" role="status" aria-live="polite">
-        {busy && <p>Searching the HEURIAL documents…</p>}
-        {error && <p className="form-error">{error}</p>}
-        {answer && <>
-          <p className="asked"><strong>{asked}</strong></p>
-          {answer.passages.length ? answer.passages.map((passage, index) => <div className="passage" key={passage.href}>
-            <p>{passage.text}</p><a href={passage.href} className="text-link"><Icon name="book" size={15} /> [{index + 1}] {passage.title}</a>
-          </div>) : <p>I couldn’t find an answer in the HEURIAL documents. Try asking about services, the demo, or starting a project.</p>}
-        </>}
-      </div>
+  return <section className="assistant glass is-glow panel" aria-labelledby="assistant-title">
+    <div className="panel-head"><span className="icon-tile"><Icon name="spark" size={20} /></span><h2 id="assistant-title">Knowledge assistant</h2><span className="chip">Public guides</span></div>
+    <form method="post" action="/api/ask" onSubmit={submit}>
+      <label htmlFor="question">What would you like to know about HEURIAL?</label>
+      <div className="question-row"><input id="question" name="question" value={question} onChange={(event) => setQuestion(event.target.value)} required minLength={3} maxLength={400} placeholder="Ask about pricing, your data, or getting started" /><button type="submit" className="button primary" disabled={busy}>Ask <Icon name="send" size={16} /></button></div>
+    </form>
+    <div className="suggestions" aria-label="Suggested questions">{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={busy} onClick={() => {
+      setQuestion(suggestion);
+      document.getElementById("question")?.focus();
+    }}>{suggestion}</button>)}</div>
+    <p className="form-note">It only answers from the public guides on this page, and links to the passage it used.</p>
+    <div className="answer" role="status" aria-live="polite">
+      {busy && <p>Searching the guides…</p>}
+      {error && <p className="form-error">{error}</p>}
+      {answer && <>
+        <p className="asked"><strong>{asked}</strong></p>
+        {answer.passages.length ? answer.passages.map((passage, index) => <div className="passage" key={passage.href}>
+          <p>{passage.text}</p><a href={passage.href} className="text-link"><Icon name="book" size={15} /> [{index + 1}] {passage.title}</a>
+        </div>) : <p>I couldn’t find that in the guides. Try asking about pricing, your data, or getting started.</p>}
+      </>}
     </div>
   </section>;
 }

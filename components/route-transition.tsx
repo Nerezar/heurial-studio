@@ -22,8 +22,8 @@ const COVER_OUT = { duration: 620, easing: "cubic-bezier(.76, 0, .24, 1)" };
 const MAX_WAIT = 4000;
 
 // Blocks that rise into view. Nested matches are skipped so a card moves as one piece.
-const REVEAL = "h2, h3, p, li, blockquote, figure, article, .button, .panel, .dashboard";
-const REVEAL_SKIP = ".hero-field, dialog, [data-no-reveal]";
+const REVEAL = "h2, h3, p, li, figure, article, .button, .glass, .note";
+const REVEAL_SKIP = ".hero-visual, dialog, [data-no-reveal]";
 
 /** Page changes (cover wipe), sticky-header state, and scroll reveal for the whole site. */
 export function RouteMotion({ children }: { children: ReactNode }) {

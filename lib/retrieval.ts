@@ -1,7 +1,7 @@
 import knowledge from "@/content/knowledge.json";
 
 type Passage = (typeof knowledge)[number];
-const stopWords = new Set("a an and are can could does for from had has have he how i in is it me of on or our please she so some tell than that the their them there they this to us was we were what when where which who why will with would you your heurial".split(" "));
+const stopWords = new Set("a an and are can could do does for from had has have he how i in is it me of on or our please she so some tell than that the their them there they this to us was we were what when where which who why will with would you your heurial".split(" "));
 
 function words(text: string) {
   return [...new Set((text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((word) => word.length > 1 && !stopWords.has(word)))];
@@ -9,7 +9,10 @@ function words(text: string) {
 
 export function retrieve(question: string) {
   const query = words(question);
-  if (/\b(price|prices|pricing|cost|guarantee|guarantees|testimonial|testimonials|founder|founded|headquarters|salary)\b/i.test(question)) return [];
+  // A general question like "What does HEURIAL do?" has no topic words left: answer with the overview.
+  if (!query.length) return /\b(heurial|you|studio)\b/i.test(question) ? knowledge.filter(({ id }) => id === "company-overview") : [];
+  // Topics the guides say nothing about: answer 'not found' rather than a loosely matching passage.
+  if (/\b(guarantee|guarantees|testimonial|testimonials|headquarters|salary)\b/i.test(question)) return [];
   return knowledge.map((passage) => {
     const keywords = new Set(words(passage.keywords + " " + passage.title));
     const body = new Set(words(passage.text));
