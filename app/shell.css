@@ -151,6 +151,7 @@ html[data-scrolled] .site-header {
 .closing {
   display: block;
   padding: 0;
+  background: radial-gradient(ellipse 60% 120% at 88% 110%, rgb(52 120 246 / .22), transparent 70%), radial-gradient(ellipse 40% 90% at 0% 0%, rgb(145 182 255 / .07), transparent 70%);
   margin-top: clamp(60px, 9vw, 130px);
   border-top: 1px solid var(--line, #383838);
 }
