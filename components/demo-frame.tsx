@@ -6,7 +6,9 @@ const SRC = "/demo/tracker/index.html";
 // Catalyst adds X-Frame-Options: DENY to hosted files. srcDoc renders the
 // same local-only demo without navigating the frame to a blocked response.
 const DEMO_HTML = readFileSync(join(process.cwd(), "public/demo/tracker/index.html"), "utf8")
-  .replace("<head>", '<head><base href="/demo/tracker/">');
+  .replace("<head>", '<head><base href="/demo/tracker/">')
+  // Absolute script path: the browser can fetch it before it has read the <base> tag.
+  .replace('<script src="core.js"></script>', '<script src="/demo/tracker/core.js"></script>');
 
 /** The follow-up tracker demo, embedded. Sample data only; a full-screen link is always offered. */
 export function DemoFrame() {
