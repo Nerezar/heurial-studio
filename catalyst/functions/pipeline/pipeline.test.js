@@ -83,6 +83,11 @@ test("logs time, totals it per lead, and deletes time with the lead", async () =
   assert.equal(entries.body.length, 2);
   const data = await call(deps, "GET", "/data?range=30");
   assert.equal(data.body.leads[0].hours, 3.5);
+  // The dashboard data lists every time entry with its lead's name, for the Time page.
+  assert.equal(data.body.time.length, 2);
+  assert.deepEqual(data.body.time.map((t) => t.hours).sort(), [1, 2.5]);
+  assert.equal(data.body.time[0].lead_name, "Hours Co");
+  assert.equal(data.body.time[0].lead_id, id);
   await call(deps, "DELETE", `/time/${entries.body[0].id}`);
   assert.equal((await call(deps, "GET", `/leads/${id}/time`)).body.length, 1);
   await call(deps, "DELETE", `/leads/${id}`);

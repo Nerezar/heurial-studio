@@ -144,7 +144,17 @@ function summarize({ leadRows, timeRows, inquiryRows = [], range, today }) {
     .map(({ id, name, business, call_at, follow_up_at }) => ({ id, name, business, call_at, follow_up_at }));
   const inbox = inboxFromRows(inquiryRows);
 
-  return { leads, summary: agg(leads), previous, sources, weekly: Object.values(weeks), followups, stale, inbox, today };
+  // Every time entry, newest first, with the lead's name so the Time page can list them without extra requests.
+  const byId = Object.fromEntries(all.map((l) => [l.id, l]));
+  const time = timeRows.map((t) => {
+    const lead = byId[String(t.lead_id)];
+    return {
+      id: String(t.ROWID), lead_id: String(t.lead_id), lead_name: lead ? lead.name : "", lead_business: lead ? lead.business : "",
+      entry_date: t.entry_date || "", hours: Number(t.hours) || 0, note: t.note || "",
+    };
+  }).sort((a, b) => b.entry_date.localeCompare(a.entry_date) || b.id.localeCompare(a.id)).slice(0, 1000);
+
+  return { leads, summary: agg(leads), previous, sources, weekly: Object.values(weeks), followups, stale, inbox, time, today };
 }
 
 /** Website inquiries still waiting for a decision, oldest first. */

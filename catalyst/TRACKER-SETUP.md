@@ -32,6 +32,10 @@ Development, so deploy there first, test, then promote to Production from the Ca
 `inquiries` were promoted. `www.heurial.studio` already points to Production, so the tracker must read Production's
 `Inquiries` table: use the Production pipeline URL everywhere.
 
+**Redeploy `pipeline` after the tracker redesign.** The redesigned tracker's Time page reads a `time` list that
+`/data` now returns (`core.js`). Deploy the current `functions/pipeline` before promoting it. If an older version is
+running, the page still works: it falls back to one request per lead, which is slower.
+
 ## 1. Create two tables (Catalyst console → CloudScale → Data Store)
 
 **`Leads`**: all optional, no public access:
