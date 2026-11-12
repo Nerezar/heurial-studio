@@ -1,0 +1,71 @@
+# Handoff — 2026-11-12
+
+Durable rules are in `CLAUDE.md`. This file is current status only.
+
+## Where things stand
+- Folder: `~/heurial-dev/heurial-design`
+- `origin/main` = `fb0e919` (AI drafts, Twilio, inbound email, installable app and notifications). Not deployed:
+  the live site is still `46d6c31`. `tracker-pwa` was fast-forwarded into main on 2026-11-12.
+- The iCloud checkout is ChatGPT's deployment copy, clean on `fb0e919` (2026-11-12). `CLAUDE.md` and `HANDOFF.md` are in git so both agents read the same notes.
+- Deploy is blocked on credentials (ChatGPT, 2026-11-12): no Anthropic key, Twilio values or inbound mail provider
+  yet. Catalyst Production settings are read-only; change Development, then promote.
+
+## Merged to main at `fb0e919`: installable app and notifications, not deployed
+- PWA: `public/admin/manifest.webmanifest`, icons in `public/admin/icons/`, `public/admin-sw.js` (scope `/admin`,
+  notifications only, no caching). Apple meta tags in `public/admin/index.html`.
+- Web Push in the pipeline (`push.js`, `web-push` dep): `GET push/key`, `POST push/subscribe|unsubscribe|test`,
+  `POST notify/inquiry` (called by `lib/contact.ts` after an inquiry is saved). Incoming email/text also notifies.
+  Needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (`node scripts/make-vapid-keys.mjs`) and a `PushSubscriptions` table.
+- Tracker: Connections → This device (install, notifications on/off/test); notification links
+  `/admin#lead=ID&tab=messages` open that lead. Phone header layout fixed.
+- Checks: tsc, eslint, build, 19 function tests. Preview: manifest and worker served, worker registers, device rows,
+  deep link, phone layout. A real request reached Google's push service (fake address, rejected and cleaned up as
+  designed). Not tested: receiving a notification on a real phone (the preview browser blocks notifications).
+
+## Merged to main at `7f79e72`, not deployed
+- AI reply drafts: `catalyst/functions/pipeline/draft.js` (`claude-opus-5-5`, structured output, server-side refusal
+  fallback, refusals and errors become plain messages). `POST /leads/:id/draft` saves a `draft` message;
+  `POST /messages/:id/approve` sends (or logs) it. Nothing is ever sent without approval.
+- Twilio: `adapters.js` sends texts (`TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM`) and `POST /twilio/sms` takes incoming
+  texts with a signature check (`TWILIO_WEBHOOK_URL`). The old `MESSAGE_WEBHOOK_URL` still works as a fallback.
+- Inbound email: `POST /inbound/email?key=INBOUND_KEY` accepts Postmark JSON or Mailgun/SendGrid forms, strips quoted text.
+- Tracker: "Draft with AI" in the composer, editable draft card with Approve and send / Mark as sent / Discard,
+  Connections rows for texts, incoming texts, incoming email and AI drafts. Demo page returns a labelled sample draft.
+- Site proxy allows the two new routes; drafts get 45 s instead of 15 s.
+- Docs: `catalyst/TRACKER-SETUP.md` (settings table, Connecting messages, AI reply drafts).
+- Checks: tsc, eslint, `next build`, 16 function tests pass. Tried in the preview against the stand-in (sample
+  drafter, no API calls): draft, edit, approve and send, text draft, discard, Connections, demo page.
+- Not tested against real Anthropic, Twilio or a mail provider. Catalyst function timeout for a ~10-30 s draft is unverified.
+
+## Done and merged to main
+- Editorial site, blended with the earlier glass redesign.
+- Smooth 60fps hero animation.
+- Tracker workspace (Overview, Pipeline, Leads, Time, Messages, Connections) with a lead panel (Details, Messages, Time) and a Cmd/Ctrl+K command bar.
+- Messages back end: `/messages`, `/leads/:id/messages`, and `/inbound` with its own key. 10 function tests pass.
+- Polish pass from the ChatGPT review (readability, attention first, honest chart label).
+- HEURIAL brand: tiger emblem, wordmark, IBM Plex Sans.
+
+## Deployment status
+- A check on 2026-11-12 showed `www.heurial.studio` and `heurial-mmoiyutd.onslate.com` both serving the editorial home page and the new tracker files (`/tracker/tracker.js` contains the workspace and brand code). `/admin` returns a 307 redirect.
+- Not verified: whether the `pipeline` and `daily-digest` functions on Catalyst match this code, and whether they are on Production or Development only. Earlier notes said Development only.
+
+## Still to do for live use
+- Confirm or deploy the `pipeline` function.
+- Create the Messages table and the `phone` column on Leads (`catalyst/TRACKER-SETUP.md`).
+- The user runs the password-hash script.
+- Set the Slate environment variables.
+- Verify the Mail sender.
+- Set up the daily-digest cron.
+- Test `/admin` against live Catalyst. The tracker has only been tested against the local stand-in.
+
+## Unresolved
+- Never tested against live Catalyst.
+- Preview screenshots are low resolution.
+- AI drafts, Twilio and inbound email are built on `tracker-ai` but untested against the real services.
+
+## Next task
+1. Deploy `fb0e919` when the user says so. It works without new credentials: each feature stays off until its settings exist. Cheapest first step: VAPID keys + `PushSubscriptions` table (free).
+2. Deploy needs an explicit go-ahead and credentials. Then: `ANTHROPIC_API_KEY`, Twilio values, inbound mail
+   provider, VAPID keys and the `PushSubscriptions` table on the pipeline function; install the app on a phone,
+   turn notifications on, and send a test.
+3. Later (if clients want it): the tracker as a delivered workflow per client, then a multi-tenant app.
