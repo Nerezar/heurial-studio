@@ -130,7 +130,10 @@ html[data-scrolled] .site-header {
 .footer-end a:hover { color: var(--paper, #ecebe5); }
 
 .page-intro {
-  background: transparent;
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: radial-gradient(ellipse at 88% 0%, #20324f 0%, #111a2a 42%, #0c0e13 80%);
   padding: calc(var(--masthead-height) + clamp(70px, 10vw, 154px)) 0 clamp(42px, 7vw, 95px);
   border-bottom: 1px solid var(--line, #383838);
 }
@@ -151,6 +154,7 @@ html[data-scrolled] .site-header {
 .closing {
   display: block;
   padding: 0;
+  background: radial-gradient(ellipse 60% 120% at 88% 110%, rgb(52 120 246 / .22), transparent 70%), radial-gradient(ellipse 40% 90% at 0% 0%, rgb(145 182 255 / .07), transparent 70%);
   margin-top: clamp(60px, 9vw, 130px);
   border-top: 1px solid var(--line, #383838);
 }
@@ -298,3 +302,13 @@ html[data-scrolled] .site-header {
 @media (prefers-reduced-motion: reduce) {
   .masthead-dialog[open] { animation: none; }
 }
+
+/* Interior page intros share the homepage hero's depth: navy glow plus a faint grid that fades out. */
+.page-intro::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: linear-gradient(rgb(145 182 255 / .06) 1px, transparent 1px), linear-gradient(90deg, rgb(145 182 255 / .06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 85% 10%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse 70% 90% at 85% 10%, #000 0%, transparent 70%);
+}
+.page-intro .lede { color: #d5deec; }

@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Dashboard } from "@/components/dashboard";
+import { DemoFrame } from "@/components/demo-frame";
 import { Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
 export const metadata: Metadata = {
   title: "Demos",
-  description: "Try Heurial Intelligence, a sales dashboard demo with sample data that shows where deals get stuck.",
+  description: "Try the follow-up tracker I built for my own business, running on sample data: new inquiries, follow-up reminders, a pipeline board, and a daily email.",
 };
 
 const views = [
-  { label: "Overview", title: "Read the trend", description: "Compare closed revenue, open pipeline, and qualified-to-won conversion across sample periods." },
-  { label: "Pipeline", title: "Inspect the funnel", description: "See how deal counts narrow between qualification, discovery, proposal, and closed won." },
-  { label: "Signals", title: "Decide what to check", description: "Use sample observations to frame follow-up questions about conversion and handoffs." },
+  { label: "Needs you", title: "Start the day with a short list", description: "New website inquiries, calls that need a status, and follow-ups that are due, all in one place with one-click actions." },
+  { label: "Pipeline", title: "Drag a lead along", description: "Move a card between columns as a conversation progresses. A follow-up date is suggested for you." },
+  { label: "Daily email", title: "Get it without opening anything", description: "Click “Email preview” to see the summary I get each morning. In this demo, nothing is ever sent." },
 ];
 
 export default function Products() {
@@ -19,17 +19,17 @@ export default function Products() {
     <>
       <PageIntro
         label="Demo / Sample data"
-        title="Where do deals get stuck?"
-        description="Heurial Intelligence is a working demo of the kind of simple dashboard I can build. Every number below is sample data, not a real business."
+        title="Never lose track of a lead."
+        description="This is the follow-up tracker I built for my own business, running on made-up people. Add a lead, move a card, log some time. Nothing is saved or sent."
       />
-      <section className="wrap interior-band intelligence-lab" aria-label="Interactive revenue intelligence demo">
-        <div className="lab-heading"><p className="interior-label">Heurial Intelligence</p><p className="interior-label">Sample data</p></div>
-        <Dashboard />
-        <p className="lab-caption">Switch periods or views to explore the sample data.</p>
+      <section className="wrap interior-band intelligence-lab" aria-label="Interactive follow-up tracker demo">
+        <div className="lab-heading"><p className="interior-label">Follow-up tracker</p><p className="interior-label">Sample data</p></div>
+        <DemoFrame />
+        <p className="lab-caption">Everything here is a demo. Refresh the page to start over.</p>
       </section>
-      <section className="interior-paper" aria-labelledby="intelligence-guide">
+      <section className="interior-paper" aria-labelledby="demo-guide">
         <div className="wrap interior-band lab-guide">
-          <div><p className="interior-label">Demo guide</p><h2 id="intelligence-guide">Three ways to explore it.</h2></div>
+          <div><p className="interior-label">Demo guide</p><h2 id="demo-guide">Three things to try.</h2></div>
           <div className="lab-guide-entries">
             {views.map(({ label, title, description }) => (
               <article key={label}>

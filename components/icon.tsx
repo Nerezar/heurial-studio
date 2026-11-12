@@ -14,6 +14,15 @@ const paths: Record<string, ReactNode> = {
   book: <><path d="M6 4h13v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm-2 14c0-1.1.9-2 2-2h13M8 8h7" /></>,
   check: <path d="m5 12.5 4.5 4.5L19 7" />,
   send: <path d="m3 10 18-7-7 18-3-8-8-3Zm8 3L21 3" />,
+  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></>,
+  repeat: <><path d="M4 11V9a3 3 0 0 1 3-3h12m-3-3 3 3-3 3" /><path d="M20 13v2a3 3 0 0 1-3 3H5m3 3-3-3 3-3" /></>,
+  copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></>,
+  search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></>,
+  table: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M3 15h18M9 4v16" /></>,
+  bell: <><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20a2 2 0 0 0 4 0" /></>,
+  pause: <path d="M8 5v14M16 5v14" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  play: <path d="M7 5v14l12-7L7 5Z" />,
 };
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {

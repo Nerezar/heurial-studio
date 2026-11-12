@@ -2,13 +2,14 @@ import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
 import { ButtonLink, Closing } from "@/components/shell";
 import { SystemField } from "@/components/system-field";
+import { WorkflowDemo } from "@/components/workflow-demo";
 import "./home.css";
 
 const problems = [
-  { title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
-  { title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
-  { title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them." },
-  { title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them." },
+  { icon: "mail", title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
+  { icon: "repeat", title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
+  { icon: "copy", title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them." },
+  { icon: "search", title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them." },
 ];
 
 const steps = [
@@ -28,12 +29,12 @@ const deliverables = [
 
 const demos = [
   {
-    title: "Heurial Intelligence",
+    title: "Follow-up tracker",
     label: "Sample data",
-    icon: "chart",
-    description: "A sales dashboard demo that shows where deals get stuck. Switch views and periods to explore it.",
+    icon: "bell",
+    description: "The tool I use to keep every inquiry and follow-up from slipping. Move cards, check reminders, and preview the daily email.",
     href: "/products",
-    action: "Open the dashboard demo",
+    action: "Try the tracker demo",
   },
   {
     title: "Heurial Knowledge Assistant",
@@ -62,8 +63,13 @@ export default function Home() {
           <p>I help small businesses take repetitive work off their plate, like lead follow-up, answering the same questions, or copying information between tools, with small AI-powered workflows built around the tools they already use.</p>
           <div className="hero-actions">
             <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
-            <a href="#how-it-works" className="button secondary">See how it works <Icon name="arrow" size={17} /></a>
+            <a href="#example" className="button secondary">Watch an example <Icon name="arrow" size={17} /></a>
           </div>
+          <ul className="hero-facts">
+            <li><Icon name="check" size={15} />$495 founding price</li>
+            <li><Icon name="check" size={15} />About one week</li>
+            <li><Icon name="check" size={15} />You own everything</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -75,13 +81,25 @@ export default function Home() {
           <h2 id="problems-title">The busywork adds up.</h2>
         </header>
         <div className="home-problem-grid">
-          {problems.map(({ title, body }) => (
+          {problems.map(({ icon, title, body }) => (
             <article className="home-product-card" key={title}>
+              <span className="home-product-icon"><Icon name={icon} size={22} /></span>
               <h3>{title}</h3>
               <p className="home-product-description">{body}</p>
             </article>
           ))}
         </div>
+      </div>
+    </section>
+
+    <section className="home-flow" id="example" aria-labelledby="flow-title">
+      <div className="wrap">
+        <header className="home-flow-heading">
+          <p className="mono index-label">What I build</p>
+          <h2 id="flow-title">Watch one run.</h2>
+          <p>Here’s a typical workflow for a home-service business: a late-night inquiry gets a reply, a record, and a follow-up, and you only tap once.</p>
+        </header>
+        <WorkflowDemo />
       </div>
     </section>
 
