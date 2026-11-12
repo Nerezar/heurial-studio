@@ -32,7 +32,7 @@ Keep the project out of iCloud-synced folders (such as Documents with "Optimize 
 
 Accent colours are the CSS variables `--signal`, `--cyan`, `--green`, `--amber`, `--red`, and `--violet`. A chip, note, or icon tile takes its colour from `--c` (see `lib/style.ts`).
 
-The real tracker and the public demo are one app. Each page only supplies a data source and calls `HeurialTracker.start({ mode, api, auth })`: `/admin` uses the signed-in session and `/api/admin/*`; the demo uses made-up data in memory, with the same logic as the back end (`public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`, so keep the two in step). Change the interface once, in `public/tracker/`, and both get it.
+The tracker is a workspace: a strip of key figures, an Overview (revenue chart, follow-up schedule, what needs attention), Pipeline, Leads, Time, Messages and Connections, with a lead panel that docks beside whatever is open. The real tracker and the public demo are one app. Each page only supplies a data source and calls `HeurialTracker.start({ mode, api, auth })`: `/admin` uses the signed-in session and `/api/admin/*`; the demo uses made-up data in memory, with the same logic as the back end (`public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`, so keep the two in step). Change the interface once, in `public/tracker/`, and both get it.
 
 The site respects the system's reduced-motion setting: page-change wipes, scroll reveals, the ring, and the example workflow all stop or simplify.
 

@@ -164,3 +164,94 @@ test("summary math matches the local tracker", () => {
   assert.equal(d.weekly.length, 12);
   assert.equal(d.previous.booked, 0);
 });
+
+function inbound(deps, body, key) {
+  const raw = JSON.stringify(body);
+  const req = Readable.from([Buffer.from(raw)]);
+  Object.assign(req, { method: "POST", url: "/inbound", headers: key ? { "x-heurial-inbound-key": key } : {} });
+  return new Promise((resolve) => {
+    const res = {
+      writeHead(status) { this.status = status; },
+      end(payload) { resolve({ status: this.status, body: payload ? JSON.parse(payload) : null }); },
+    };
+    handle(req, res, deps);
+  });
+}
+
+test("messages: log, send through a connected service, and delete with the lead", async () => {
+  const { deps, store } = setup();
+  const delivered = [];
+  deps.sendMessage = { email: async (m) => { delivered.push(m); } };
+  const { body: { id } } = await call(deps, "POST", "/leads", { name: "Thread Co", email: "owner@thread.example", phone: "(555) 010-2030" });
+  assert.equal((await call(deps, "GET", `/leads/${id}`)).body.phone, "(555) 010-2030");
+
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: id, body: "  " })).status, 400);
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: "999", body: "Hi" })).status, 404);
+  const note = await call(deps, "POST", "/messages", { lead_id: id, channel: "note", direction: "in", body: "Prefers mornings" });
+  assert.equal(note.status, 201);
+  assert.equal(note.body.status, "logged"); // a note is always your own
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "call", direction: "in", body: "They called back" })).body.status, "received");
+
+  const sent = await call(deps, "POST", "/messages", { lead_id: id, channel: "email", subject: "Next step", body: "Here is the plan.", send: true });
+  assert.equal(sent.body.status, "sent");
+  assert.deepEqual(delivered.map((m) => [m.to, m.subject]), [["owner@thread.example", "Next step"]]);
+
+  // Texts aren't connected here: sending is refused, logging still works.
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "sms", body: "On my way", send: true })).status, 503);
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "sms", body: "On my way" })).body.status, "logged");
+  // A failed delivery saves nothing.
+  deps.sendMessage.email = async () => { throw new Error("mail down"); };
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "email", body: "Lost", send: true })).status, 502);
+
+  const thread = await call(deps, "GET", `/leads/${id}/messages`);
+  assert.deepEqual(thread.body.map((x) => x.channel), ["note", "call", "email", "sms"]);
+  const data = await call(deps, "GET", "/data?range=30");
+  assert.equal(data.body.messages.length, 4);
+  assert.equal(data.body.messages[0].lead_name, "Thread Co");
+  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false });
+
+  await call(deps, "DELETE", `/messages/${thread.body[0].id}`);
+  assert.equal((await call(deps, "GET", `/leads/${id}/messages`)).body.length, 3);
+  await call(deps, "DELETE", `/leads/${id}`);
+  assert.equal((await store.list("Messages")).length, 0);
+});
+
+test("inbound: needs its own key, and matches a lead by email or phone", async () => {
+  const { deps } = setup();
+  const { body: { id } } = await call(deps, "POST", "/leads", { name: "Reply Co", email: "Pat@Reply.example", phone: "+1 (555) 010-7788" });
+  assert.equal((await inbound(deps, { from: "pat@reply.example", body: "Yes" }, "anything")).status, 401); // not set up
+  deps.inboundKey = "inbound-key-0123456789";
+  assert.equal((await inbound(deps, { from: "pat@reply.example", body: "Yes" }, KEY)).status, 401); // the site's key is not accepted here
+  assert.equal((await inbound(deps, { from: "", body: "Yes" }, deps.inboundKey)).status, 400);
+
+  const email = await inbound(deps, { channel: "email", from: "Pat <pat@reply.example>", subject: "Re: plan", body: "Sounds good." }, deps.inboundKey);
+  assert.deepEqual(email.body, { ok: true, matched: true });
+  const text = await inbound(deps, { channel: "sms", from: "5550107788", body: "Running late" }, deps.inboundKey);
+  assert.equal(text.body.matched, true);
+  const stranger = await inbound(deps, { from: "nobody@else.example", body: "Hello?" }, deps.inboundKey);
+  assert.equal(stranger.body.matched, false);
+
+  const thread = (await call(deps, "GET", `/leads/${id}/messages`)).body;
+  assert.deepEqual(thread.map((x) => [x.channel, x.direction, x.status]), [["email", "in", "received"], ["sms", "in", "received"]]);
+  const data = (await call(deps, "GET", "/data?range=30")).body;
+  assert.equal(data.messages.filter((x) => !x.lead_id).length, 1); // the stranger's message is kept, unmatched
+  assert.equal(data.services.inbound, true);
+});
+
+test("works before the Messages table exists, and with a Leads table that has no phone column", async () => {
+  const { deps, store } = setup();
+  const list = store.list.bind(store);
+  store.list = async (table) => { if (table === "Messages") throw new Error("table not found"); return list(table); };
+  const insert = store.insert.bind(store);
+  store.insert = async (table, row) => { if (table === "Leads" && "phone" in row) throw new Error("no such column: phone"); return insert(table, row); };
+
+  const made = await call(deps, "POST", "/leads", { name: "Early Co" });
+  assert.equal(made.status, 201);
+  assert.equal((await call(deps, "PATCH", `/leads/${made.body.id}`, { name: "Early Co", phone: "" })).status, 200);
+  const data = await call(deps, "GET", "/data?range=30");
+  assert.equal(data.status, 200);
+  assert.deepEqual(data.body.messages, []);
+  assert.equal(data.body.services.messages, false);
+  assert.equal((await call(deps, "POST", "/messages", { lead_id: made.body.id, body: "Note" })).status, 503);
+  assert.equal((await call(deps, "DELETE", `/leads/${made.body.id}`)).status, 200);
+});

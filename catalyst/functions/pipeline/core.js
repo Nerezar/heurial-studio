@@ -31,6 +31,7 @@ function cleanLead(body, partial = false, today) {
   if (!partial || has("name")) { out.name = text(body.name, 120); if (!out.name) throw new Bad("Name is required."); }
   if (!partial || has("business")) out.business = text(body.business, 120);
   if (!partial || has("email")) out.email = text(body.email, 254);
+  if (!partial || has("phone")) out.phone = text(body.phone, 40);
   if (!partial || has("source")) out.source = text(body.source, 60) || "Other";
   if (!partial || has("status")) {
     out.status = body.status ?? "booked";
@@ -71,6 +72,7 @@ function leadFromRow(row, hoursByLead = {}) {
     name: row.name || "",
     business: row.business || "",
     email: row.email || "",
+    phone: row.phone || "",
     source: row.source || "Other",
     status: STATUSES.includes(row.status) ? row.status : "booked",
     booked_at: row.booked_at || "",
@@ -102,7 +104,7 @@ function agg(rows) {
 }
 
 /** Everything the dashboard needs, computed from all leads, time entries and inquiries. */
-function summarize({ leadRows, timeRows, inquiryRows = [], range, today }) {
+function summarize({ leadRows, timeRows, inquiryRows = [], messageRows = [], range, today }) {
   if (!["7", "30", "90", "365", "all"].includes(String(range))) throw new Bad("Bad range.");
   const hours = hoursByLead(timeRows);
   const all = leadRows.map((r) => leadFromRow(r, hours));
@@ -154,7 +156,13 @@ function summarize({ leadRows, timeRows, inquiryRows = [], range, today }) {
     };
   }).sort((a, b) => b.entry_date.localeCompare(a.entry_date) || b.id.localeCompare(a.id)).slice(0, 1000);
 
-  return { leads, summary: agg(leads), previous, sources, weekly: Object.values(weeks), followups, stale, inbox, time, today };
+  // Recent messages, newest first. Long ones are shortened here; a lead's own thread has them in full.
+  const messages = messageRows.map((r) => messageFromRow(r, byId))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))
+    .slice(0, 300)
+    .map((x) => (x.body.length > 600 ? { ...x, body: `${x.body.slice(0, 600)}…` } : x));
+
+  return { leads, summary: agg(leads), previous, sources, weekly: Object.values(weeks), followups, stale, inbox, time, messages, today };
 }
 
 /** Website inquiries still waiting for a decision, oldest first. */
@@ -191,6 +199,74 @@ function leadFromInquiry(inquiry, today) {
     value_cents: 0,
     notes: text(`From the website form${detail}:\n${inquiry.message || ""}`, 4000),
     inquiry_id: text(inquiry.inquiry_id, 36),
+  };
+}
+
+// ---------- Messages ----------
+// One log per lead for notes, calls, emails and texts. A message is either written here ("out") or received ("in").
+// "logged" means it was recorded but not sent from the tracker; "sent" means a connected service delivered it.
+
+const CHANNELS = ["note", "email", "sms", "call"];
+
+function cleanMessage(body, nowIso) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new Bad("Invalid request.");
+  const channel = body.channel ?? "note";
+  if (!CHANNELS.includes(channel)) throw new Bad("Unknown message type.");
+  const lead_id = String(body.lead_id ?? "");
+  if (!ID.test(lead_id)) throw new Bad("Unknown lead.");
+  const content = text(body.body, 4000);
+  if (!content) throw new Bad("Write the message first.");
+  // A note is always your own. Calls, emails and texts can be logged in either direction.
+  const direction = channel !== "note" && body.direction === "in" ? "in" : "out";
+  return {
+    lead_id, direction, channel, subject: channel === "email" ? text(body.subject, 200) : "", body: content,
+    status: direction === "in" ? "received" : "logged", sender: "", created_at: nowIso,
+  };
+}
+
+/** A message posted by an outside service (an email or text provider). The handler matches it to a lead. */
+function cleanInbound(body, nowIso) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new Bad("Invalid request.");
+  const channel = body.channel === "sms" ? "sms" : "email";
+  const sender = text(body.from, 254);
+  const content = text(body.body, 4000);
+  if (!sender) throw new Bad("from is required.");
+  if (!content) throw new Bad("body is required.");
+  return {
+    lead_id: "", direction: "in", channel, subject: channel === "email" ? text(body.subject, 200) : "", body: content,
+    status: "received", sender, created_at: nowIso,
+  };
+}
+
+const digits = (s) => String(s || "").replace(/\D/g, "");
+
+/** Find the lead a message came from: by email address, or by the last 10 digits of a phone number. */
+function matchLead(leadRows, channel, sender) {
+  if (channel === "sms") {
+    const want = digits(sender).slice(-10);
+    if (want.length < 7) return null;
+    return leadRows.find((l) => digits(l.phone).slice(-10) === want) || null;
+  }
+  const raw = String(sender).trim().toLowerCase();
+  const inBrackets = raw.match(/<([^>]+)>/); // "Name <address@example.com>"
+  const address = (inBrackets ? inBrackets[1] : raw).trim();
+  return leadRows.find((l) => String(l.email || "").trim().toLowerCase() === address) || null;
+}
+
+function messageFromRow(row, leadsById = {}) {
+  const lead = row.lead_id ? leadsById[String(row.lead_id)] : null;
+  return {
+    id: String(row.ROWID),
+    lead_id: row.lead_id ? String(row.lead_id) : "",
+    lead_name: lead ? lead.name : "",
+    lead_business: lead ? lead.business : "",
+    direction: row.direction === "in" ? "in" : "out",
+    channel: CHANNELS.includes(row.channel) ? row.channel : "note",
+    subject: row.subject || "",
+    body: row.body || "",
+    status: row.status || "logged",
+    sender: row.sender || "",
+    created_at: row.created_at || "",
   };
 }
 
@@ -250,5 +326,6 @@ ${trackerUrl ? `<p style="margin:16px 0 0"><a href="${esc(trackerUrl)}" style="d
 }
 
 module.exports = {
-  Bad, STATUSES, cleanLead, cleanTime, leadFromRow, summarize, inboxFromRows, leadFromInquiry, buildDigest, todayIn, addDays, ID,
+  Bad, STATUSES, CHANNELS, cleanLead, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
+  inboxFromRows, leadFromInquiry, buildDigest, todayIn, addDays, ID,
 };

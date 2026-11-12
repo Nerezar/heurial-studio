@@ -58,4 +58,7 @@ const sent = [];
 http.createServer((req, res) => handle(req, res, {
   expectedKey: key, store, timeZone: "America/Chicago", digestTo: "owner@example.com", trackerUrl: "http://127.0.0.1:3007/admin",
   sendMail: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject}`); },
+  // Email "sends" by printing, so the send path can be tried locally. Texts stay unconnected to show that state.
+  sendMessage: { email: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject || "(no subject)"}`); } },
+  inboundKey: process.env.INBOUND_KEY || "",
 })).listen(4600, "127.0.0.1", () => console.log("pipeline dev server on http://127.0.0.1:4600/"));

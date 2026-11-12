@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>HEURIAL tracker (demo)</title>
+<title>HEURIAL tracker (sample data)</title>
 <script>
   // Apply the saved theme before first paint so the page never flashes the wrong colours.
   let t = "dark"; try { t = localStorage.getItem("hp-theme") || "dark"; } catch {}
@@ -37,8 +37,8 @@ const demo = (() => {
     mk("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 44, 495),
     mk("Greg Haldane", "Haldane Roofing", "Referral", "paid", 33, 1200, { follow_up_at: day(10), follow_up_note: "Ask for a testimonial" }),
     mk("Aisha Rahman", "Rahman Dental", "Referral", "paid", 27, 1500, { follow_up_at: day(14), follow_up_note: "Ask about a second workflow" }),
-    mk("Ben Carter", "Carter Law Office", "Website", "proposal", 21, 1500, { follow_up_at: day(-3), follow_up_note: "Check if he's reviewed the proposal" }),
-    mk("Elena Petrova", "Petrova Bookkeeping", "Partner", "proposal", 13, 1200, { follow_up_at: day(0), follow_up_note: "Send the revised scope" }),
+    mk("Ben Carter", "Carter Law Office", "Website", "proposal", 21, 1500, { follow_up_at: day(-3), follow_up_note: "Check if he's reviewed the proposal", phone: "(555) 010-0142" }),
+    mk("Elena Petrova", "Petrova Bookkeeping", "Partner", "proposal", 13, 1200, { follow_up_at: day(0), follow_up_note: "Send the revised scope", phone: "(555) 010-0177" }),
     mk("Chris Doyle", "Doyle Electric", "Instagram", "held", 9, 0, { follow_up_at: day(2), follow_up_note: "Ask about the booking inbox" }),
     mk("Mia Fontaine", "Fontaine Yoga", "Website", "held", 8, 0, { follow_up_at: day(5), follow_up_note: "Share a sample FAQ assistant" }),
     mk("Owen Pike", "Pike Landscaping", "Cold outreach", "lost", 18, 0),
@@ -59,10 +59,21 @@ const demo = (() => {
     { ROWID: id(), inquiry_id: "demo-0002", created_at: ago(26), name: "Sam Ortiz", email: "sam@example.com", company: "Ortiz HVAC", source: "Search",
       source_detail: "came from google.com", status: "new", message: "We answer the same ten questions every day on the phone." },
   ];
-  return { today, leads, time, inquiries, id };
+  const when = (daysAgo, hour) => { const d = new Date(Date.now() - daysAgo * 864e5); d.setHours(hour, 15, 0, 0); return d.toISOString(); };
+  const of = (name) => leads.find((l) => l.name === name).ROWID;
+  const msg = (name, direction, channel, subject, body, daysAgo, hour) => ({
+    ROWID: id(), lead_id: of(name), direction, channel, subject, body, status: direction === "in" ? "received" : "logged", sender: "", created_at: when(daysAgo, hour),
+  });
+  const messages = [
+    msg("Ben Carter", "out", "email", "Proposal for the intake workflow", "Hi Ben, the proposal is attached. Happy to walk through it whenever suits.", 6, 10),
+    msg("Ben Carter", "in", "email", "Re: Proposal for the intake workflow", "Thanks. Give me until next week to look it over with my partner.", 5, 14),
+    msg("Ben Carter", "out", "note", "", "His partner makes the final call. Follow up after they've met.", 5, 15),
+    msg("Elena Petrova", "out", "call", "", "Walked through the scope. She wants the monthly report left out of phase one.", 2, 11),
+    msg("Aisha Rahman", "in", "sms", "", "The reminders are working great. Thank you!", 1, 9),
+  ];
+  return { today, leads, time, inquiries, messages, id };
 })();
 
-const demoStore = { Leads: demo.leads, TimeEntries: demo.time, Inquiries: demo.inquiries };
 const bad = (message, status = 400) => Object.assign(new Error(message), { status });
 
 async function api(path, method = "GET", body) {
@@ -71,18 +82,21 @@ async function api(path, method = "GET", body) {
   const p = url.pathname.replace(/^\/+|\/+$/g, "");
   const today = demo.today;
   const find = (rows, id) => rows.find((r) => String(r.ROWID) === String(id));
-  const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries });
+  const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries, messageRows: demo.messages });
+  // Nothing is connected on this page, and it says so.
+  const services = { messages: true, digest: false, email: false, sms: false, inbound: false };
   const wrap = (fn) => { try { return fn(); } catch (e) { if (e instanceof core.Bad) throw bad(e.message, e.status); throw e; } };
   let m;
 
-  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), demo: true }));
+  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true }));
   if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.cleanLead(body, false, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
   if ((m = p.match(/^leads\/(\d+)$/))) {
     const row = find(demo.leads, m[1]);
     if (!row) throw bad("Not found.", 404);
     if (method === "GET") { const hours = demo.time.filter((t) => String(t.lead_id) === m[1]).reduce((s, t) => s + t.hours, 0); return core.leadFromRow(row, { [m[1]]: hours }); }
     if (method === "PATCH") { Object.assign(row, wrap(() => core.cleanLead(body, true, today))); return { ok: true }; }
-    if (method === "DELETE") { demo.leads.splice(demo.leads.indexOf(row), 1); for (let i = demo.time.length - 1; i >= 0; i--) if (String(demo.time[i].lead_id) === m[1]) demo.time.splice(i, 1); return { ok: true }; }
+    if (method === "DELETE") { demo.leads.splice(demo.leads.indexOf(row), 1); for (let i = demo.time.length - 1; i >= 0; i--) if (String(demo.time[i].lead_id) === m[1]) demo.time.splice(i, 1);
+      for (let i = demo.messages.length - 1; i >= 0; i--) if (String(demo.messages[i].lead_id) === m[1]) demo.messages.splice(i, 1); return { ok: true }; }
   }
   if ((m = p.match(/^leads\/(\d+)\/time$/)) && method === "GET")
     return demo.time.filter((t) => String(t.lead_id) === m[1]).map((t) => ({ id: t.ROWID, lead_id: t.lead_id, entry_date: t.entry_date, hours: t.hours, note: t.note || "" })).sort((a, b) => b.entry_date.localeCompare(a.entry_date));
@@ -92,6 +106,17 @@ async function api(path, method = "GET", body) {
     demo.time.push({ ...e, ROWID: demo.id() }); return { ok: true };
   });
   if ((m = p.match(/^time\/(\d+)$/)) && method === "DELETE") { const i = demo.time.findIndex((t) => String(t.ROWID) === m[1]); if (i >= 0) demo.time.splice(i, 1); return { ok: true }; }
+  if ((m = p.match(/^leads\/(\d+)\/messages$/)) && method === "GET")
+    return demo.messages.filter((x) => String(x.lead_id) === m[1]).map((x) => core.messageFromRow(x)).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  if (method === "POST" && p === "messages") return wrap(() => {
+    const row = core.cleanMessage(body, new Date().toISOString());
+    if (!find(demo.leads, row.lead_id)) throw bad("Not found.", 404);
+    if (body.send === true) throw bad("Nothing is sent from this sample-data page.", 503);
+    const saved = { ...row, ROWID: demo.id() };
+    demo.messages.push(saved);
+    return { id: saved.ROWID, status: saved.status };
+  });
+  if ((m = p.match(/^messages\/(\d+)$/)) && method === "DELETE") { const i = demo.messages.findIndex((x) => String(x.ROWID) === m[1]); if (i >= 0) demo.messages.splice(i, 1); return { ok: true }; }
   if ((m = p.match(/^inbox\/(\d+)\/(convert|dismiss)$/)) && method === "POST") {
     const q = find(demo.inquiries, m[1]);
     if (!q) throw bad("Not found.", 404);

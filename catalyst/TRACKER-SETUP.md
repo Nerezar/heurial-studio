@@ -32,11 +32,11 @@ Development, so deploy there first, test, then promote to Production from the Ca
 `inquiries` were promoted. `www.heurial.studio` already points to Production, so the tracker must read Production's
 `Inquiries` table: use the Production pipeline URL everywhere.
 
-**Redeploy `pipeline` after the tracker redesign.** The redesigned tracker's Time page reads a `time` list that
-`/data` now returns (`core.js`). Deploy the current `functions/pipeline` before promoting it. If an older version is
-running, the page still works: it falls back to one request per lead, which is slower.
+**Deploy the current `functions/pipeline`.** The tracker reads three things from `/data` that older versions don't
+return: `time` (every time entry), `messages` (the message log) and `services` (what is connected). With an older
+function the tracker still opens, but the Time page is slower and Connections can't show what's connected.
 
-## 1. Create two tables (Catalyst console → CloudScale → Data Store)
+## 1. Create three tables (Catalyst console → CloudScale → Data Store)
 
 **`Leads`**: all optional, no public access:
 
@@ -54,6 +54,7 @@ running, the page still works: it falls back to one request per lead, which is s
 | `value_cents`    | BigInt        |
 | `notes`          | Text          |
 | `inquiry_id`     | Var Char 36   |
+| `phone`          | Var Char 40   |
 
 **`TimeEntries`**:
 
@@ -64,9 +65,25 @@ running, the page still works: it falls back to one request per lead, which is s
 | `hours`      | Double        |                                |
 | `note`       | Var Char 300  |                                |
 
+**`Messages`**: the log of notes, calls, emails and texts for each lead:
+
+| Column       | Type          | Notes                                                        |
+| ------------ | ------------- | ------------------------------------------------------------ |
+| `lead_id`    | Var Char 20   | The lead's ROWID as text. Empty for an unmatched incoming message |
+| `direction`  | Var Char 4    | `out` (from you) or `in` (from them)                         |
+| `channel`    | Var Char 10   | `note`, `email`, `sms` or `call`                             |
+| `subject`    | Var Char 200  | Emails only                                                  |
+| `body`       | Text          |                                                              |
+| `status`     | Var Char 12   | `logged`, `sent` or `received`                               |
+| `sender`     | Var Char 254  | Who an incoming message came from                            |
+| `created_at` | Var Char 30   | ISO date and time                                            |
+
+The tracker works before `Messages` exists and before `Leads` has a `phone` column: Connections shows the message log
+as "Not connected", and leads save as long as the phone field is left empty. Add both when you want messages.
+
 `Inquiries` already exists. The tracker only changes its `status` column (`new` → `converted` or `dismissed`).
 
-For all three tables, check **Scopes & Permissions**: no end-user role may read or write.
+For all four tables, check **Scopes & Permissions**: no end-user role may read or write.
 
 ## 2. Deploy the two functions (from `catalyst/`)
 
@@ -94,6 +111,10 @@ pbcopy < ~/.heurial-secrets/pipeline-key
 |                                        | `DIGEST_TO`             | where the daily email goes (e.g. hello@heurial.studio)    |
 |                                        | `TRACKER_URL`           | `https://www.heurial.studio/admin`                        |
 |                                        | `TIME_ZONE`             | `America/Chicago` (the default)                           |
+|                                        | `MESSAGES_FROM`         | optional: a sender verified in Catalyst Mail. Turns on **Email to leads** |
+|                                        | `MESSAGE_WEBHOOK_URL`   | optional: `https://` address of a service that sends a text. Turns on **Text messages** |
+|                                        | `MESSAGE_WEBHOOK_KEY`   | optional: sent to that service as `X-Heurial-Key` so it can check the request is yours |
+|                                        | `INBOUND_KEY`           | optional: a new random secret. Turns on **Incoming messages** |
 | Function `daily-digest`                | `PIPELINE_FUNCTION_URL` | the pipeline function URL, ending in `/server/pipeline/`  |
 |                                        | `PIPELINE_KEY`          | the pipeline secret                                       |
 | Slate app **HEURIAL Studio**           | `PIPELINE_FUNCTION_URL` | same pipeline URL                                         |
@@ -106,6 +127,24 @@ session secret. Use a new password of 12+ characters that you don't use anywhere
 `ADMIN_SESSION_SECRET` signs out every browser.
 
 **Catalyst Mail:** add and verify the sender address (`DIGEST_FROM`) in the console before the first send.
+
+### Connecting messages
+
+Each lead has a Messages tab. With nothing connected it is a log: you write a note, log a call, or write an email or
+text and send it yourself ("Open in mail app"). The Connections page in the tracker shows what is switched on.
+
+- **Email to leads** (`MESSAGES_FROM`): the tracker sends the email through Catalyst Mail and marks it "Sent". If
+  sending fails, nothing is saved, so the log never claims an email went out when it didn't.
+- **Text messages** (`MESSAGE_WEBHOOK_URL`): when you send a text, the function POSTs
+  `{ "channel": "sms", "to": "<the lead's phone>", "body": "...", "lead": { "id": "...", "name": "..." } }` to that
+  address. Point it at whatever sends texts for you (a Twilio function, or an automation hook). Any 2xx answer counts
+  as sent.
+- **Incoming messages** (`INBOUND_KEY`): your email or text service can post replies to
+  `<pipeline function URL>/inbound` with the header `X-Heurial-Inbound-Key: <INBOUND_KEY>` and a JSON body
+  `{ "channel": "email" | "sms", "from": "...", "subject": "...", "body": "..." }`. The message is matched to a lead by
+  email address, or by the last 10 digits of the phone number, and appears in that lead's thread. Anything that
+  doesn't match is kept and listed under Messages as "not matched to a lead". This key can only add incoming messages;
+  it can't read or change anything else. This route is called directly on the function, not through the website.
 
 ## 4. Schedule the daily email
 
