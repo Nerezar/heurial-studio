@@ -87,7 +87,7 @@ async function api(path, method = "GET", body) {
   const find = (rows, id) => rows.find((r) => String(r.ROWID) === String(id));
   const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries, messageRows: demo.messages });
   // Nothing is connected on this page, and it says so.
-  const services = { messages: true, digest: false, email: false, sms: false, inbound: false };
+  const services = { messages: true, digest: false, email: false, sms: false, inbound: false, twilio: false, ai: false };
   const wrap = (fn) => { try { return fn(); } catch (e) { if (e instanceof core.Bad) throw bad(e.message, e.status); throw e; } };
   let m;
 
@@ -118,6 +118,24 @@ async function api(path, method = "GET", body) {
     const saved = { ...row, ROWID: demo.id() };
     demo.messages.push(saved);
     return { id: saved.ROWID, status: saved.status };
+  });
+  // "Draft with AI" on this page returns a fixed sample, not a real AI draft.
+  if ((m = p.match(/^leads\/(\d+)\/draft$/)) && method === "POST") return wrap(() => {
+    const lead = find(demo.leads, m[1]);
+    if (!lead) throw bad("Not found.", 404);
+    const first = (lead.name || "there").split(" ")[0], sms = body.channel === "sms";
+    const row = { ...core.cleanMessage({ lead_id: m[1], channel: sms ? "sms" : "email", subject: sms ? "" : "Next step",
+      body: sms ? `Hi ${first}, sample draft: does Thursday still work for a quick call?`
+        : `Hi ${first},\n\nThis is a sample draft. On the real tracker, Claude writes it from this thread.\n\nDoes Thursday still work for a quick call?` }, new Date().toISOString()), status: "draft", ROWID: demo.id() };
+    demo.messages.push(row);
+    return core.messageFromRow(row);
+  });
+  if ((m = p.match(/^messages\/(\d+)\/approve$/)) && method === "POST") return wrap(() => {
+    const row = find(demo.messages, m[1]);
+    if (!row || row.status !== "draft") throw bad("This message was already handled.", 409);
+    if (body.send === true) throw bad("Nothing is sent from this sample-data page.", 503);
+    Object.assign(row, core.cleanMessage({ lead_id: row.lead_id, channel: row.channel, subject: body.subject, body: body.body }, new Date().toISOString()), { status: "logged" });
+    return { ok: true, status: "logged" };
   });
   if ((m = p.match(/^messages\/(\d+)$/)) && method === "DELETE") { const i = demo.messages.findIndex((x) => String(x.ROWID) === m[1]); if (i >= 0) demo.messages.splice(i, 1); return { ok: true }; }
   if ((m = p.match(/^inbox\/(\d+)\/(convert|dismiss)$/)) && method === "POST") {

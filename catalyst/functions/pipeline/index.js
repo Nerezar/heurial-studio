@@ -15,13 +15,23 @@
 //                        automation hook). It receives { channel: "sms", to, body, lead: { id, name } }
 //   MESSAGE_WEBHOOK_KEY  sent to that service as X-Heurial-Key, so it can check the request is yours
 //   INBOUND_KEY          lets an email or text provider post replies to .../server/pipeline/inbound
-//                        (header X-Heurial-Inbound-Key; body { channel, from, subject, body })
+//                        (header X-Heurial-Inbound-Key; body { channel, from, subject, body }), and an email
+//                        provider (Postmark, Mailgun, SendGrid) post to .../server/pipeline/inbound/email?key=…
+//   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM   send texts through Twilio (takes the place of the webhook)
+//   TWILIO_WEBHOOK_URL   the exact URL set as the number's incoming-message webhook in Twilio, ending in
+//                        /server/pipeline/twilio/sms. Needed to check Twilio's signature on incoming texts.
+//   ANTHROPIC_API_KEY    turns on "Draft with AI". Drafts are saved for you to approve; nothing is sent on its own.
 
 const { zcAuth } = require("@zcatalyst/auth");
 const { Datastore } = require("@zcatalyst/datastore");
 const { Mail } = require("@zcatalyst/mail");
 const { handle } = require("./handler");
 const { catalystStore } = require("./store");
+const { twilioSender } = require("./adapters");
+const { makeDrafter } = require("./draft");
+
+const env = (name) => (process.env[name] || "").trim();
+const drafter = makeDrafter({ apiKey: env("ANTHROPIC_API_KEY") }); // one client for the life of the instance
 
 module.exports = async (req, res) => {
   let store;
@@ -46,6 +56,10 @@ module.exports = async (req, res) => {
       }
       : undefined,
     inboundKey: process.env.INBOUND_KEY,
+    twilio: env("TWILIO_AUTH_TOKEN") && env("TWILIO_WEBHOOK_URL").startsWith("https://")
+      ? { authToken: env("TWILIO_AUTH_TOKEN"), webhookUrl: env("TWILIO_WEBHOOK_URL") }
+      : undefined,
+    draft: drafter,
     sendMessage: {
       email: process.env.MESSAGES_FROM
         ? async ({ to, subject, body }) => {
@@ -53,7 +67,7 @@ module.exports = async (req, res) => {
           await new Mail().sendMail({ from_email: process.env.MESSAGES_FROM, to_email: [to], subject: subject || "(no subject)", content: body, html_mode: false });
         }
         : undefined,
-      sms: hook.startsWith("https://")
+      sms: twilioSender({ accountSid: env("TWILIO_ACCOUNT_SID"), authToken: env("TWILIO_AUTH_TOKEN"), from: env("TWILIO_FROM") }) || (hook.startsWith("https://")
         ? async ({ to, body, lead }) => {
           const res = await fetch(hook, {
             method: "POST",
@@ -63,7 +77,7 @@ module.exports = async (req, res) => {
           });
           if (!res.ok) throw new Error(`message service answered ${res.status}`);
         }
-        : undefined,
+        : undefined),
     },
   });
 };

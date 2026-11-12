@@ -49,6 +49,7 @@
     phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
     note: '<path d="M5 4h14v12l-4 4H5zM15 20v-4h4"/>',
     send: '<path d="m4 12 16-8-6 16-3-7z"/>',
+    spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
     inbound: '<path d="M4 13v6h16v-6M12 4v10m0 0-4-4m4 4 4-4"/>',
     refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -280,6 +281,8 @@
           <span class="form-note" id="composeHint"></span>
           <label class="check" id="logOnlyWrap" hidden><input type="checkbox" name="logonly"> Log only, don't send</label>
           <a class="btn sm" id="composeOpen" hidden></a>
+          <button class="btn sm" type="button" id="draftBtn" data-action="draft" hidden
+            title="Claude writes the next message from this thread. Anything typed above is used as instructions. Nothing is sent until you approve it.">${icon("spark")}<span>Draft with AI</span></button>
           <button class="btn primary sm" type="submit" id="composeBtn">Save note</button>
         </div>
       </form>
@@ -797,7 +800,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function viewMessages() {
     const d = state.data, sv = services(), demo = cfg.mode === "demo";
     const svc = (on, label) => `<span class="svc ${on && !demo ? "on" : ""}"><i></i>${label}: ${demo ? "sample data" : on ? "connected" : "not connected"}</span>`;
-    const strip = `<div class="strip">${sv ? svc(sv.email, "Email sending") + svc(sv.sms, "Text sending") + svc(sv.inbound, "Incoming messages")
+    const strip = `<div class="strip">${sv ? svc(sv.email, "Email sending") + svc(sv.sms, "Text sending") + svc(sv.inbound || sv.twilio, "Incoming messages") + svc(sv.ai, "AI drafts")
       : `<span>This version of the back end doesn't report what's connected.</span>`}
       <button class="btn sm" type="button" data-action="view" data-view="connections" data-fk="to-conn">${icon("plug")}Connections</button></div>`;
     const inbox = d.inbox.length ? `<div class="strip"><span>${plural(d.inbox.length, "new website inquiry", "new website inquiries")} waiting for a decision.</span>
@@ -813,7 +816,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (t) t.count++; else threads.set(m.lead_id, { latest: m, count: 1 });
       }
       const unmatched = msgs.filter((m) => !m.lead_id);
-      const excerpt = (m) => `${m.channel === "note" ? "Note" : m.direction === "in" ? "Them" : "You"}: ${esc(m.subject ? `${m.subject} — ` : "")}${esc(m.body)}`;
+      const excerpt = (m) => `${m.status === "draft" ? "Draft" : m.channel === "note" ? "Note" : m.direction === "in" ? "Them" : "You"}: ${esc(m.subject ? `${m.subject} — ` : "")}${esc(m.body)}`;
       const chan = (m) => `<span class="tag">${CHANNEL[m.channel][0]}</span>`;
       body = threads.size || unmatched.length ? `<table class="tbl"><thead><tr><th>Lead</th><th>Type</th><th>Latest message</th><th>When</th><th class="r">In thread</th></tr></thead><tbody>
         ${unmatched.map((m) => `<tr><td><span class="who">${esc(m.sender || "Unknown sender")}<span> · not matched to a lead</span></span></td><td>${chan(m)}</td>
@@ -845,10 +848,14 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         `<button class="btn sm" type="button" data-action="digest" data-fk="c-digest">Preview</button>`],
       ["send", "Email to leads", "Send email from a lead's Messages tab. Until it's connected, emails you write are saved to the log and you send them yourself.", st(sv && sv.email),
         "Needs <code>MESSAGES_FROM</code>: a sender verified in Catalyst Mail.", ""],
-      ["sms", "Text messages", "Send texts from a lead's Messages tab through your own text service.", st(sv && sv.sms),
-        "Needs <code>MESSAGE_WEBHOOK_URL</code>: the https address of a service that sends the text, for example a Twilio function or an automation hook.", ""],
-      ["inbound", "Incoming messages", "Lets your email or text service post replies straight into the right lead's thread.", st(sv && sv.inbound),
-        "Needs <code>INBOUND_KEY</code>. The service then posts to the pipeline function's <code>/inbound</code> address with that key.", ""],
+      ["sms", "Text messages", "Send texts from a lead's Messages tab through Twilio.", st(sv && sv.sms),
+        "Needs <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> and <code>TWILIO_FROM</code> (your Twilio number). Another text service can use <code>MESSAGE_WEBHOOK_URL</code> instead.", ""],
+      ["inbound", "Incoming texts", "Replies to your Twilio number land in the right lead's thread, matched by phone number.", st(sv && sv.twilio),
+        "Needs <code>TWILIO_AUTH_TOKEN</code> and <code>TWILIO_WEBHOOK_URL</code>: the pipeline function's <code>/twilio/sms</code> address, also set as the number's incoming-message webhook in Twilio.", ""],
+      ["mail", "Incoming email", "Replies sent to your inbound address land in the right lead's thread, matched by email address.", st(sv && sv.inbound),
+        "Needs <code>INBOUND_KEY</code>. Point your mail provider's inbound webhook (Postmark, Mailgun or SendGrid) at the pipeline function's <code>/inbound/email?key=…</code> address.", ""],
+      ["spark", "AI reply drafts", "Claude drafts your next email or text from the thread. You read it, edit it and approve it. Nothing is sent on its own.", st(sv && sv.ai),
+        "Needs <code>ANTHROPIC_API_KEY</code> on the pipeline function.", ""],
       ["note", "Message log", "Where notes, calls, emails and texts are stored.", st(sv && sv.messages),
         "Needs the <code>Messages</code> table in the Catalyst Data Store.", ""],
     ];
@@ -1003,6 +1010,45 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         const ok = await confirmBox({ title: "Delete this time entry?", text: "The hours come off the lead's total. This can't be undone.", action: "Delete entry", danger: true });
         if (!ok) return;
         return act(button, async () => { await call("/api/time/" + id, "DELETE"); toast("Time entry deleted"); if (state.tab === "time") loadLeadTime(); await load(); });
+      }
+      case "draft": {
+        const c = $("composeForm"), lead = state.lead;
+        if (!lead || state.isNew) return;
+        const label = button.querySelector("span");
+        return act(button, async () => {
+          label.textContent = "Drafting…";
+          try {
+            await call(`/api/leads/${lead.id}/draft`, "POST", { channel: c.channel.value, instructions: c.body.value.trim() });
+          } finally { label.textContent = "Draft with AI"; }
+          c.body.value = "";
+          paintComposer();
+          toast("Draft ready. Read it before you approve it.");
+          await loadThread();
+          await load();
+        });
+      }
+      case "draft-approve": case "draft-discard": case "draft-open": {
+        const li = el.closest("li"), lead = state.lead;
+        if (!li || !lead) return;
+        const subject = li.querySelector('[name="dsubject"]'), text = li.querySelector("textarea").value.trim();
+        const ch = li.dataset.channel, to = ch === "email" ? lead.email : lead.phone;
+        if (el.dataset.action === "draft-open") {
+          window.location.href = ch === "email"
+            ? `mailto:${encodeURI(to)}?subject=${encodeURIComponent(subject ? subject.value : "")}&body=${encodeURIComponent(text)}`
+            : `sms:${to.replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(text)}`;
+          return;
+        }
+        if (el.dataset.action === "draft-discard") {
+          return act(button, async () => { await call("/api/messages/" + id, "DELETE"); toast("Draft discarded"); await loadThread(); await load(); });
+        }
+        if (!text) { toast("The draft is empty. Write something or discard it.", true); return; }
+        const send = el.dataset.send === "1";
+        return act(button, async () => {
+          await call(`/api/messages/${id}/approve`, "POST", { subject: subject ? subject.value : "", body: text, send });
+          toast(send ? `${ch === "email" ? "Email" : "Text"} sent to ${to}` : "Saved to the log as sent");
+          await loadThread();
+          await load();
+        });
       }
       case "msg-del": {
         const ok = await confirmBox({ title: "Delete this message?", text: "It's removed from the log. If it was sent, the other person still has it.", action: "Delete message", danger: true });
@@ -1225,8 +1271,32 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     }
   }
   function paintThread() {
-    const list = $("thread"), items = state.thread || [];
+    const list = $("thread"), items = state.thread || [], lead = state.lead || {}, sv = services() || {}, demo = cfg.mode === "demo";
+    // Keep any edits in an open draft when the thread repaints.
+    const kept = {};
+    for (const li of list.querySelectorAll("li.draft")) {
+      const subj = li.querySelector('[name="dsubject"]');
+      kept[li.dataset.id] = { subject: subj ? subj.value : null, body: li.querySelector("textarea").value };
+    }
+    const draft = (m) => {
+      const [label] = CHANNEL[m.channel] || CHANNEL.email;
+      const k = kept[m.id] || {}, to = m.channel === "email" ? lead.email : lead.phone;
+      const canSend = !demo && to && (m.channel === "email" ? sv.email : sv.sms);
+      const note = demo ? "Sample data: nothing is sent from this page."
+        : !to ? `Add ${m.channel === "email" ? "an email address" : "a phone number"} in Details to send it.`
+        : canSend ? `Sends to ${to} when you approve it.`
+        : `${m.channel === "email" ? "Email" : "Text"} sending isn't connected. Send it yourself, then mark it sent.`;
+      return `<li class="msg mine draft" data-id="${m.id}" data-channel="${m.channel}">
+        <div class="msg-meta"><b>${icon("spark")}${label} draft</b><span>Written by AI · not sent</span><time datetime="${esc(m.created_at)}">${stamp(m.created_at)}</time></div>
+        ${m.channel === "email" ? `<input class="in" name="dsubject" maxlength="200" aria-label="Draft subject" value="${esc(k.subject ?? m.subject)}">` : ""}
+        <textarea class="in" rows="5" maxlength="4000" aria-label="Draft ${label.toLowerCase()}">${esc(k.body ?? m.body)}</textarea>
+        <div class="draft-foot"><span class="form-note">${esc(note)}</span>
+          <button class="btn ghost sm" type="button" data-action="draft-discard" data-id="${m.id}">Discard</button>
+          ${!canSend && to ? `<button class="btn sm" type="button" data-action="draft-open" data-id="${m.id}">Open in ${m.channel === "email" ? "mail" : "text"} app</button>` : ""}
+          <button class="btn primary sm" type="button" data-action="draft-approve" data-id="${m.id}" data-send="${canSend ? 1 : 0}">${canSend ? `${icon("send")}Approve and send` : `${icon("check")}Mark as sent`}</button></div></li>`;
+    };
     list.innerHTML = items.length ? items.map((m) => {
+      if (m.status === "draft") return draft(m);
       const [label, ic] = CHANNEL[m.channel] || CHANNEL.note;
       const who = m.channel === "note" ? "" : m.direction === "in" ? "From them" : "From me";
       const how = m.status === "sent" ? "Sent" : m.status === "received" ? (m.sender ? `Received from ${esc(m.sender)}` : "Received") : m.channel === "note" ? "" : "Logged, not sent from here";
@@ -1252,6 +1322,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     f.body.placeholder = ch === "note" ? "Write a note about this lead…" : ch === "call" ? "What was said on the call…" : out ? `Write the ${ch === "email" ? "email" : "text"}…` : "Paste what they wrote…";
     $("composeBtn").innerHTML = ch === "note" ? "Save note" : ch === "call" ? "Log call" : willSend ? `${icon("send")}Send ${ch === "email" ? "email" : "text"}` : out ? "Log as sent" : "Log reply";
     $("logOnlyWrap").hidden = !(connected && to);
+    $("draftBtn").hidden = !((ch === "email" || ch === "sms") && out && (demo || sv.ai));
     const kind = ch === "email" ? "Email" : "Text";
     let hint = "";
     if ((ch === "email" || ch === "sms") && out) {

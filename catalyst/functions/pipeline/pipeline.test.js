@@ -208,7 +208,7 @@ test("messages: log, send through a connected service, and delete with the lead"
   const data = await call(deps, "GET", "/data?range=30");
   assert.equal(data.body.messages.length, 4);
   assert.equal(data.body.messages[0].lead_name, "Thread Co");
-  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false });
+  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false, twilio: false, ai: false });
 
   await call(deps, "DELETE", `/messages/${thread.body[0].id}`);
   assert.equal((await call(deps, "GET", `/leads/${id}/messages`)).body.length, 3);

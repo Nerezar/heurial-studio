@@ -3,8 +3,10 @@
 
 const crypto = require("node:crypto");
 const core = require("./core");
+const adapters = require("./adapters");
 
 const MAX_BODY = 32 * 1024;
+const MAX_EMAIL = 4 * 1024 * 1024; // provider posts can include HTML and attachments; only the text is kept
 const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages" };
 
 function keyMatches(given, expected) {
@@ -14,19 +16,41 @@ function keyMatches(given, expected) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-function readJson(req) {
+function readBody(req, limit = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
-    req.on("data", (c) => { size += c.length; if (size <= MAX_BODY) chunks.push(c); });
+    req.on("data", (c) => { size += c.length; if (size <= limit) chunks.push(c); });
     req.on("end", () => {
-      if (size > MAX_BODY) return reject(new core.Bad("Request too large.", 413));
-      const raw = Buffer.concat(chunks).toString("utf8");
-      if (!raw) return resolve({});
-      try { resolve(JSON.parse(raw)); } catch { reject(new core.Bad("Invalid JSON.")); }
+      if (size > limit) return reject(new core.Bad("Request too large.", 413));
+      resolve(Buffer.concat(chunks).toString("utf8"));
     });
     req.on("error", reject);
   });
+}
+
+async function readJson(req, limit) {
+  const raw = await readBody(req, limit);
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch { throw new core.Bad("Invalid JSON."); }
+}
+
+/** JSON or an HTML form post (Twilio, Mailgun and SendGrid send forms), as a flat object of strings. */
+async function readFields(req, limit) {
+  const type = String(req.headers["content-type"] || "");
+  if (type.includes("json")) return readJson(req, limit);
+  if (type.includes("multipart/form-data")) {
+    const raw = await readBody(req, limit);
+    const boundary = (type.match(/boundary="?([^";]+)"?/) || [])[1];
+    const out = {};
+    if (!boundary) return out;
+    for (const part of raw.split(`--${boundary}`)) {
+      const m = part.match(/^\r?\nContent-Disposition: form-data; name="([^"]+)"(?:; filename="[^"]*")?\r?\n(?:[^\r\n]+\r?\n)*\r?\n([\s\S]*?)\r?\n$/i);
+      if (m && !/filename=/i.test(part.slice(0, 200))) out[m[1]] = m[2];
+    }
+    return out;
+  }
+  return Object.fromEntries(new URLSearchParams(await readBody(req, limit)));
 }
 
 /**
@@ -36,7 +60,9 @@ function readJson(req) {
  *   sendMail?: (msg: { to, subject, text, html }) => Promise<void>,
  *   digestTo?: string, trackerUrl?: string, timeZone?: string, now?: () => Date,
  *   sendMessage?: { email?: (msg: { to, subject, body, lead }) => Promise<void>, sms?: (msg: { to, body, lead }) => Promise<void> },
- *   inboundKey?: string,   // lets an outside service post incoming messages to /inbound
+ *   inboundKey?: string,   // lets an outside service post incoming messages to /inbound and /inbound/email
+ *   twilio?: { authToken: string, webhookUrl: string },   // checks the signature on texts posted to /twilio/sms
+ *   draft?: ({ lead, thread, channel, instructions }) => Promise<{ subject, body }>,   // AI reply drafts
  * }
  */
 async function handle(req, res, deps) {
@@ -53,15 +79,34 @@ async function handle(req, res, deps) {
     const { store } = deps;
     let m;
 
-    // Incoming messages from an outside service (an email or text provider). This is the only route that
-    // doesn't use the site's key: the provider gets its own, so it can never read or change anything else.
-    if (path === "inbound" && method === "POST") {
-      if (!deps.inboundKey || !keyMatches(req.headers["x-heurial-inbound-key"], deps.inboundKey)) return send(401, { error: "Unauthorized" });
-      const row = core.cleanInbound(await readJson(req), now.toISOString());
+    // Incoming messages from outside services. These are the only routes that don't use the site's key:
+    // each provider gets its own secret, so it can only add a received message and never read anything.
+    const saveInbound = async (fields) => {
+      const row = core.cleanInbound(fields, now.toISOString());
       const lead = core.matchLead(await store.list(TABLES.leads), row.channel, row.sender);
       if (lead) row.lead_id = String(lead.ROWID);
       await store.insert(TABLES.messages, row);
-      return send(201, { ok: true, matched: Boolean(lead) });
+      return Boolean(lead);
+    };
+    if (path === "inbound" && method === "POST") {
+      if (!deps.inboundKey || !keyMatches(req.headers["x-heurial-inbound-key"], deps.inboundKey)) return send(401, { error: "Unauthorized" });
+      return send(201, { ok: true, matched: await saveInbound(await readJson(req)) });
+    }
+    // Email providers (Postmark, Mailgun, SendGrid) can't add headers, so the key goes in the webhook URL.
+    if (path === "inbound/email" && method === "POST") {
+      const given = req.headers["x-heurial-inbound-key"] || url.searchParams.get("key");
+      if (!deps.inboundKey || !keyMatches(given, deps.inboundKey)) return send(401, { error: "Unauthorized" });
+      const fields = adapters.emailInbound(await readFields(req, MAX_EMAIL));
+      return send(201, { ok: true, matched: await saveInbound(fields) });
+    }
+    // Texts from Twilio. The signature proves the request came from Twilio for this exact webhook URL.
+    if (path === "twilio/sms" && method === "POST") {
+      const tw = deps.twilio;
+      const params = await readFields(req, MAX_BODY);
+      if (!tw || !adapters.twilioValid(tw.authToken, tw.webhookUrl, params, req.headers["x-twilio-signature"])) return send(401, { error: "Unauthorized" });
+      await saveInbound(adapters.twilioInbound(params));
+      res.writeHead(200, { "Content-Type": "text/xml" });
+      return res.end("<Response></Response>"); // no automatic reply
     }
 
     if (!keyMatches(req.headers["x-heurial-key"], deps.expectedKey)) return send(401, { error: "Unauthorized" });
@@ -81,7 +126,23 @@ async function handle(req, res, deps) {
       email: Boolean(deps.sendMessage && deps.sendMessage.email),
       sms: Boolean(deps.sendMessage && deps.sendMessage.sms),
       inbound: Boolean(deps.inboundKey),
+      twilio: Boolean(deps.twilio && deps.twilio.authToken && deps.twilio.webhookUrl),
+      ai: Boolean(deps.draft),
     });
+    // Send an email or text through the connected service. Throws if it can't, so callers save nothing.
+    const deliver = async (row, lead) => {
+      if (row.direction !== "out" || (row.channel !== "email" && row.channel !== "sms")) throw new core.Bad("Only your own emails and texts can be sent.");
+      const service = deps.sendMessage && deps.sendMessage[row.channel];
+      if (!service) throw new core.Bad(row.channel === "email" ? "Email sending isn't connected yet." : "Text sending isn't connected yet.", 503);
+      const to = row.channel === "email" ? lead.email : lead.phone;
+      if (!to) throw new core.Bad(row.channel === "email" ? "This lead has no email address." : "This lead has no phone number.");
+      try {
+        await service({ to, subject: row.subject, body: row.body, lead: { id: String(lead.ROWID), name: lead.name || "" } });
+      } catch (err) {
+        console.error("pipeline: sending failed", err && err.message);
+        throw new core.Bad("The message couldn't be sent. Nothing was saved, so you can try again.", 502);
+      }
+    };
     const getLead = async (id) => {
       const row = await store.get(TABLES.leads, id);
       if (!row) throw new core.Bad("Not found.", 404);
@@ -157,21 +218,52 @@ async function handle(req, res, deps) {
       const lead = await getLead(row.lead_id);
       if ((await listMessages()) === null) throw new core.Bad("Messages aren't set up yet. Create the Messages table first.", 503);
       if (body.send === true) {
-        if (row.direction !== "out" || (row.channel !== "email" && row.channel !== "sms")) throw new core.Bad("Only your own emails and texts can be sent.");
-        const deliver = deps.sendMessage && deps.sendMessage[row.channel];
-        if (!deliver) throw new core.Bad(row.channel === "email" ? "Email sending isn't connected yet." : "Text sending isn't connected yet.", 503);
-        const to = row.channel === "email" ? lead.email : lead.phone;
-        if (!to) throw new core.Bad(row.channel === "email" ? "This lead has no email address." : "This lead has no phone number.");
-        try {
-          await deliver({ to, subject: row.subject, body: row.body, lead: { id: String(lead.ROWID), name: lead.name || "" } });
-        } catch (err) {
-          console.error("pipeline: sending failed", err && err.message);
-          throw new core.Bad("The message couldn't be sent. Nothing was saved, so you can try again.", 502);
-        }
+        await deliver(row, lead);
         row.status = "sent";
       }
       const saved = await store.insert(TABLES.messages, row);
       return send(201, { id: String(saved.ROWID), status: row.status });
+    }
+    // AI draft: Claude writes the next email or text and it's saved with status "draft". It is never sent
+    // until you approve it below.
+    if ((m = path.match(/^leads\/(\d{1,20})\/draft$/)) && method === "POST") {
+      const body = await readJson(req);
+      const channel = body.channel === "sms" ? "sms" : "email";
+      const lead = await getLead(m[1]);
+      if (!deps.draft) throw new core.Bad("AI drafts aren't connected yet (ANTHROPIC_API_KEY).", 503);
+      const all = await listMessages();
+      if (all === null) throw new core.Bad("Messages aren't set up yet. Create the Messages table first.", 503);
+      const thread = all.filter((x) => String(x.lead_id) === m[1] && x.status !== "draft").map((x) => core.messageFromRow(x))
+        .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+      const instructions = String(body.instructions ?? "").trim().slice(0, 1000);
+      let out;
+      try {
+        out = await deps.draft({ lead: core.leadFromRow(lead), thread, channel, instructions });
+      } catch (err) {
+        if (err && err.status) throw new core.Bad(err.message, err.status);
+        console.error("pipeline: draft failed", err && err.message);
+        throw new core.Bad("The draft couldn't be written. Try again.", 502);
+      }
+      const row = { ...core.cleanMessage({ lead_id: m[1], channel, subject: out.subject, body: out.body }, now.toISOString()), status: "draft" };
+      const saved = await store.insert(TABLES.messages, row);
+      return send(201, core.messageFromRow(saved));
+    }
+    // Approve a draft, with any edits. send: true delivers it first; otherwise it's kept as logged
+    // (for when you sent it yourself).
+    if ((m = path.match(/^messages\/(\d{1,20})\/approve$/)) && method === "POST") {
+      const body = await readJson(req);
+      const existing = await store.get(TABLES.messages, m[1]);
+      if (!existing) throw new core.Bad("Not found.", 404);
+      if (existing.status !== "draft") throw new core.Bad("This message was already handled.", 409);
+      const row = core.cleanMessage({
+        lead_id: existing.lead_id, channel: existing.channel,
+        subject: body.subject ?? existing.subject, body: body.body ?? existing.body,
+      }, existing.created_at || now.toISOString());
+      const lead = await getLead(row.lead_id);
+      if (body.send === true) await deliver(row, lead);
+      const status = body.send === true ? "sent" : "logged";
+      await store.update(TABLES.messages, { ROWID: m[1], subject: row.subject, body: row.body, status, created_at: now.toISOString() });
+      return send(200, { ok: true, status });
     }
     if ((m = path.match(/^messages\/(\d{1,20})$/)) && method === "DELETE") {
       await store.remove(TABLES.messages, m[1]);

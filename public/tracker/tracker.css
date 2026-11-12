@@ -413,6 +413,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .msg-meta .btn { margin: -3px -4px -3px 0; }
 .msg-subj { margin-top: 5px; font-weight: 600; overflow-wrap: anywhere; }
 .msg-body { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.draft { display: grid; gap: 6px; border-style: dashed; border-left-style: solid; border-left-color: var(--warn); background: var(--bg-1); }
+.msg.draft textarea { resize: vertical; min-height: 96px; }
+.draft-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .compose { flex: none; display: grid; gap: 8px; padding: 10px 14px 12px; background: var(--bg-0); border-top: 1px solid var(--line); }
 .compose-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; }
 .compose-row.solo { grid-template-columns: 112px; }

@@ -15,6 +15,8 @@ const ROUTES: [string, RegExp][] = [
   ["GET", /^leads\/\d{1,20}\/time$/],
   ["GET", /^leads\/\d{1,20}\/messages$/],
   ["POST", /^messages$/],
+  ["POST", /^leads\/\d{1,20}\/draft$/],
+  ["POST", /^messages\/\d{1,20}\/approve$/],
   ["DELETE", /^messages\/\d{1,20}$/],
   ["POST", /^time$/],
   ["DELETE", /^time\/\d{1,20}$/],
@@ -62,7 +64,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
         method,
         headers: { "X-Heurial-Key": key, ...(body ? { "Content-Type": "application/json" } : {}) },
         body,
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(path.endsWith("/draft") ? 45_000 : 15_000), // an AI draft takes longer
         cache: "no-store",
       });
     } catch {

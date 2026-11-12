@@ -114,7 +114,12 @@ pbcopy < ~/.heurial-secrets/pipeline-key
 |                                        | `MESSAGES_FROM`         | optional: a sender verified in Catalyst Mail. Turns on **Email to leads** |
 |                                        | `MESSAGE_WEBHOOK_URL`   | optional: `https://` address of a service that sends a text. Turns on **Text messages** |
 |                                        | `MESSAGE_WEBHOOK_KEY`   | optional: sent to that service as `X-Heurial-Key` so it can check the request is yours |
-|                                        | `INBOUND_KEY`           | optional: a new random secret. Turns on **Incoming messages** |
+|                                        | `INBOUND_KEY`           | optional: a new random secret. Turns on **Incoming email** (and the generic `/inbound` route) |
+|                                        | `TWILIO_ACCOUNT_SID`    | optional: from the Twilio console. With the next two, turns on **Text messages** through Twilio |
+|                                        | `TWILIO_AUTH_TOKEN`     | optional: from the Twilio console. Also checks the signature on incoming texts |
+|                                        | `TWILIO_FROM`           | optional: your Twilio phone number, e.g. `+15125550100` |
+|                                        | `TWILIO_WEBHOOK_URL`    | optional: `<pipeline function URL>/twilio/sms`, exactly as entered in Twilio. Turns on **Incoming texts** |
+|                                        | `ANTHROPIC_API_KEY`     | optional: an API key from console.anthropic.com. Turns on **AI reply drafts** |
 | Function `daily-digest`                | `PIPELINE_FUNCTION_URL` | the pipeline function URL, ending in `/server/pipeline/`  |
 |                                        | `PIPELINE_KEY`          | the pipeline secret                                       |
 | Slate app **HEURIAL Studio**           | `PIPELINE_FUNCTION_URL` | same pipeline URL                                         |
@@ -135,16 +140,45 @@ text and send it yourself ("Open in mail app"). The Connections page in the trac
 
 - **Email to leads** (`MESSAGES_FROM`): the tracker sends the email through Catalyst Mail and marks it "Sent". If
   sending fails, nothing is saved, so the log never claims an email went out when it didn't.
-- **Text messages** (`MESSAGE_WEBHOOK_URL`): when you send a text, the function POSTs
+- **Text messages** (Twilio): set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM`. Texts go out through
+  Twilio's Messages API from your Twilio number. US numbers written any common way are sent as `+1…`; other countries
+  need the `+` and country code in the lead's phone field. If Twilio refuses the text, nothing is saved.
+  Without Twilio, `MESSAGE_WEBHOOK_URL` still works: the function POSTs
   `{ "channel": "sms", "to": "<the lead's phone>", "body": "...", "lead": { "id": "...", "name": "..." } }` to that
-  address. Point it at whatever sends texts for you (a Twilio function, or an automation hook). Any 2xx answer counts
-  as sent.
-- **Incoming messages** (`INBOUND_KEY`): your email or text service can post replies to
-  `<pipeline function URL>/inbound` with the header `X-Heurial-Inbound-Key: <INBOUND_KEY>` and a JSON body
-  `{ "channel": "email" | "sms", "from": "...", "subject": "...", "body": "..." }`. The message is matched to a lead by
-  email address, or by the last 10 digits of the phone number, and appears in that lead's thread. Anything that
-  doesn't match is kept and listed under Messages as "not matched to a lead". This key can only add incoming messages;
-  it can't read or change anything else. This route is called directly on the function, not through the website.
+  address (with `MESSAGE_WEBHOOK_KEY` as `X-Heurial-Key`), and any 2xx answer counts as sent.
+- **Incoming texts** (Twilio): in the Twilio console, open your number → Messaging → "A message comes in" → Webhook,
+  HTTP POST, and enter `<pipeline function URL>/twilio/sms`. Put the same address, character for character, in
+  `TWILIO_WEBHOOK_URL`: Twilio signs each request with your auth token and that exact URL, and the function refuses
+  anything whose signature doesn't match. No automatic reply is sent back.
+- **Incoming email** (`INBOUND_KEY`): use a mail provider with an inbound webhook (Postmark, Mailgun or SendGrid
+  Inbound Parse). Point it at `<pipeline function URL>/inbound/email?key=<INBOUND_KEY>`, and send replies to the
+  inbound address it gives you (for example by setting it as the Reply-To on emails you send). The function takes the
+  sender, subject and the new part of the reply; quoted earlier messages and attachments are dropped. The key is in
+  the URL because these providers can't add headers, so treat that URL like a password.
+- **Any other service** (`INBOUND_KEY`): can post to `<pipeline function URL>/inbound` with the header
+  `X-Heurial-Inbound-Key: <INBOUND_KEY>` and a JSON body
+  `{ "channel": "email" | "sms", "from": "...", "subject": "...", "body": "..." }`.
+
+Incoming messages are matched to a lead by email address, or by the last 10 digits of the phone number, and appear in
+that lead's thread. Anything that doesn't match is kept and listed under Messages as "not matched to a lead". The
+inbound key and the Twilio signature can only add incoming messages; they can't read or change anything else. These
+routes are called directly on the function, not through the website.
+
+### AI reply drafts
+
+With `ANTHROPIC_API_KEY` set, a lead's Messages tab shows **Draft with AI** when you choose Email or Text. Claude
+(`claude-opus-5-5`) reads the lead's details and the last 20 messages in the thread and writes the next message.
+Anything typed in the message box first is passed along as instructions ("say yes to Tuesday, ask for their booking
+link").
+
+The draft is saved to the thread as a draft. Nothing is sent on its own. You can edit it, then:
+- **Approve and send** when sending for that channel is connected and the lead has an address or number;
+- **Mark as sent** otherwise (after "Open in mail app" or sending it yourself); or
+- **Discard** it.
+
+Messages from leads are treated as data, not instructions, and a draft never goes anywhere without your approval.
+Each draft is one API call, billed to the Anthropic account that owns the key. If Claude declines a request, the
+tracker says so and you write that one yourself. The website allows up to 45 seconds for a draft.
 
 ## 4. Schedule the daily email
 

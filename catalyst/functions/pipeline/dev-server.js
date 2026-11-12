@@ -9,6 +9,16 @@ const http = require("node:http");
 const { handle } = require("./handler");
 const { memoryStore } = require("./store");
 const core = require("./core");
+const { makeDrafter } = require("./draft");
+
+// With ANTHROPIC_API_KEY set, drafts come from Claude. Without it, a fixed sample draft, so the flow can be tried.
+const draft = makeDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async ({ lead, channel }) => {
+  await new Promise((r) => setTimeout(r, 600));
+  const first = (lead.name || "there").split(" ")[0];
+  return channel === "sms"
+    ? { subject: "", body: `Hi ${first}, sample draft from the local stand-in. Does Thursday still work for a quick call?` }
+    : { subject: "Next step", body: `Hi ${first},\n\nThis is a sample draft from the local stand-in, not from Claude. Set ANTHROPIC_API_KEY to get real drafts.\n\nDoes Thursday still work for a quick call?` };
+});
 
 const key = process.env.PIPELINE_KEY;
 if (!key || key.length < 16) { console.error("Set PIPELINE_KEY (16+ characters)."); process.exit(1); }
@@ -61,4 +71,5 @@ http.createServer((req, res) => handle(req, res, {
   // Email "sends" by printing, so the send path can be tried locally. Texts stay unconnected to show that state.
   sendMessage: { email: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject || "(no subject)"}`); } },
   inboundKey: process.env.INBOUND_KEY || "",
+  draft,
 })).listen(4600, "127.0.0.1", () => console.log("pipeline dev server on http://127.0.0.1:4600/"));

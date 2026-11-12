@@ -3,8 +3,11 @@
 	"version": "1.0.0",
 	"main": "index.js",
 	"author": "hello@heurial.studio",
-	"scripts": { "test": "node --test" },
+	"scripts": {
+		"test": "node --test"
+	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^1.8.0",
 		"@zcatalyst/auth": "1.0.0",
 		"@zcatalyst/datastore": "1.0.0",
 		"@zcatalyst/mail": "1.0.0"
