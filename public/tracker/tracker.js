@@ -5,6 +5,8 @@
  *     mode  "live" or "demo"
  *     api   async (path, method, body) => JSON. Paths look like "/api/data?range=30". Throws Error with .status.
  *     auth  optional { check(), signIn(password), signOut() } for the real tracker's sign-in
+ *     device  optional { installed, ios, canInstall(), install(), pushState(), enablePush(), disablePush(), testPush() }
+ *           for the installed app and notifications on this device (the real tracker only)
  *
  * Layout: an icon rail, a top bar, a strip of key figures, the current section, a lead panel that docks
  * on the right, and a status bar. Everything shown comes from the API: no invented numbers, history or
@@ -49,6 +51,7 @@
     phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
     note: '<path d="M5 4h14v12l-4 4H5zM15 20v-4h4"/>',
     send: '<path d="m4 12 16-8-6 16-3-7z"/>',
+    bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>',
     spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
     inbound: '<path d="M4 13v6h16v-6M12 4v10m0 0-4-4m4 4 4-4"/>',
     refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
@@ -178,6 +181,26 @@
     state.loading = false;
     render();
     if (state.view === "time") ensureTime();
+    if (pendingLink && state.data) { const link = pendingLink; pendingLink = ""; follow(link); }
+  }
+
+  // Links from notifications: /admin#lead=ID&tab=messages or /admin#view=overview.
+  let pendingLink = "";
+  function follow(url) {
+    const hash = String(url || "").split("#")[1] || "";
+    if (!hash) return;
+    if (!state.data) { pendingLink = url; return; }
+    const p = new URLSearchParams(hash);
+    try { history.replaceState(null, "", location.pathname); } catch { /* not important */ }
+    if (p.get("view") && VIEWS[p.get("view")]) setView(p.get("view"));
+    if (/^\d{1,20}$/.test(p.get("lead") || "")) openById(p.get("lead"), ["details", "messages", "time"].includes(p.get("tab")) ? p.get("tab") : "details");
+  }
+
+  // This device: installed app and notifications. Checked when Connections is shown.
+  async function refreshDevice() {
+    if (!cfg.device) return;
+    const next = await cfg.device.pushState().catch(() => "unsupported");
+    if (next !== state.pushState) { state.pushState = next; if (state.view === "connections") render(); }
   }
 
   // ---------- Frame ----------
@@ -835,6 +858,33 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     </div>`;
   }
 
+  function deviceRows(sv) {
+    const dev = cfg.device;
+    if (!dev) return "";
+    if (state.pushState === undefined) { state.pushState = "checking"; refreshDevice(); }
+    const tag = (c, label) => `<span class="tag" style="--c:var(${c})">${label}</span>`;
+    const installNote = dev.installed ? "You're using the installed app on this device."
+      : dev.ios ? "In Safari, tap Share, then Add to Home Screen. It opens full screen with its own icon."
+      : dev.canInstall() ? "Add the tracker to this device as an app, with its own icon and window."
+      : "Use your browser's Install or Add to Home Screen option. On iPhone, use Safari.";
+    const install = `<div class="conn"><div class="conn-ico">${icon("down")}</div><h3>App on this device</h3><p>${installNote}</p>
+      <div class="conn-side">${dev.installed ? tag("--up", "Installed") : dev.canInstall()
+        ? `<button class="btn sm" type="button" data-action="install" data-fk="c-install">Install</button>` : tag("--mute", "Not installed")}</div></div>`;
+    const ps = state.pushState;
+    const pushNote = !sv || !sv.push ? "Get a notification on this device for new inquiries and replies. Needs <code>VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code> on the pipeline function, and the <code>PushSubscriptions</code> table."
+      : ps === "needs-install" ? "On iPhone and iPad, notifications work once the tracker is installed. Add it to your Home Screen first, then open it from there."
+      : ps === "blocked" ? "Notifications are blocked for this site. Allow them in your browser or phone settings, then come back here."
+      : ps === "unsupported" ? "This browser can't show notifications from websites."
+      : ps === "on" ? "New inquiries and replies show up as notifications on this device."
+      : "Get a notification on this device for new inquiries and replies.";
+    const pushSide = !sv || !sv.push ? tag("--mute", "Not connected")
+      : ps === "on" ? `${tag("--up", "On")}<button class="btn sm" type="button" data-action="push-test" data-fk="c-ptest">Send test</button><button class="btn ghost sm" type="button" data-action="push-off" data-fk="c-poff">Turn off</button>`
+      : ps === "off" ? `<button class="btn sm primary" type="button" data-action="push-on" data-fk="c-pon">Turn on</button>`
+      : tag("--mute", ps === "checking" ? "Checking" : ps === "blocked" ? "Blocked" : "Not available");
+    return `<h3 class="sub-head">This device</h3>${install}
+      <div class="conn"><div class="conn-ico">${icon("bell")}</div><h3>Notifications</h3><p>${pushNote}</p><div class="conn-side">${pushSide}</div></div>`;
+  }
+
   // ----- Connections -----
   function viewConnections() {
     const d = state.data, sv = services(), demo = cfg.mode === "demo";
@@ -868,6 +918,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         : "What the tracker is connected to right now. Settings live on the Catalyst pipeline function; steps are in catalyst/TRACKER-SETUP.md."}</span></div>
       <div class="pane-body"><div class="conn-list">
         ${rows.map(row).join("")}
+        ${deviceRows(sv)}
         <h3 class="sub-head">Workspace</h3>
         <div class="conn"><div class="conn-ico">${icon(dark ? "moon" : "sun")}</div><h3>Appearance</h3><p>${dark ? "Dark" : "Light"} mode is on.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="theme" data-fk="c-theme">Switch to ${dark ? "light" : "dark"}</button></div></div>
@@ -964,6 +1015,18 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       case "palette": return openPalette();
       case "refresh": return act(button, load);
       case "theme": return toggleTheme();
+      case "install": return act(button, async () => { await cfg.device.install(); render(); });
+      case "push-on": return act(button, async () => {
+        await cfg.device.enablePush();
+        state.pushState = "on"; render();
+        toast("Notifications are on for this device");
+      });
+      case "push-off": return act(button, async () => {
+        await cfg.device.disablePush();
+        state.pushState = "off"; render();
+        toast("Notifications are off for this device");
+      });
+      case "push-test": return act(button, async () => { await cfg.device.testPush(); toast("Test sent. It should arrive in a few seconds."); });
       case "signout": return signOut(button);
       case "digest": return openDigest(button);
       case "export": return exportCsv();
@@ -1645,8 +1708,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         state.loading = false; state.error = "Couldn't reach the tracker. Check your connection and try again."; render(); return;
       }
     }
+    if (location.hash) pendingLink = location.href;
     await load();
   }
 
-  window.HeurialTracker = { start };
+  window.HeurialTracker = { start, open: follow };
 })();

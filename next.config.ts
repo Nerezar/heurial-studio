@@ -32,7 +32,9 @@ const config: NextConfig = {
     // The private tracker: never indexed, never cached.
     { source: "/admin", headers: privateArea },
     { source: "/admin/:path*", headers: privateArea },
-    { source: "/api/admin/:path*", headers: privateArea }];
+    { source: "/api/admin/:path*", headers: privateArea },
+    // The tracker's notification helper: always fetched fresh, so an update reaches installed apps.
+    { source: "/admin-sw.js", headers: privateArea }];
   },
   // The private tracker page is a static file; its data comes from /api/admin/* after sign-in.
   async rewrites() {

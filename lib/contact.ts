@@ -112,4 +112,28 @@ export async function saveInquiry(inquiry: Inquiry) {
   const store = inquiryStore();
   if (!store) throw new RequestError(503, "This site’s inquiry inbox is unavailable.");
   await store.save(inquiry);
+  await notifyOwner(inquiry);
+}
+
+/**
+ * Ask the tracker's pipeline function to send a phone notification about the new inquiry. Best effort:
+ * the inquiry is already saved, so a failure here is logged and never shown to the visitor.
+ */
+async function notifyOwner(inquiry: Inquiry) {
+  const base = process.env.PIPELINE_FUNCTION_URL?.trim() ?? "";
+  const key = process.env.PIPELINE_FUNCTION_KEY?.trim();
+  const allowed = base.startsWith("https://") || (process.env.NODE_ENV === "development" && base.startsWith("http://127.0.0.1"));
+  if (!allowed || !key) return;
+  try {
+    const res = await fetch(`${base.replace(/\/+$/, "")}/notify/inquiry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Heurial-Key": key },
+      body: JSON.stringify({ name: inquiry.name, company: inquiry.company, message: inquiry.message.slice(0, 300) }),
+      signal: AbortSignal.timeout(6_000),
+      cache: "no-store",
+    });
+    if (!res.ok) console.error(`Inquiry notification returned ${res.status}`);
+  } catch {
+    console.error("Inquiry notification couldn’t reach the tracker service.");
+  }
 }

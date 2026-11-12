@@ -74,16 +74,26 @@ function the tracker still opens, but the Time page is slower and Connections ca
 | `channel`    | Var Char 10   | `note`, `email`, `sms` or `call`                             |
 | `subject`    | Var Char 200  | Emails only                                                  |
 | `body`       | Text          |                                                              |
-| `status`     | Var Char 12   | `logged`, `sent` or `received`                               |
+| `status`     | Var Char 12   | `logged`, `sent`, `received`, or `draft` (an AI draft waiting for you) |
 | `sender`     | Var Char 254  | Who an incoming message came from                            |
 | `created_at` | Var Char 30   | ISO date and time                                            |
 
 The tracker works before `Messages` exists and before `Leads` has a `phone` column: Connections shows the message log
 as "Not connected", and leads save as long as the phone field is left empty. Add both when you want messages.
 
+**`PushSubscriptions`**: one row per device with notifications turned on (optional, for notifications):
+
+| Column       | Type          | Notes                                                 |
+| ------------ | ------------- | ----------------------------------------------------- |
+| `endpoint`   | Text          | The browser's push address. Can be longer than 255 characters |
+| `p256dh`     | Var Char 200  | The browser's public key                              |
+| `auth`       | Var Char 64   | The browser's auth secret                             |
+| `device`     | Var Char 120  | A label such as "iPhone or iPad (app)"                |
+| `created_at` | Var Char 30   | ISO date and time                                     |
+
 `Inquiries` already exists. The tracker only changes its `status` column (`new` → `converted` or `dismissed`).
 
-For all four tables, check **Scopes & Permissions**: no end-user role may read or write.
+For all of these tables, check **Scopes & Permissions**: no end-user role may read or write.
 
 ## 2. Deploy the two functions (from `catalyst/`)
 
@@ -119,6 +129,8 @@ pbcopy < ~/.heurial-secrets/pipeline-key
 |                                        | `TWILIO_AUTH_TOKEN`     | optional: from the Twilio console. Also checks the signature on incoming texts |
 |                                        | `TWILIO_FROM`           | optional: your Twilio phone number, e.g. `+15125550100` |
 |                                        | `TWILIO_WEBHOOK_URL`    | optional: `<pipeline function URL>/twilio/sms`, exactly as entered in Twilio. Turns on **Incoming texts** |
+|                                        | `VAPID_PUBLIC_KEY`      | optional: from `node scripts/make-vapid-keys.mjs`. With the next one, turns on **Notifications** |
+|                                        | `VAPID_PRIVATE_KEY`     | optional: from the same command. A secret |
 |                                        | `ANTHROPIC_API_KEY`     | optional: an API key from console.anthropic.com. Turns on **AI reply drafts** |
 | Function `daily-digest`                | `PIPELINE_FUNCTION_URL` | the pipeline function URL, ending in `/server/pipeline/`  |
 |                                        | `PIPELINE_KEY`          | the pipeline secret                                       |
@@ -179,6 +191,25 @@ The draft is saved to the thread as a draft. Nothing is sent on its own. You can
 Messages from leads are treated as data, not instructions, and a draft never goes anywhere without your approval.
 Each draft is one API call, billed to the Anthropic account that owns the key. If Claude declines a request, the
 tracker says so and you write that one yourself. The website allows up to 45 seconds for a draft.
+
+### The app on your phone, and notifications
+
+The tracker installs as an app (a PWA): its own icon, full screen, no App Store.
+- **iPhone or iPad:** open `https://www.heurial.studio/admin` in Safari, tap Share, then **Add to Home Screen**.
+  Open it from the Home Screen and sign in once.
+- **Android, Chrome or Edge on a computer:** open `/admin` and choose **Install** (Connections → This device has a
+  button when the browser offers it).
+
+Notifications need `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and the `PushSubscriptions` table. Then, on each device,
+open Connections → This device → Notifications → **Turn on**, and **Send test**. On iPhone this only works from the
+installed app (iOS 16.4 or later). You get a notification for:
+- a new website inquiry (the website asks the pipeline function after it saves one);
+- an incoming email or text from a lead, or from an unmatched sender.
+
+Tapping a notification opens the tracker on that lead's messages. Notifications carry the sender's name and the
+first line of the message; they are encrypted between the function and your device. The service worker
+(`/admin-sw.js`) shows notifications only and caches nothing. Making new VAPID keys means turning notifications on
+again on every device.
 
 ## 4. Schedule the daily email
 

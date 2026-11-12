@@ -22,6 +22,8 @@ const ROUTES: [string, RegExp][] = [
   ["DELETE", /^time\/\d{1,20}$/],
   ["POST", /^inbox\/\d{1,20}\/(convert|dismiss)$/],
   ["POST", /^digest$/],
+  ["GET", /^push\/key$/],
+  ["POST", /^push\/(subscribe|unsubscribe|test)$/],
 ];
 
 function pipelineUrl() {

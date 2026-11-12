@@ -7,6 +7,11 @@
 <title>HEURIAL tracker</title>
 <link rel="icon" href="/brand/emblem.svg">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/admin/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HEURIAL">
 <meta name="theme-color" content="#0a0a0b">
 <script>
   // Apply the saved theme before first paint so the page never flashes the wrong colours.
@@ -47,7 +52,59 @@ const auth = {
   async signOut() { await fetch("/api/admin/session", { method: "DELETE", credentials: "same-origin" }); },
 };
 
-HeurialTracker.start({ mode: "live", api, auth });
+// This device: the installed app and notifications.
+let installPrompt = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; });
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const pushable = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const worker = "serviceWorker" in navigator
+  ? navigator.serviceWorker.register("/admin-sw.js", { scope: "/admin" }).catch(() => null)
+  : Promise.resolve(null);
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.type === "open") HeurialTracker.open(e.data.url); });
+}
+const b64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const deviceName = () => (ios ? "iPhone or iPad" : /Android/.test(navigator.userAgent) ? "Android" : /Mac/.test(navigator.platform) ? "Mac" : /Win/.test(navigator.platform) ? "Windows" : "Browser")
+  + (standalone ? " (app)" : "");
+
+const device = {
+  installed: standalone,
+  ios,
+  canInstall: () => Boolean(installPrompt),
+  async install() {
+    if (!installPrompt) throw fail("Use your browser's Install option instead.", 0);
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+  },
+  async pushState() {
+    if (!pushable) return ios && !standalone ? "needs-install" : "unsupported";
+    if (Notification.permission === "denied") return "blocked";
+    const reg = await worker;
+    const sub = reg && await reg.pushManager.getSubscription();
+    return sub ? "on" : "off";
+  },
+  async enablePush() {
+    const reg = await worker;
+    if (!reg) throw fail("This browser can't run the notification helper.", 0);
+    if (await Notification.requestPermission() !== "granted") throw fail("Notifications weren't allowed. You can allow them in your settings.", 0);
+    const { publicKey } = await api("/api/push/key");
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(publicKey) });
+    await api("/api/push/subscribe", "POST", { subscription: sub.toJSON(), device: deviceName() });
+  },
+  async disablePush() {
+    const reg = await worker;
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await api("/api/push/unsubscribe", "POST", { endpoint: sub.endpoint });
+    await sub.unsubscribe();
+  },
+  testPush: () => api("/api/push/test", "POST", {}),
+};
+
+HeurialTracker.start({ mode: "live", api, auth, device });
 </script>
 </body>
 </html>

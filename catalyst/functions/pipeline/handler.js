@@ -4,10 +4,11 @@
 const crypto = require("node:crypto");
 const core = require("./core");
 const adapters = require("./adapters");
+const { cleanSubscription, short } = require("./push");
 
 const MAX_BODY = 32 * 1024;
 const MAX_EMAIL = 4 * 1024 * 1024; // provider posts can include HTML and attachments; only the text is kept
-const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages" };
+const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages", push: "PushSubscriptions" };
 
 function keyMatches(given, expected) {
   if (!expected || typeof given !== "string") return false;
@@ -63,6 +64,7 @@ async function readFields(req, limit) {
  *   inboundKey?: string,   // lets an outside service post incoming messages to /inbound and /inbound/email
  *   twilio?: { authToken: string, webhookUrl: string },   // checks the signature on texts posted to /twilio/sms
  *   draft?: ({ lead, thread, channel, instructions }) => Promise<{ subject, body }>,   // AI reply drafts
+ *   push?: { publicKey: string, send(subscription, payload): Promise<"sent" | "gone"> },   // notifications
  * }
  */
 async function handle(req, res, deps) {
@@ -79,13 +81,36 @@ async function handle(req, res, deps) {
     const { store } = deps;
     let m;
 
+    // Notifications to every subscribed device. Never fails the request that triggered it.
+    const notify = async (payload) => {
+      if (!deps.push) return 0;
+      let subs;
+      try { subs = await store.list(TABLES.push); } catch { return 0; } // table not created yet
+      let sent = 0;
+      await Promise.all(subs.map(async (sub) => {
+        try {
+          const result = await deps.push.send({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+          if (result === "gone") await store.remove(TABLES.push, String(sub.ROWID));
+          else sent++;
+        } catch (err) { console.error("pipeline: notification failed", err && (err.statusCode || err.message)); }
+      }));
+      return sent;
+    };
+
     // Incoming messages from outside services. These are the only routes that don't use the site's key:
     // each provider gets its own secret, so it can only add a received message and never read anything.
     const saveInbound = async (fields) => {
       const row = core.cleanInbound(fields, now.toISOString());
       const lead = core.matchLead(await store.list(TABLES.leads), row.channel, row.sender);
       if (lead) row.lead_id = String(lead.ROWID);
-      await store.insert(TABLES.messages, row);
+      const saved = await store.insert(TABLES.messages, row);
+      const kind = row.channel === "sms" ? "Text" : "Email";
+      await notify({
+        title: `${kind} from ${lead ? lead.name || row.sender : row.sender}`,
+        body: short(row.subject ? `${row.subject}: ${row.body}` : row.body, 140),
+        url: lead ? `/admin#lead=${lead.ROWID}&tab=messages` : "/admin#view=messages",
+        tag: `msg-${saved.ROWID}`,
+      });
       return Boolean(lead);
     };
     if (path === "inbound" && method === "POST") {
@@ -128,6 +153,7 @@ async function handle(req, res, deps) {
       inbound: Boolean(deps.inboundKey),
       twilio: Boolean(deps.twilio && deps.twilio.authToken && deps.twilio.webhookUrl),
       ai: Boolean(deps.draft),
+      push: Boolean(deps.push),
     });
     // Send an email or text through the connected service. Throws if it can't, so callers save nothing.
     const deliver = async (row, lead) => {
@@ -282,6 +308,48 @@ async function handle(req, res, deps) {
       }
       await store.update(TABLES.inquiries, { ROWID: m[1], status: m[2] === "convert" ? "converted" : "dismissed" });
       return send(200, { ok: true, leadId });
+    }
+
+    // Notifications: the browser's public key, subscribing a device, a test, and alerts from the website.
+    if (path === "push/key" && method === "GET") {
+      if (!deps.push) throw new core.Bad("Notifications aren't connected yet (VAPID keys).", 503);
+      return send(200, { publicKey: deps.push.publicKey });
+    }
+    if (path === "push/subscribe" && method === "POST") {
+      if (!deps.push) throw new core.Bad("Notifications aren't connected yet (VAPID keys).", 503);
+      const sub = cleanSubscription(await readJson(req));
+      if (!sub) throw new core.Bad("That browser subscription can't be used.");
+      let rows;
+      try { rows = await store.list(TABLES.push); } catch { throw new core.Bad("Notifications aren't set up yet. Create the PushSubscriptions table first.", 503); }
+      const existing = rows.find((r) => r.endpoint === sub.endpoint);
+      if (existing) await store.update(TABLES.push, { ROWID: String(existing.ROWID), p256dh: sub.p256dh, auth: sub.auth, device: sub.device });
+      else await store.insert(TABLES.push, { ...sub, created_at: now.toISOString() });
+      return send(200, { ok: true });
+    }
+    if (path === "push/unsubscribe" && method === "POST") {
+      const endpoint = String((await readJson(req)).endpoint || "");
+      let rows = [];
+      try { rows = await store.list(TABLES.push); } catch { /* nothing stored */ }
+      for (const r of rows.filter((x) => x.endpoint === endpoint)) await store.remove(TABLES.push, String(r.ROWID));
+      return send(200, { ok: true });
+    }
+    if (path === "push/test" && method === "POST") {
+      if (!deps.push) throw new core.Bad("Notifications aren't connected yet (VAPID keys).", 503);
+      const sent = await notify({ title: "Notifications are on", body: "New inquiries and replies will show up here.", url: "/admin", tag: "test" });
+      if (!sent) throw new core.Bad("No device received it. Turn notifications off and on again.", 502);
+      return send(200, { ok: true, sent });
+    }
+    // The website calls this after it saves a new inquiry.
+    if (path === "notify/inquiry" && method === "POST") {
+      const b = await readJson(req);
+      const name = short(b.name, 80) || "Someone";
+      await notify({
+        title: `New inquiry: ${name}`,
+        body: short([b.company, b.message].filter(Boolean).join(" · "), 140) || "Open the tracker to review it.",
+        url: "/admin#view=overview",
+        tag: "inquiry",
+      });
+      return send(200, { ok: true });
     }
 
     // Daily email. ?preview=1 returns it without sending.
