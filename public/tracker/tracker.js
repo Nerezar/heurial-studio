@@ -188,7 +188,7 @@
 <div class="app" id="app">
   ${demo ? `<div class="demo-bar" role="note">Sample data. Nothing here is saved or sent, and a refresh starts over.</div>` : ""}
   <nav class="rail" aria-label="Sections">
-    <div class="rail-mark" aria-hidden="true"><b>H</b></div>
+    <div class="rail-mark" aria-hidden="true"><i class="mark emblem"></i></div>
     <div class="rail-nav">${["overview", "pipeline", "leads", "time", "messages"].map(railBtn).join("")}</div>
     <div class="rail-foot">
       ${railBtn("connections")}
@@ -197,7 +197,7 @@
     </div>
   </nav>
   <header class="top">
-    <div class="top-id"><span class="wordmark">HEURIAL</span><h1 id="viewTitle">Overview</h1></div>
+    <div class="top-id"><span class="mark word" role="img" aria-label="HEURIAL"></span><h1 id="viewTitle">Overview</h1></div>
     <button class="cmd" type="button" data-action="palette" aria-haspopup="dialog">${icon("search")}<span>Search leads or run a command</span><kbd>${CMD_KEY}</kbd></button>
     <div class="seg" id="rangeSeg" role="group" aria-label="Date range">${RANGES.map(([value, label, long]) => `<button type="button" data-action="range" data-range="${value}" title="${long[0].toUpperCase() + long.slice(1)}">${label}</button>`).join("")}</div>
     <button class="btn primary" type="button" id="newBtn" data-action="new-lead" aria-label="New lead">${icon("plus")}<span>New lead</span></button>
@@ -320,7 +320,7 @@
 
 ${cfg.auth ? `<div class="signin" id="signin" hidden>
   <form class="signin-card" id="signinForm">
-    <div><span class="wordmark">HEURIAL</span></div>
+    <div class="signin-brand" role="img" aria-label="HEURIAL"><i class="mark emblem"></i><i class="mark word"></i></div>
     <h1>Sign in to the tracker</h1>
     <label class="field"><span>Password</span><input id="pw" type="password" autocomplete="current-password" required maxlength="200" aria-describedby="signinErr"></label>
     <p class="field-err" id="signinErr" role="alert"></p>

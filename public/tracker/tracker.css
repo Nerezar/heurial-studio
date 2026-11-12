@@ -7,16 +7,18 @@
 
 :root {
   color-scheme: dark;
-  --bg-0: #080b10;      /* chrome: rail, top bar, status bar, table heads */
-  --bg-1: #0d1117;      /* panes */
-  --bg-2: #141a24;      /* raised: buttons, cards, hover */
-  --bg-3: #1c2431;      /* pressed, selected */
-  --field: #080b10;
-  --line: #1b2330;
-  --line-2: #2a3445;
-  --text: #dfe4ec;
-  --text-2: #b0b9c8;
-  --text-3: #8792a6;
+  /* HEURIAL brand: silver (#C5CED6) on limousine black (#101010). */
+  --brand: #c5ced6;
+  --bg-0: #0a0a0b;      /* chrome: rail, top bar, status bar, table heads */
+  --bg-1: #101010;      /* panes */
+  --bg-2: #17181a;      /* raised: buttons, cards, hover */
+  --bg-3: #202226;      /* pressed, selected */
+  --field: #0a0a0b;
+  --line: #222428;
+  --line-2: #33363c;
+  --text: #e6eaee;
+  --text-2: #b7bfc8;
+  --text-3: #8b939d;
   --accent: #4c8dff;
   --accent-ink: #8fb5ff;
   --accent-soft: rgb(76 141 255 / .14);
@@ -34,6 +36,7 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
+  --brand: #101010;
   --bg-0: #eef0f3;
   --bg-1: #ffffff;
   --bg-2: #f4f5f7;
@@ -80,7 +83,13 @@ kbd { display: inline-block; min-width: 17px; padding: 0 4px; border: 1px solid 
 
 .rail { grid-area: rail; display: flex; flex-direction: column; background: var(--bg-0); border-right: 1px solid var(--line); }
 .rail-mark { flex: none; height: 44px; display: grid; place-items: center; border-bottom: 1px solid var(--line); }
-.rail-mark b { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line-2); border-radius: var(--r); font: 700 12px var(--sans); color: var(--text); }
+/* HEURIAL marks: the brand SVGs used as masks, so they take the brand colour in either theme. */
+.mark { display: block; flex: none; background: var(--brand); -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; }
+.mark.emblem { --src: url("/brand/emblem.svg"); width: 40px; height: 27px; }
+.mark.word { --src: url("/brand/wordmark.svg"); width: 88px; height: 19px; }
+.signin-brand { display: grid; justify-items: start; gap: 8px; }
+.signin-brand .mark.emblem { width: 84px; height: 56px; }
+.signin-brand .mark.word { width: 150px; height: 32px; margin-left: -7px; }
 .rail-nav, .rail-foot { display: grid; gap: 2px; padding: 6px 4px; }
 .rail-foot { margin-top: auto; border-top: 1px solid var(--line); }
 .rail-btn { position: relative; display: grid; justify-items: center; gap: 3px; width: 100%; padding: 7px 0 6px; border: 0; border-radius: var(--r); background: transparent; color: var(--text-2); font-size: 11px; letter-spacing: .01em; transition: color .1s, background-color .1s; }
@@ -91,8 +100,7 @@ kbd { display: inline-block; min-width: 17px; padding: 0 4px; border: 1px solid 
 .rail-badge { position: absolute; top: 3px; right: 8px; min-width: 15px; padding: 0 4px; border-radius: 8px; background: var(--down); color: #fff; font: 700 9.5px/15px var(--num); text-align: center; }
 
 .top { grid-area: top; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 12px; background: var(--bg-0); border-bottom: 1px solid var(--line); }
-.top-id { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin-right: auto; }
-.wordmark { color: var(--text-2); font-size: 11.5px; font-weight: 600; letter-spacing: .24em; }
+.top-id { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; }
 .top-id h1 { padding-left: 10px; border-left: 1px solid var(--line-2); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .cmd { display: flex; align-items: center; gap: 8px; width: min(34vw, 380px); height: 28px; padding: 0 6px 0 9px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--bg-1); color: var(--text-3); font-size: 12.5px; text-align: left; transition: border-color .1s, color .1s; }
 .cmd:hover { border-color: var(--text-3); color: var(--text-2); }
