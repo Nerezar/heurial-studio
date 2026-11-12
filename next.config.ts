@@ -11,6 +11,14 @@ const config: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       ],
+    },
+    // The sample-data tracker demo is shown inside the Demos page, so this one path may be framed by this site only.
+    {
+      source: "/demo/tracker/:path*",
+      headers: [
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "X-Robots-Tag", value: "noindex" },
+      ],
     }];
   },
 };

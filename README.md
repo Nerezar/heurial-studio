@@ -1,6 +1,6 @@
 # HEURIAL
 
-HEURIAL’s local site includes Home, Studio, Learn, About, Contact, and the Heurial Intelligence demo. It uses Next.js App Router, React, TypeScript, and a custom CSS design system. The dashboard uses fixed sample data and supports two periods and three views.
+HEURIAL’s local site includes Home, Studio, Learn, About, Contact, and a follow-up tracker demo. It uses Next.js App Router, React, TypeScript, and a custom CSS design system. The demo (`public/demo/tracker`) runs entirely in the browser on made-up sample data; nothing is saved or sent.
 
 The [reference audit](REFERENCE-AUDIT.md) records the source observations behind the redesign. The homepage uses an original SVG wireframe and a scroll-linked workflow diagram. Page changes use browser view transitions when supported, and the site respects the system’s reduced-motion setting.
 

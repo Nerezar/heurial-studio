@@ -49,8 +49,8 @@
   },
   {
     "id": "intelligence-demo",
-    "title": "Heurial Intelligence demo guide",
+    "title": "Follow-up tracker demo guide",
     "keywords": "demo dashboard intelligence interactive prototype metrics period overview signals sample dataset live real numbers customer results",
-    "text": "Heurial Intelligence is presented here as an interactive revenue intelligence prototype. It uses a fixed sample dataset. Switch between 30-day and 90-day periods or open Overview, Pipeline, and Signals to inspect the example metrics and observations."
+    "text": "The follow-up tracker is shown here as an interactive demo on made-up sample data. It lists new website inquiries, calls that need a status update and follow-ups that are due. A Pipeline board lets you drag leads between stages, and Email preview shows the daily summary. Nothing in the demo is saved or sent."
   }
 ]

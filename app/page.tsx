@@ -29,12 +29,12 @@ const deliverables = [
 
 const demos = [
   {
-    title: "Heurial Intelligence",
+    title: "Follow-up tracker",
     label: "Sample data",
-    icon: "chart",
-    description: "A sales dashboard demo that shows where deals get stuck. Switch views and periods to explore it.",
+    icon: "bell",
+    description: "The tool I use to keep every inquiry and follow-up from slipping. Move cards, check reminders, and preview the daily email.",
     href: "/products",
-    action: "Open the dashboard demo",
+    action: "Try the tracker demo",
   },
   {
     title: "Heurial Knowledge Assistant",
