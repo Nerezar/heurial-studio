@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Faq } from "@/components/faq";
 import { Icon } from "@/components/icon";
 import { Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
@@ -76,10 +77,10 @@ export default function HowItWorks() {
           </div>
           <div className="studio-entries">
             {steps.map(({ id, title, body, output }, index) => (
-              <article className="studio-entry" id={id} key={id}>
-                <div>
-                  <p className="interior-label">Step {index + 1}</p>
-                  <h3>{title}</h3>
+              <article className="studio-entry studio-step" id={id} key={id}>
+                <div className="studio-step-head">
+                  <span className="studio-step-number" aria-hidden="true">{index + 1}</span>
+                  <h3><span className="sr-only">Step {index + 1}: </span>{title}</h3>
                 </div>
                 <div className="studio-description">
                   <p>{body}</p>
@@ -87,17 +88,8 @@ export default function HowItWorks() {
                 </div>
               </article>
             ))}
-            {questions.map(({ id, title, body }) => (
-              <article className="studio-entry" id={id} key={id}>
-                <div>
-                  <p className="interior-label">Question</p>
-                  <h3>{title}</h3>
-                </div>
-                <div className="studio-description">
-                  <p>{body}</p>
-                </div>
-              </article>
-            ))}
+            <h3 className="faq-title">Common questions</h3>
+            <Faq questions={questions} />
           </div>
         </div>
       </section>

@@ -413,3 +413,60 @@
     transform: none;
   }
 }
+
+/* ---------- Design pass ---------- */
+/* How it works: numbered step blocks */
+.studio-step { align-items: start; }
+.studio-step-head { display: flex; align-items: center; gap: 1rem; }
+.studio-step-head h3 { margin-top: 0; }
+.studio-step-number {
+  flex: none; display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%;
+  color: #f6f3ec; background: #1b2a44; font-size: 1.15rem; font-weight: 700; box-shadow: 0 0 0 6px #dfe6f3;
+}
+.studio-description .studio-output {
+  margin-top: 1.1rem; padding: .9rem 1.1rem; border-radius: 12px; background: #f7f6f1; border: 1px solid #d5d2c6; box-shadow: inset 3px 0 0 var(--interior-link);
+}
+.studio-output span { color: var(--interior-link); }
+
+/* Expandable questions */
+.faq-title { margin-top: clamp(2rem, 4vw, 3.5rem); padding-bottom: 1rem; }
+.faq { border-top: 1px solid var(--interior-rule); }
+.faq-item { border-bottom: 1px solid var(--interior-rule); scroll-margin-top: calc(var(--masthead-height, 72px) + 1rem); }
+.faq-item summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4rem; padding-block: .9rem;
+  cursor: pointer; list-style: none; font-size: clamp(1.1rem, 1.7vw, 1.4rem); letter-spacing: -.02em; transition: color .2s ease;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary:hover { color: var(--interior-link); }
+.faq-item summary svg { flex: none; color: var(--interior-link); transition: transform .3s var(--ease-out); }
+.faq-item[open] summary svg { transform: rotate(45deg); }
+.faq-item p { max-width: 62ch; padding-bottom: 1.4rem; color: var(--interior-muted); animation: faq-open .35s var(--ease-out); }
+.faq-item:target summary { color: var(--interior-link); }
+@keyframes faq-open { from { opacity: 0; transform: translateY(-6px); } }
+
+/* About: emblem on a dark plate, principles with check marks */
+.identity-plate {
+  border: 0; border-radius: 20px; overflow: hidden;
+  background:
+    linear-gradient(rgb(145 182 255 / .07) 1px, transparent 1px) center / 14% 14%,
+    linear-gradient(90deg, rgb(145 182 255 / .07) 1px, transparent 1px) center / 14% 14%,
+    radial-gradient(ellipse at 80% 10%, #223657 0%, #111a2a 55%, #0d1016 100%);
+  box-shadow: 0 30px 60px -34px rgb(16 19 25 / .7);
+}
+.identity-plate img { filter: brightness(0) invert(1); opacity: .94; }
+.about-principles li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .9rem; align-items: start; }
+.principle-mark { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; margin-top: .2rem; border-radius: 50%; color: var(--interior-link); background: #dfe6f3; }
+
+/* Contact: checklist bullets */
+.contact-guide li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .75rem; align-items: start; }
+.contact-guide li::before {
+  content: ""; width: 1.25rem; height: 1.25rem; margin-top: .15rem; border-radius: 50%; background: #dfe6f3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322549c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4L18 8'/%3E%3C/svg%3E");
+  background-size: 70%; background-position: center; background-repeat: no-repeat;
+}
+
+/* Index links nudge on hover */
+.interior-index-link { transition: color .2s ease, padding-left .25s var(--ease-out); }
+.interior-index-link:hover { padding-left: .35rem; }
+
+@media (prefers-reduced-motion: reduce) { .faq-item p { animation: none; } .interior-index-link:hover { padding-left: 0; } }

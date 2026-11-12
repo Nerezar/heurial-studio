@@ -21,6 +21,7 @@ const paths: Record<string, ReactNode> = {
   table: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M3 15h18M9 4v16" /></>,
   bell: <><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20a2 2 0 0 0 4 0" /></>,
   pause: <path d="M8 5v14M16 5v14" />,
+  plus: <path d="M12 5v14M5 12h14" />,
   play: <path d="M7 5v14l12-7L7 5Z" />,
 };
 

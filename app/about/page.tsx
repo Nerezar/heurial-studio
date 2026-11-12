@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import { ButtonLink, Closing, PageIntro } from "@/components/shell";
+import { Icon } from "@/components/icon";
 import "../interiors.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function About() {
             <ol>
               {principles.map(({ title, body }) => (
                 <li key={title}>
+                  <span className="principle-mark" aria-hidden="true"><Icon name="check" size={16} /></span>
                   <div><h3>{title}</h3><p>{body}</p></div>
                 </li>
               ))}
