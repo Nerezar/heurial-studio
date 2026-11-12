@@ -73,7 +73,6 @@
   const mondayOf = (s) => { const d = at(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); };
   const dayDiff = (a, b) => Math.round((at(a) - at(b)) / 864e5);
   const clock = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const shortName = (name) => { const p = String(name).trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; };
   /** "Nov 12", with the year added when it isn't this year. */
   function niceDate(s) {
     if (!s) return "–";
@@ -368,7 +367,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const rate = (a, b) => (b ? a / b : null);
     const perHour = s.hours > 0 ? s.revenue_cents / s.hours : null, prevPerHour = p && p.hours > 0 ? p.revenue_cents / p.hours : null;
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
+    const urgent = urgentCount(d);
     const cells = [
+      ["Needs you", urgent, "", urgent ? "bad" : "", "New website inquiries, calls to update, and follow-ups due today or earlier.", ""],
       ["Open leads", d.leads.filter((l) => OPEN.includes(l.status)).length, "", "", `Booked, held or proposal sent, among leads booked ${inPeriod()}.`, ""],
       ["Overdue", overdue, "", overdue ? "bad" : "", "Follow-ups past their date, across all leads.", ""],
       ["Booked", s.booked, delta(s.booked, p && p.booked, String), "", `Calls booked ${inPeriod()}.`, spark(w.map((x) => x.booked))],
@@ -425,25 +426,29 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
     const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
     const w = d.weekly, total = w.reduce((a, x) => a + x.revenue_cents, 0);
-    const label = `Cumulative revenue over the last 12 weeks: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
+    const label = `Paid project value over the last 12 weeks, by the week each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
+    const overdueN = d.followups.filter((f) => f.follow_up_at < d.today).length, todayN = d.followups.filter((f) => f.follow_up_at === d.today).length;
+    const summary = [overdueN && `${overdueN} overdue`, todayN && `${todayN} due today`, d.inbox.length && plural(d.inbox.length, "new inquiry", "new inquiries"), d.stale.length && plural(d.stale.length, "call to update", "calls to update")].filter(Boolean).join(" · ");
     return `<div class="vw ov">
-  <section class="pane ov-chart" aria-labelledby="chartTitle">
-    <div class="pane-head"><h2 id="chartTitle">Cumulative revenue</h2><span class="pane-meta">Paid projects, by the week the call was booked · last 12 weeks</span><div class="pane-tools read" id="chartRead"></div></div>
-    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to read each week."></div>
+  <section class="pane ov-queue" aria-labelledby="queueTitle">
+    <div class="pane-head ${urgent ? "is-urgent" : ""}"><h2 id="queueTitle">Needs attention</h2><span class="count ${urgent ? "hot" : ""}" title="Due today or earlier">${urgent}</span>
+      <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
+    <p class="q-summary ${urgent ? "is-urgent" : ""}">${summary || "All caught up. Nothing is due today or overdue."}</p>
+    <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
   </section>
-  <section class="pane ov-sched" aria-labelledby="schedTitle">
-    <div class="pane-head"><h2 id="schedTitle">Follow-up schedule</h2><span class="pane-meta">Overdue, then the next 14 days</span></div>
-    <div class="sched" data-scroll="sched">${scheduleHtml()}</div>
+  <section class="pane ov-chart" aria-labelledby="chartTitle">
+    <div class="pane-head"><h2 id="chartTitle">Paid project value</h2><div class="pane-tools read" id="chartRead"></div></div>
+    <p class="chart-note">Running total over the last 12 weeks, grouped by the week the call was booked. Payment dates aren't recorded, so this isn't when money arrived.</p>
+    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to read each week."></div>
   </section>
   <section class="pane ov-tabs" aria-label="Reports">
     <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div>
       <span class="pane-tools pane-meta">Calls booked ${inPeriod()}</span></div>
     <div class="pane-body" role="tabpanel">${report}</div>
   </section>
-  <section class="pane ov-queue" aria-labelledby="queueTitle">
-    <div class="pane-head"><h2 id="queueTitle">Needs attention</h2><span class="count ${urgent ? "hot" : ""}" title="Due today or earlier">${urgent}</span>
-      <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
-    <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
+  <section class="pane ov-sched" aria-labelledby="schedTitle">
+    <div class="pane-head"><h2 id="schedTitle">Follow-up schedule</h2><span class="pane-meta"><span class="sched-14">Overdue, then the next 14 days</span><span class="sched-7">Overdue, then the next 7 days</span></span></div>
+    <div class="sched" data-scroll="sched">${scheduleHtml()}</div>
   </section>
 </div>`;
   }
@@ -497,13 +502,13 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     for (let i = 0; i < 14; i++) {
       const day = addDays(t, i), date = at(day), dow = date.getDay();
       cols.push({
-        cls: `${i === 0 ? "is-today" : ""} ${dow === 0 || dow === 6 ? "is-off" : ""}`,
+        cls: `${i === 0 ? "is-today" : ""} ${dow === 0 || dow === 6 ? "is-off" : ""} ${i >= 7 ? "d-later" : ""}`,
         head: `<span>${i === 0 ? "Today" : date.toLocaleDateString("en-US", { weekday: "short" })}</span><b>${date.getDate()}</b>`,
         items: d.followups.filter((f) => f.follow_up_at === day),
       });
     }
     return cols.map((c) => `<div class="sc-col ${c.cls}"><div class="sc-head">${c.head}</div><div class="sc-items">
-      ${c.items.slice(0, 3).map((f) => `<button class="sc-item" type="button" data-action="open" data-id="${f.id}" data-fk="sc-${f.id}" title="${esc(f.name)}: ${esc(f.follow_up_note || "Follow up")}">${esc(shortName(f.name))}</button>`).join("")}
+      ${c.items.slice(0, 3).map((f) => `<button class="sc-item" type="button" data-action="open" data-id="${f.id}" data-fk="sc-${f.id}" title="${esc(f.name)}: ${esc(f.follow_up_note || "Follow up")}">${esc(f.name)}</button>`).join("")}
       ${c.items.length > 3 ? `<span class="sc-more" title="${esc(c.items.slice(3).map((f) => f.name).join(", "))}">+${c.items.length - 3} more</span>` : ""}</div></div>`).join("");
   }
 
@@ -517,16 +522,16 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     ];
     const total = reached[0][1], count = (st) => L.filter((l) => l.status === st).length;
     if (!total) return `<div class="empty">No calls booked ${inPeriod()}.</div>`;
-    return `<table class="tbl"><thead><tr><th>Stage reached</th><th class="r">Leads</th><th>Share of booked</th><th class="r">Of booked</th><th class="r">From previous stage</th></tr></thead><tbody>
-      ${reached.map(([name, value, c], i) => `<tr><td>${name}</td><td class="r">${value}</td><td><div class="meter" style="--c:var(${c})"><i style="width:${(value / total) * 100}%"></i></div></td><td class="r">${pct(value, total)}</td><td class="r">${i ? pct(value, reached[i - 1][1]) : "–"}</td></tr>`).join("")}
+    return `<table class="tbl"><thead><tr><th>Stage reached</th><th class="r">Leads</th><th class="meter-col">Share of booked</th><th class="r">Of booked</th><th class="r">From previous stage</th></tr></thead><tbody>
+      ${reached.map(([name, value, c], i) => `<tr><td>${name}</td><td class="r">${value}</td><td class="meter-col"><div class="meter" style="--c:var(${c})"><i style="width:${(value / total) * 100}%"></i></div></td><td class="r">${pct(value, total)}</td><td class="r">${i ? pct(value, reached[i - 1][1]) : "–"}</td></tr>`).join("")}
       </tbody></table><p class="foot-note">${count("booked") + count("held") + count("proposal")} still open · ${count("lost")} lost · ${count("no_show")} no-show. A lead counts toward every stage it has passed.</p>`;
   }
   function reportSources() {
     const rows = state.data.sources;
     if (!rows.length) return `<div class="empty">No calls booked ${inPeriod()}.</div>`;
     const max = Math.max(1, ...rows.map((x) => x.booked));
-    return `<table class="tbl"><thead><tr><th>Source</th><th class="r">Booked</th><th>Share</th><th class="r">Paid</th><th class="r">Close rate</th><th class="r">Revenue</th></tr></thead><tbody>
-      ${rows.map((x) => `<tr><td>${esc(x.source)}</td><td class="r">${x.booked}</td><td><div class="meter"><i style="width:${(x.booked / max) * 100}%"></i></div></td><td class="r">${x.paid}</td><td class="r">${pct(x.paid, x.booked)}</td><td class="r">${money(x.revenue_cents)}</td></tr>`).join("")}
+    return `<table class="tbl"><thead><tr><th>Source</th><th class="r">Booked</th><th class="meter-col">Share</th><th class="r">Paid</th><th class="r">Close rate</th><th class="r">Revenue</th></tr></thead><tbody>
+      ${rows.map((x) => `<tr><td>${esc(x.source)}</td><td class="r">${x.booked}</td><td class="meter-col"><div class="meter"><i style="width:${(x.booked / max) * 100}%"></i></div></td><td class="r">${x.paid}</td><td class="r">${pct(x.paid, x.booked)}</td><td class="r">${money(x.revenue_cents)}</td></tr>`).join("")}
       </tbody></table>`;
   }
   function reportRates() {
@@ -610,7 +615,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const { w, cum, cx, py, x0, band } = geo;
     if (i < 0) {
       gx.setAttribute("visibility", "hidden");
-      read.innerHTML = `<span>12 weeks</span><span>Revenue <b>${usd(cum[cum.length - 1])}</b></span><span>Booked <b>${w.reduce((a, x) => a + x.booked, 0)}</b></span><span>Paid <b>${w.reduce((a, x) => a + x.paid, 0)}</b></span>`;
+      read.innerHTML = `<span>Total <b>${usd(cum[cum.length - 1])}</b></span><span>Booked <b>${w.reduce((a, x) => a + x.booked, 0)}</b></span><span>Paid <b>${w.reduce((a, x) => a + x.paid, 0)}</b></span>`;
       return;
     }
     const x = cx(i).toFixed(1), y = py(cum[i]).toFixed(1);
@@ -622,7 +627,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("gxr").setAttribute("y", (py(cum[i]) - 8).toFixed(1));
     $("gxt").setAttribute("y", (py(cum[i]) + 3.5).toFixed(1));
     $("gxt").textContent = usd(cum[i]);
-    read.innerHTML = `<span>Week of ${niceDate(w[i].week)}</span><span>Revenue <b>${money(w[i].revenue_cents)}</b></span><span>Running total <b>${usd(cum[i])}</b></span><span>Booked <b>${w[i].booked}</b></span><span>Paid <b>${w[i].paid}</b></span>`;
+    read.innerHTML = `<span>Wk of ${niceDate(w[i].week)}</span><span>Value <b>${money(w[i].revenue_cents)}</b></span><span>Total <b>${usd(cum[i])}</b></span><span>Booked <b>${w[i].booked}</b></span><span>Paid <b>${w[i].paid}</b></span>`;
   }
 
   // ----- Pipeline -----
