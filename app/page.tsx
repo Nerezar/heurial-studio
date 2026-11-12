@@ -7,15 +7,6 @@ import { WorkflowDemo } from "@/components/workflow-demo";
 import { tone } from "@/lib/style";
 import "./home.css";
 
-// Labels that float around the hero ring: the stages of a typical workflow.
-const heroChips = [
-  { label: "New inquiry", icon: "mail", color: "signal", x: "3%", y: "17%", delay: "0s" },
-  { label: "Reply drafted", icon: "spark", color: "violet", x: "56%", y: "3%", delay: "-2.2s" },
-  { label: "You approved", icon: "check", color: "green", x: "70%", y: "47%", delay: "-4s" },
-  { label: "Logged", icon: "table", color: "cyan", x: "49%", y: "86%", delay: "-1.2s" },
-  { label: "Follow-up set", icon: "bell", color: "amber", x: "0%", y: "68%", delay: "-3.1s" },
-] as const;
-
 const tools = [
   { icon: "mail", label: "Email" },
   { icon: "table", label: "Spreadsheets" },
@@ -25,11 +16,11 @@ const tools = [
 ];
 
 const problems = [
-  { icon: "mail", color: "red", title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
-  { icon: "repeat", color: "amber", title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
-  { icon: "copy", color: "signal", title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them." },
-  { icon: "search", color: "violet", title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them." },
-] as const;
+  { title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
+  { title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
+  { title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them." },
+  { title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them." },
+];
 
 const steps = [
   { title: "Talk", body: "A free 20-minute call. You tell me what eats your time, and I tell you honestly whether I can help." },
@@ -47,27 +38,27 @@ const deliverables = [
 ];
 
 const fits = [
-  { icon: "mail", color: "signal", label: "Reply to new inquiries and log them" },
-  { icon: "bell", color: "amber", label: "Nudge leads who went quiet" },
-  { icon: "book", color: "violet", label: "Answer common questions from your own documents" },
-  { icon: "check", color: "green", label: "Turn meeting notes into a to-do list" },
-  { icon: "chart", color: "cyan", label: "Send a weekly report that pulls your numbers together" },
-] as const;
+  "Reply to new inquiries and log them",
+  "Nudge leads who went quiet",
+  "Answer common questions from your own documents",
+  "Turn meeting notes into a to-do list",
+  "Send a weekly report that pulls your numbers together",
+];
 
 const promises = [
-  { icon: "shield", title: "You own everything I build.", body: "It lives in your accounts, not mine." },
-  { icon: "lock", title: "I never ask for your passwords.", body: "You invite me as a user instead." },
-  { icon: "eye", title: "No surprises with your data.", body: "I’ll tell you which AI services touch it before we start." },
-  { icon: "chat", title: "Straight answers.", body: "If I’m not the right fit, I’ll say so." },
+  { title: "You own everything I build.", body: "It lives in your accounts, not mine." },
+  { title: "I never ask for your passwords.", body: "You invite me as a user instead." },
+  { title: "No surprises with your data.", body: "I’ll tell you which AI services touch it before we start." },
+  { title: "Straight answers.", body: "If I’m not the right fit, I’ll say so." },
 ];
 
 export default function Home() {
   return <>
-    <section className="hero" aria-labelledby="hero-title">
+    <section className="hero is-navy" aria-labelledby="hero-title">
       <div className="wrap hero-inner">
         <div className="hero-copy">
           <Chip>AI workflows for small businesses</Chip>
-          <h1 id="hero-title">Make work <span className="grad">flow better.</span></h1>
+          <h1 id="hero-title">Make work <span className="accent">flow better.</span></h1>
           <p className="hero-lede">I build small AI-powered workflows that take repetitive work off your plate: following up with leads, answering the same questions, moving information between tools. All inside the tools you already use.</p>
           <div className="hero-actions">
             <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
@@ -81,11 +72,6 @@ export default function Home() {
         </div>
         <div className="hero-visual" aria-hidden="true">
           <SystemField />
-          {heroChips.map(({ label, icon, color, x, y, delay }, index) => (
-            <span className="chip hero-chip" key={label} style={tone(color, { "--x": x, "--y": y, "--d": delay, "--n": index })}>
-              <Icon name={icon} size={15} />{label}
-            </span>
-          ))}
         </div>
       </div>
       <div className="wrap hero-tools">
@@ -96,21 +82,16 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section" aria-labelledby="problems-title">
+    <section className="section is-paper" aria-labelledby="problems-title">
       <div className="wrap split">
         <header className="section-head">
-          <Chip color="red">Sound familiar?</Chip>
+          <Chip>Sound familiar?</Chip>
           <h2 id="problems-title">The busywork adds up.</h2>
           <p>A few minutes here, a few there. By Friday it’s hours you didn’t spend on the work that pays.</p>
         </header>
-        <div className="note-stack">
-          {problems.map(({ icon, color, title, body }, index) => (
-            <article className="note" key={title} style={tone(color, { "--i": index })}>
-              <span className="icon-tile"><Icon name={icon} size={20} /></span>
-              <div><h3>{title}</h3><p>{body}</p></div>
-            </article>
-          ))}
-        </div>
+        <ul className="rows">
+          {problems.map(({ title, body }) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}
+        </ul>
       </div>
     </section>
 
@@ -125,16 +106,16 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section" id="how-it-works" aria-labelledby="steps-title">
+    <section className="section is-paper" id="how-it-works" aria-labelledby="steps-title">
       <div className="wrap">
-        <header className="section-head is-center">
-          <Chip color="cyan">How it works</Chip>
+        <header className="section-head">
+          <Chip>How it works</Chip>
           <h2 id="steps-title">One annoying task, handled.</h2>
           <p>We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff.</p>
         </header>
         <ol className="steps">
           {steps.map(({ title, body }, index) => (
-            <li className="glass lift step" key={title}>
+            <li className="step" key={title}>
               <span className="step-orb" aria-hidden="true">{index + 1}</span>
               <h3>{title}</h3>
               <p>{body}</p>
@@ -148,7 +129,7 @@ export default function Home() {
     <section className="section" id="calculator" aria-labelledby="calc-title">
       <div className="wrap">
         <header className="section-head">
-          <Chip color="green">Quick math</Chip>
+          <Chip>Quick math</Chip>
           <h2 id="calc-title">What is that task costing you?</h2>
           <p>Pick one task you repeat every week. Move the sliders to see what it adds up to over a year.</p>
         </header>
@@ -158,14 +139,13 @@ export default function Home() {
 
     <section className="section offer" aria-labelledby="offer-title">
       <div className="wrap">
-        <header className="section-head is-center">
+        <header className="section-head">
           <Chip>Founding offer</Chip>
           <h2 id="offer-title">One price. One workflow. About a week.</h2>
           <p>For my first three clients. Half to start, half at handoff.</p>
         </header>
         <div className="offer-stage">
-          <span className="ghost-word" aria-hidden="true">Offer</span>
-          <article className="glass is-frosted is-glow glow-bottom offer-card">
+          <article className="glass is-glow offer-card">
             <p className="offer-label">Founding offer</p>
             <p className="offer-price num">$495</p>
             <p className="offer-note">One workflow, built in your own tools, about one week from kickoff.</p>
@@ -174,11 +154,11 @@ export default function Home() {
             </ul>
             <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
           </article>
-          <article className="glass is-frosted fit-card">
+          <article className="fit-card">
             <h3>Tasks it fits</h3>
             <p>The best first workflow is one small task you repeat all the time. For example:</p>
             <ul className="fit-list">
-              {fits.map(({ icon, color, label }) => <li className="chip" key={label} style={tone(color)}><Icon name={icon} size={16} />{label}</li>)}
+              {fits.map((label) => <li key={label}>{label}</li>)}
             </ul>
             <p className="fit-foot">Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
           </article>
@@ -189,7 +169,7 @@ export default function Home() {
     <section className="section" id="demos" aria-labelledby="demos-title">
       <div className="wrap">
         <header className="section-head">
-          <Chip color="violet">Demos</Chip>
+          <Chip>Demos</Chip>
           <h2 id="demos-title">See what’s possible.</h2>
           <p>These are working demos with sample data. They’re not live client systems.</p>
         </header>
@@ -230,21 +210,16 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section" aria-labelledby="trust-title">
-      <div className="wrap split is-reversed">
+    <section className="section is-paper" aria-labelledby="trust-title">
+      <div className="wrap split">
         <header className="section-head">
-          <Chip color="green">Honest promises</Chip>
+          <Chip>Honest promises</Chip>
           <h2 id="trust-title">Your business stays yours.</h2>
           <p>The same four rules on every project.</p>
         </header>
-        <div className="note-stack is-mirrored">
-          {promises.map(({ icon, title, body }, index) => (
-            <article className="note" key={title} style={tone("green", { "--i": index })}>
-              <span className="icon-tile"><Icon name={icon} size={20} /></span>
-              <div><h3>{title}</h3><p>{body}</p></div>
-            </article>
-          ))}
-        </div>
+        <ul className="rows">
+          {promises.map(({ title, body }) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}
+        </ul>
       </div>
     </section>
 

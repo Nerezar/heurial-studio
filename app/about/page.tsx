@@ -20,14 +20,13 @@ export default function About() {
   return (
     <>
       <PageIntro
-        ghost="About"
         label="About"
         title="AI built around how you work."
         description="I’m Uriyah Moore, founder of HEURIAL Studio. I help small businesses use AI in practical ways: less busywork, fewer dropped balls, and tools people actually use."
       />
       <section className="section is-tight" aria-labelledby="about-method">
         <div className="wrap about-grid">
-          <figure className="glass is-glow glow-bottom identity-plate">
+          <figure className="glass identity-plate">
             <Image src="/brand/emblem.svg" alt="HEURIAL’s tiger emblem" width={407} height={269} />
           </figure>
           <div className="about-principles">
@@ -48,9 +47,9 @@ export default function About() {
       </section>
       <section className="section is-tight" aria-labelledby="about-studio-title">
         <div className="wrap">
-          <div className="glass strip">
+          <div className="strip">
             <div>
-              <Chip color="cyan">HEURIAL Studio</Chip>
+              <Chip>HEURIAL Studio</Chip>
               <h2 id="about-studio-title">One task at a time.</h2>
               <p>Start with one repetitive task. I’ll build a workflow for it in your own tools in about a week.</p>
             </div>

@@ -65,7 +65,7 @@ export function SavingsCalculator() {
       <p className="calc-fine">This is an estimate from your numbers, not a promise. It assumes a workflow takes over about 70% of the task across 50 working weeks, and it leaves out any tool fees.</p>
     </form>
 
-    <div className="glass is-glow glow-bottom calc-result">
+    <div className="glass is-glow calc-result">
       <div className="calc-result-head">
         <span>Your estimate</span>
         {pays
@@ -76,7 +76,7 @@ export function SavingsCalculator() {
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
             <linearGradient id="calc-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="rgb(110 165 255)" stopOpacity=".38" />
+              <stop offset="0" stopColor="rgb(110 165 255)" stopOpacity=".16" />
               <stop offset="1" stopColor="rgb(110 165 255)" stopOpacity="0" />
             </linearGradient>
           </defs>

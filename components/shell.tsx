@@ -21,17 +21,17 @@ export function ButtonLink({ href, children, secondary = false }: { href: string
   return <MotionLink className={`button ${secondary ? "secondary" : "primary"}`} href={href}>{children}<Icon name="arrow" size={17} /></MotionLink>;
 }
 
-/** Small glowing label that sits above a heading. */
+/** Small label that sits above a heading. */
 export function Chip({ children, color }: { children: ReactNode; color?: Tone }) {
-  return <p className="chip" style={color ? tone(color) : undefined}><i aria-hidden="true" />{children}</p>;
+  return <p className="label" style={color ? tone(color) : undefined}><i aria-hidden="true" />{children}</p>;
 }
 
 export function Header() {
   return <header className="site-header">
-    <div className="nav-pill">
+    <div className="wrap header-inner">
       <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></MotionLink>
       <Navigation links={primaryLinks} />
-      <MotionLink href="/contact" className="nav-cta">Book a free call</MotionLink>
+      <MotionLink href="/contact" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></MotionLink>
     </div>
   </header>;
 }
@@ -52,9 +52,8 @@ export function Footer() {
   </footer>;
 }
 
-export function PageIntro({ label, title, description, ghost }: { label: string; title: string; description: string; ghost?: string }) {
-  return <section className="page-intro">
-    {ghost && <span className="ghost-word" aria-hidden="true">{ghost}</span>}
+export function PageIntro({ label, title, description }: { label: string; title: string; description: string }) {
+  return <section className="page-intro is-navy">
     <div className="wrap page-intro-inner">
       <Chip>{label}</Chip>
       <h1><span className="intro-title">{title}</span></h1>
@@ -64,11 +63,11 @@ export function PageIntro({ label, title, description, ghost }: { label: string;
 }
 
 export function Closing() {
-  return <section className="closing" aria-labelledby="closing-title">
-    <div className="wrap">
-      <div className="closing-panel glass is-glow glow-bottom">
-        <Chip>Free 20-minute call</Chip>
-        <h2 id="closing-title">Got a task you’re tired of doing?</h2>
+  return <section className="closing is-navy" aria-labelledby="closing-title">
+    <div className="wrap closing-panel">
+      <Chip>Free 20-minute call</Chip>
+      <h2 id="closing-title">Got a task you’re tired of doing?</h2>
+      <div className="closing-copy">
         <p>Tell me about it. If I can help, I’ll show you exactly how. If not, I’ll point you somewhere useful.</p>
         <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
       </div>

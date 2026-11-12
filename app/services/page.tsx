@@ -57,7 +57,6 @@ export default function HowItWorks() {
   return (
     <>
       <PageIntro
-        ghost="How"
         label="How it works"
         title="One annoying task, handled."
         description="We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff, $495 for my first three clients."
@@ -65,14 +64,14 @@ export default function HowItWorks() {
       <section className="section is-tight" aria-labelledby="steps-title">
         <div className="wrap">
           <header className="section-head">
-            <Chip color="cyan">Three steps</Chip>
+            <Chip>Three steps</Chip>
             <h2 id="steps-title">From call to handoff</h2>
           </header>
           <ol className="timeline">
             {steps.map(({ id, title, body, output }, index) => (
               <li id={id} key={id}>
                 <span className="step-orb" aria-hidden="true">{index + 1}</span>
-                <article className="glass timeline-card">
+                <article className="timeline-card">
                   <h3><span className="sr-only">Step {index + 1}: </span>{title}</h3>
                   <div>
                     <p>{body}</p>
@@ -84,10 +83,10 @@ export default function HowItWorks() {
           </ol>
         </div>
       </section>
-      <section className="section" aria-labelledby="faq-title">
+      <section className="section is-paper" aria-labelledby="faq-title">
         <div className="wrap faq-layout">
           <header className="section-head">
-            <Chip color="violet">Questions</Chip>
+            <Chip>Questions</Chip>
             <h2 id="faq-title">Common questions</h2>
             <p>Don’t see yours? <MotionLink href="/contact" className="text-link">Ask me directly</MotionLink>.</p>
           </header>

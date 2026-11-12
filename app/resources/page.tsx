@@ -13,7 +13,6 @@ export default function Resources() {
   return (
     <>
       <PageIntro
-        ghost="Guides"
         label="Guides"
         title="Ask a question."
         description="This knowledge assistant is a demo. Ask about working with HEURIAL, and it answers from the public guides below, with a link to the passage it used."
@@ -23,10 +22,10 @@ export default function Resources() {
           <Assistant />
         </div>
       </section>
-      <section className="section" aria-labelledby="source-title">
+      <section className="section is-paper" aria-labelledby="source-title">
         <div className="wrap">
           <header className="section-head">
-            <Chip color="violet">Source library</Chip>
+            <Chip>Source library</Chip>
             <h2 id="source-title">Read the sources</h2>
             <p>Everything the assistant can say comes from these passages.</p>
           </header>

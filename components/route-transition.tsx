@@ -47,32 +47,6 @@ export function RouteMotion({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", update);
   }, []);
 
-  // Cards light up under the pointer: pass its position to the card it is over.
-  useEffect(() => {
-    if (!window.matchMedia("(hover: hover)").matches) return;
-    let frame = 0;
-    let latest: PointerEvent | null = null;
-    const apply = () => {
-      frame = 0;
-      const target = latest?.target;
-      if (!(target instanceof Element)) return;
-      const card = target.closest<HTMLElement>(".glass, .note");
-      if (!card || !latest) return;
-      const box = card.getBoundingClientRect();
-      card.style.setProperty("--mx", `${latest.clientX - box.left}px`);
-      card.style.setProperty("--my", `${latest.clientY - box.top}px`);
-    };
-    const onMove = (event: PointerEvent) => {
-      latest = event;
-      if (!frame) frame = requestAnimationFrame(apply);
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
-
   // Tell a pending navigation that the new page has rendered.
   useLayoutEffect(() => {
     if (previousPath.current === pathname) return;

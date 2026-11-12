@@ -11,16 +11,15 @@ export const metadata: Metadata = {
 };
 
 const views = [
-  { icon: "bell", label: "Needs you", title: "Start the day with a short list", description: "New website inquiries, calls that need a status, and follow-ups that are due, all in one place with one-click actions." },
-  { icon: "workflow", label: "Pipeline", title: "Drag a lead along", description: "Move a card between columns as a conversation progresses. A follow-up date is suggested for you." },
-  { icon: "mail", label: "Daily email", title: "Get it without opening anything", description: "Click “Email preview” to see the summary I get each morning. In this demo, nothing is ever sent." },
+  { label: "Needs you", title: "Start the day with a short list", description: "New website inquiries, calls that need a status, and follow-ups that are due, all in one place with one-click actions." },
+  { label: "Pipeline", title: "Drag a lead along", description: "Move a card between columns as a conversation progresses. A follow-up date is suggested for you." },
+  { label: "Daily email", title: "Get it without opening anything", description: "Click “Email preview” to see the summary I get each morning. In this demo, nothing is ever sent." },
 ];
 
 export default function Products() {
   return (
     <>
       <PageIntro
-        ghost="Demo"
         label="Demo with sample data"
         title="Never lose track of a lead."
         description="This is the follow-up tracker I built for my own business, running on made-up people. Add a lead, move a card, log some time. Nothing is saved or sent."
@@ -31,16 +30,15 @@ export default function Products() {
           <p className="demo-caption">Everything here is a demo. Refresh the page to start over.</p>
         </div>
       </section>
-      <section className="section" aria-labelledby="demo-guide">
+      <section className="section is-paper" aria-labelledby="demo-guide">
         <div className="wrap">
           <header className="section-head">
-            <Chip color="green">Demo guide</Chip>
+            <Chip>Demo guide</Chip>
             <h2 id="demo-guide">Three things to try.</h2>
           </header>
           <div className="card-grid">
-            {views.map(({ icon, label, title, description }) => (
-              <article className="glass lift guide-card" key={label}>
-                <span className="icon-tile"><Icon name={icon} size={20} /></span>
+            {views.map(({ label, title, description }) => (
+              <article className="guide-card" key={label}>
                 <p className="guide-label">{label}</p>
                 <h3>{title}</h3>
                 <p>{description}</p>

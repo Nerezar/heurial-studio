@@ -22,7 +22,6 @@ export default function Contact() {
   return (
     <>
       <PageIntro
-        ghost="Hello"
         label="Free 20-minute call"
         title="Let’s find one thing to take off your plate."
         description="Tell me about a task you’re tired of doing. I’ll reply by email to set up a free 20-minute call."
@@ -30,7 +29,7 @@ export default function Contact() {
       <section className="section is-tight" aria-labelledby="inquiry-guide">
         <div className="wrap contact-grid">
           <aside className="glass contact-guide">
-            <Chip color="cyan">Before the call</Chip>
+            <Chip>Before the call</Chip>
             <h2 id="inquiry-guide">What to include</h2>
             <ul className="check-list">
               {prompts.map((prompt) => <li key={prompt}><Icon name="check" size={18} />{prompt}</li>)}
