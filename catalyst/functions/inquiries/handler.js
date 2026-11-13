@@ -49,10 +49,40 @@ function toRow(data) {
   return row;
 }
 
+const ALERT_TIMEOUT_MS = 5000; // the website waits 10 s in total, so the alert must not hold the reply for long
+const oneLine = (s) => String(s || "").replace(/[\r\n\t]+/g, " ").trim();
+
+/** The email the owner gets for each new inquiry. Plain text; replying goes straight to the visitor. */
+function buildAlert(row, { trackerUrl = "https://www.heurial.studio/admin" } = {}) {
+  const who = oneLine(row.name) + (row.company ? ` (${oneLine(row.company)})` : "");
+  const lines = [
+    `New inquiry from ${who}`,
+    "",
+    `Email: ${row.email}`,
+    `Business: ${row.company || "not given"}`,
+    `Came from: ${row.source}${row.source_detail ? ` (${row.source_detail})` : ""}`,
+    row.heard ? `Said they heard about you via: ${row.heard}` : "",
+    `Sent: ${row.created_at}`,
+    "",
+    "Message:",
+    row.message,
+    "",
+    `Reply to this email to answer ${oneLine(row.name)} directly, or open the tracker: ${trackerUrl}`,
+  ].filter((line, i, all) => line !== "" || all[i - 1] !== "");
+  return { subject: `New inquiry: ${who}`.slice(0, 150), text: lines.join("\n"), replyTo: row.email };
+}
+
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); })])
+    .finally(() => clearTimeout(timer));
+}
+
 /**
  * @param req  Node request
  * @param res  Node response
- * @param deps { expectedKey: string, insert: (row) => Promise<{ ROWID?: string }> }
+ * @param deps { expectedKey: string, insert: (row) => Promise<{ ROWID?: string }>,
+ *               notify?: (alert: { subject, text, replyTo }) => Promise<void>, trackerUrl?: string, alertTimeoutMs?: number }
  */
 async function handle(req, res, deps) {
   const send = (status, body) => {
@@ -69,11 +99,21 @@ async function handle(req, res, deps) {
     const row = toRow(data);
     if (!row) return send(400, { error: "Invalid inquiry" });
     const saved = await deps.insert(row);
-    return send(201, { ok: true, rowId: saved && saved.ROWID ? String(saved.ROWID) : undefined });
+    // The inquiry is saved. Tell the owner, but a failed or slow email never fails the visitor's submission.
+    let alerted = false;
+    if (deps.notify) {
+      try {
+        await withTimeout(deps.notify(buildAlert(row, { trackerUrl: deps.trackerUrl })), deps.alertTimeoutMs || ALERT_TIMEOUT_MS);
+        alerted = true;
+      } catch (err) {
+        console.error("inquiries: owner alert failed", row.inquiry_id, err && err.message);
+      }
+    }
+    return send(201, { ok: true, rowId: saved && saved.ROWID ? String(saved.ROWID) : undefined, alerted });
   } catch (err) {
     console.error("inquiries: save failed", err && err.message);
     return send(500, { error: "Could not save the inquiry" });
   }
 }
 
-module.exports = { handle, toRow, keyMatches };
+module.exports = { handle, toRow, keyMatches, buildAlert };

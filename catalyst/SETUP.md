@@ -76,6 +76,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 Never paste the secret into code, chat, or git.
 
+### Email alert for each new inquiry
+
+Right after an inquiry is saved, the function emails the owner through Catalyst Mail: who wrote, their email and
+business, where they came from, and the message. Replying to that email goes straight to the visitor. If the email
+fails or takes longer than 5 seconds, the visitor's submission still succeeds and the failure shows in the function's
+logs ("owner alert failed"); the daily email is the backup.
+
+It works with no extra settings: it sends from and to `hello@heurial.studio`, which is verified in Catalyst Mail.
+Optional settings on the `inquiries` function:
+- `ALERT_TO`: a different address for the alerts, or `off` to stop them.
+- `ALERT_FROM`: a different sender. It must be verified in Catalyst Mail first.
+- `TRACKER_URL`: the link in the email (default `https://www.heurial.studio/admin`).
+
 ## 4. Redeploy the site and test
 
 Redeploy the Slate app so it picks up the new variables. Then:
@@ -83,6 +96,7 @@ Redeploy the Slate app so it picks up the new variables. Then:
 1. Open `https://www.heurial.studio/?src=referral`, go to Contact, and send a test inquiry.
 2. You should see "Thanks! … Reference: …".
 3. In Data Store → `Inquiries`, the new row should show `source` = Referral.
+4. Within a minute, `hello@heurial.studio` should get "New inquiry: …". Delete the test row afterwards.
 
 If the form says it couldn't reach the inbox, check the function's logs in the console and that both secret values match.
 
