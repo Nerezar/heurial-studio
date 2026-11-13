@@ -46,7 +46,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   that day; what changed it is unknown. Both corrected by fingerprint and the site redeployed. Slate swaps any 503
   from the app for its own "origin server unavailable" page, so a fast 503 on the form means the site refused
   (wrong key or address), not that the server is down. After any key change, send a real test through the form.
-- Three more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
+- Two more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
