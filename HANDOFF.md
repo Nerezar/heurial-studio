@@ -23,14 +23,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - **Live website: `665016e`.** Functions in Production: `inquiries` and `pipeline` at `bf68c83`. `origin/main`
   matches. Next: B5 (rotate `PIPELINE_KEY` and `INQUIRY_KEY` on the site and functions together), then plan step 3
   (C2 booking link, C3 thank-you and acknowledgement email, C1 About content).
-- **B5 (rotate `PIPELINE_KEY`, `INQUIRY_KEY`) in progress, paused 2026-11-13:** new keys are in the owner's
-  `~/.heurial-secrets/*.new` files (old ones kept beside them). Function settings in Production are editable from the
-  console: Serverless → Functions → <fn> → Configuration → set "Variable Environment" to Production → row ⋯ → Edit.
-  The website's copies (`INQUIRY_FUNCTION_KEY`, `PIPELINE_FUNCTION_KEY`) are NOT in Slate → heurial → App Settings
-  (empty there); they're probably on the Slate deployment "default", whose panel didn't load in the browser pane.
-  A first attempt changed `inquiries`' Production key before the site side was found; the form broke for a few
-  minutes and the old key was put back (form re-tested: 201). Next: find the site-side setting, then change both
-  sides back to back. Never screenshot a filled-in key field.
+- **B5 half done 2026-11-13:** `INQUIRY_KEY` is rotated. New value on the `inquiries` function (Production) and as
+  `INQUIRY_FUNCTION_KEY` on the website; live form tested (201). Owner's `~/.heurial-secrets/inquiry-key` is the
+  new one, `inquiry-key.old` the old. **`PIPELINE_KEY` not rotated yet:** the new value waits in
+  `~/.heurial-secrets/pipeline-key.new`; it goes on `pipeline` and `daily-digest` (Production) and as
+  `PIPELINE_FUNCTION_KEY` on the website, then redeploy the site and check /admin data and the morning email.
+- Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
+  Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
+  Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
+  A website variable change only applies after `catalyst deploy slate heurial --production`; right after a deploy
+  the API can answer 503 for about a minute while it warms up. Prepare both edit boxes before pasting, check the
+  saved value's length (43) without reading it, and never screenshot a filled-in key field.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
