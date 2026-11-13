@@ -23,8 +23,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - **Live website: `665016e`.** Functions in Production: `inquiries` and `pipeline` at `bf68c83`. `origin/main`
   matches. Next: B5 (rotate `PIPELINE_KEY` and `INQUIRY_KEY` on the site and functions together), then plan step 3
   (C2 booking link, C3 thank-you and acknowledgement email, C1 About content).
-- Two shared keys (`PIPELINE_KEY`, `INQUIRY_KEY`) were exposed in a Claude session's tool output on 2026-11-13.
-  Not public; rotating them (site + functions together) is optional.
+- **B5 (rotate `PIPELINE_KEY`, `INQUIRY_KEY`) in progress, paused 2026-11-13:** new keys are in the owner's
+  `~/.heurial-secrets/*.new` files (old ones kept beside them). Function settings in Production are editable from the
+  console: Serverless → Functions → <fn> → Configuration → set "Variable Environment" to Production → row ⋯ → Edit.
+  The website's copies (`INQUIRY_FUNCTION_KEY`, `PIPELINE_FUNCTION_KEY`) are NOT in Slate → heurial → App Settings
+  (empty there); they're probably on the Slate deployment "default", whose panel didn't load in the browser pane.
+  A first attempt changed `inquiries`' Production key before the site side was found; the form broke for a few
+  minutes and the old key was put back (form re-tested: 201). Next: find the site-side setting, then change both
+  sides back to back. Never screenshot a filled-in key field.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
