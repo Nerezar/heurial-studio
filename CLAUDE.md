@@ -21,13 +21,22 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - The CLI can hang on prompts. Run it with a time limit (`perl -e 'alarm 120; exec @ARGV' catalyst ...`) and pass
   `-ni` where it helps.
 - Functions: run from `catalyst/` (its `catalyst.json` lists the functions): `catalyst deploy --only
-  functions:pipeline,functions:inquiries` goes to **Development**. Production gets functions, tables
-  and settings only by promotion in the console (Production is read-only), which the owner may need to click.
+  functions:pipeline,functions:inquiries` goes to **Development**. Production gets functions, tables, job schedules
+  and their settings only through a console deployment (Production is read-only; API writes to it are refused).
+- Console deployment (worked 2026-11-13; the owner signs in to the browser pane, Claude clicks): Development →
+  Settings (gear) → Environments → Deployments → **Create Deployment**. Commit message max 40 characters. Select the
+  services, then **Generate Diff** (takes 1-3 minutes; reload the list to see `Diff_Completed`), open the row and read
+  every service's counts before **Initiate Deployment** → **Yes, Proceed**. A draft made before the latest
+  Development change shows 0 function changes: abort it and create a new one. Job Scheduling can only be selected
+  after its "Start Exploring" page has been opened once in Development. Slate is not part of these deployments.
+  Schedules arrive switched off if they were off in Development; switch them on in Production → Job Scheduling → Cron.
 - Website: the Slate app `heurial` has one live deployment (`heurial-mmoiyutd.onslate.com`, behind
   www.heurial.studio). `catalyst deploy slate heurial --production -m "<what> main <sha>" -ni`
   from the repo root replaces the live site directly (without `--production` it tries to create a new app and fails
   with 409). A build takes about 2 minutes. Deploy and promote functions first,
   then the site. The connector can list builds and roll back to the previous one.
+- Deleting rows or creating anything in Production through the connector is blocked by Claude's safety checks;
+  the owner deletes test rows (Data Store → table) or dismisses them in the tracker.
 - Slate serves every file in `public/` with a one-year browser cache and ignores `next.config.ts` headers for them.
   Tracker files load with `?v=<fingerprint>` (computed in `next.config.ts`); add any new tracker file to
   `TRACKER_FILES` there and load it through `__load` in the HTML pages.

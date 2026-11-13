@@ -11,19 +11,18 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   `Inquiries` with the right source and attribution; the row was then deleted. Form, server and column limits match
   (name 100, email 254, company 120, source 60, source_detail 200, heard 20; message and attribution are Text).
   No alert was sent for it: there is no inquiry alert yet (B2). Three older test rows from Nov 11-12 are still there.
-- **B1 done and live 2026-11-13** (website `665016e`): www.heurial.studio/robots.txt allows crawling (blocks `/api/`
-  and `/admin`) and points to a sitemap of the 6 pages; the Slate preview address stays blocked. All six pages
-  return 200. Next: B2 (owner email per inquiry, needs the Mail sender verified) and B5 (rotate the two keys).
-- `origin/main` = `88c7400` (AI drafts, Twilio, inbound email, installable app and notifications, calmer design).
-  Not deployed: the live site is still `46d6c31`.
-- Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
-  `CLAUDE.md`. The iCloud copy is no longer the deploy source.
-- **Live website: `665016e`** (2026-11-13): B1 robots fix and the blue tracker colours. Earlier, `c4983d9` added versioned tracker file addresses so releases aren't hidden
-  by the host's year-long cache. Before that, website `d0c78ab` went live (calmer design, installable app, notifications UI).
-  Functions `pipeline` and `inquiries` at `d0c78ab` deployed to Development; the owner then promoted to Production.
-- **Open:** Production still has no `PushSubscriptions` table after that promotion, so notifications won't work live
-  until it's promoted (or created) there. Whether the Production functions and the VAPID settings were promoted is
-  unconfirmed (no unkeyed route tells old and new code apart). The rest of the tracker works either way.
+- **B1 done and live 2026-11-13** (website `665016e`): robots.txt allows crawling on www.heurial.studio, sitemap
+  lists the 6 pages, the Slate preview address stays blocked.
+- **B2 done and live 2026-11-13** (`bf68c83`, Catalyst deployment "Inquiry alert + daily email (bf68c83)"):
+  every inquiry emails hello@heurial.studio (reply-to = visitor); the owner confirmed a live test arrived. The same
+  deployment updated `pipeline` in Production and added the `PushSubscriptions` table, the `daily` job pool and the
+  `daily_email` schedule (cron `0 7 * * *`, America/Chicago, runs `daily-digest`), switched on. First morning email
+  due 2026-11-14 7:00; check it arrived.
+- About 12 labelled test inquiries ("TEST ...", example.com addresses) from 2026-11-12/13 are in Production
+  `Inquiries` for the owner to dismiss or delete.
+- **Live website: `665016e`.** Functions in Production: `inquiries` and `pipeline` at `bf68c83`. `origin/main`
+  matches. Next: B5 (rotate `PIPELINE_KEY` and `INQUIRY_KEY` on the site and functions together), then plan step 3
+  (C2 booking link, C3 thank-you and acknowledgement email, C1 About content).
 - Two shared keys (`PIPELINE_KEY`, `INQUIRY_KEY`) were exposed in a Claude session's tool output on 2026-11-13.
   Not public; rotating them (site + functions together) is optional.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
