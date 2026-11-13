@@ -212,21 +212,21 @@
 <div class="app" id="app">
   ${demo ? `<div class="demo-bar" role="note">Sample data. Nothing here is saved or sent, and a refresh starts over.</div>` : ""}
   <nav class="rail" aria-label="Sections">
-    <div class="rail-mark" aria-hidden="true"><i class="mark emblem"></i></div>
+    <div class="rail-mark" aria-hidden="true"><i class="mark emblem"></i><i class="mark word"></i></div>
     <div class="rail-nav">${["overview", "pipeline", "leads", "time", "messages"].map(railBtn).join("")}</div>
     <div class="rail-foot">
       ${railBtn("connections")}
       <button class="rail-btn" type="button" id="themeBtn" data-action="theme" data-m="hide"></button>
       ${cfg.auth ? `<button class="rail-btn" type="button" data-action="signout" data-m="hide" title="Sign out">${icon("out")}<span>Sign out</span></button>` : ""}
+      <div class="rail-status" id="status"></div>
     </div>
   </nav>
   <header class="top">
-    <div class="top-id"><span class="mark word" role="img" aria-label="HEURIAL"></span><h1 id="viewTitle">Overview</h1></div>
+    <div class="top-id"><span class="mark word" role="img" aria-label="HEURIAL"></span><div><h1 id="viewTitle">Overview</h1><p id="viewSub"></p></div></div>
     <button class="cmd" type="button" data-action="palette" aria-haspopup="dialog">${icon("search")}<span>Search leads or run a command</span><kbd>${CMD_KEY}</kbd></button>
     <div class="seg" id="rangeSeg" role="group" aria-label="Date range">${RANGES.map(([value, label, long]) => `<button type="button" data-action="range" data-range="${value}" title="${long[0].toUpperCase() + long.slice(1)}">${label}</button>`).join("")}</div>
     <button class="btn primary" type="button" id="newBtn" data-action="new-lead" aria-label="New lead">${icon("plus")}<span>New lead</span></button>
   </header>
-  <div class="ticker" id="ticker" role="group" aria-label="Key figures"></div>
   <main class="main" id="view" tabindex="-1"></main>
 
   <aside class="insp" id="insp" hidden aria-labelledby="inspName">
@@ -324,7 +324,6 @@
     </section>
   </aside>
 
-  <footer class="status" id="status"></footer>
 </div>
 
 <dialog class="palette" id="palette" aria-label="Search and commands">
@@ -368,10 +367,25 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("railBadge").textContent = urgent;
     $("railBadge").setAttribute("aria-label", `${urgent} need attention`);
     document.title = `${urgent ? `(${urgent}) ` : ""}${VIEWS[state.view][0]} · HEURIAL tracker${cfg.mode === "demo" ? " (sample data)" : ""}`;
-    $("viewTitle").textContent = VIEWS[state.view][0];
+    const [title, sub] = heading(d);
+    $("viewTitle").textContent = title;
+    $("viewSub").textContent = sub;
     document.querySelectorAll("#rangeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === state.range)));
-    renderTicker();
     renderStatus();
+  }
+
+  const SUBTITLE = {
+    pipeline: "Every lead by stage. Drag a card to move it.", leads: "Everyone who booked a call, with filters.",
+    time: "Hours logged on each lead.", messages: "Notes, calls, emails and texts.", connections: "What the tracker is connected to.",
+  };
+  /** The page heading: a greeting and what needs you on Overview, a plain line elsewhere. */
+  function heading(d) {
+    if (state.view !== "overview") return [VIEWS[state.view][0], SUBTITLE[state.view] || ""];
+    const h = new Date().getHours();
+    const hello = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    if (!d) return [hello, ""];
+    const n = urgentCount(d);
+    return [hello, n ? `${plural(n, "thing needs", "things need")} you today.` : "You're all caught up."];
   }
 
   /** Change against the period just before, from the same data. Nothing is shown when there's no such period. */
@@ -383,29 +397,27 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   function spark(values) {
     const max = Math.max(1, ...values), n = values.length - 1 || 1;
-    const pts = values.map((v, i) => `${((i / n) * 44).toFixed(1)},${(13 - (v / max) * 12).toFixed(1)}`).join(" ");
-    return `<svg class="spark" viewBox="0 0 44 14" aria-hidden="true"><title>Last 12 weeks</title><polyline points="${pts}"/></svg>`;
+    const pts = values.map((v, i) => `${((i / n) * 120).toFixed(1)},${(38 - (v / max) * 34).toFixed(1)}`).join(" ");
+    return `<svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true"><title>Last 12 weeks</title>
+      <defs><linearGradient id="spG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sp0"/><stop offset="1" class="sp1"/></linearGradient></defs>
+      <polygon points="0,40 ${pts} 120,40" fill="url(#spG)"/><polyline points="${pts}"/></svg>`;
   }
-  function renderTicker() {
-    const d = state.data, el = $("ticker");
-    if (!d) { el.innerHTML = ""; return; }
-    const s = d.summary, p = d.previous, w = d.weekly;
-    const rate = (a, b) => (b ? a / b : null);
+  /** Four headline figures for Overview. */
+  function statCards() {
+    const d = state.data, s = d.summary, p = d.previous, w = d.weekly;
     const perHour = s.hours > 0 ? s.revenue_cents / s.hours : null, prevPerHour = p && p.hours > 0 ? p.revenue_cents / p.hours : null;
-    const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
     const urgent = urgentCount(d);
-    const cells = [
-      ["Needs you", urgent, "", urgent ? "bad" : "", "New website inquiries, calls to update, and follow-ups due today or earlier.", ""],
-      ["Open leads", d.leads.filter((l) => OPEN.includes(l.status)).length, "", "", `Booked, held or proposal sent, among leads booked ${inPeriod()}.`, ""],
-      ["Overdue", overdue, "", overdue ? "bad" : "", "Follow-ups past their date, across all leads.", ""],
-      ["Booked", s.booked, delta(s.booked, p && p.booked, String), "", `Calls booked ${inPeriod()}.`, spark(w.map((x) => x.booked))],
-      ["Paid", s.paid, delta(s.paid, p && p.paid, String), "", `Paid projects among calls booked ${inPeriod()}.`, ""],
-      ["Close rate", pct(s.paid, s.booked), delta(rate(s.paid, s.booked), p && rate(p.paid, p.booked), (v) => `${Math.round(v * 100)} pts`), "", "Paid ÷ booked.", ""],
-      ["Revenue", money(s.revenue_cents), delta(s.revenue_cents, p && p.revenue_cents, money), "", `From paid projects booked ${inPeriod()}.`, spark(w.map((x) => x.revenue_cents))],
-      ["Hours", hrs(s.hours), delta(s.hours, p && p.hours, hrs, true), "", `Logged on leads booked ${inPeriod()}.`, ""],
-      ["Per hour", perHour == null ? "–" : money(perHour), delta(perHour, prevPerHour, money), "", "Revenue ÷ all hours logged, paid or not.", ""],
+    const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
+    const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls")].filter(Boolean).join(" · ");
+    const open = d.leads.filter((l) => OPEN.includes(l.status));
+    const cards = [
+      ["Needs you", String(urgent), why || "Nothing due", urgent ? "hot" : "calm", ""],
+      ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, "", ""],
+      ["Revenue", money(s.revenue_cents), delta(s.revenue_cents, p && p.revenue_cents, money) || `Booked ${inPeriod()}`, "glow", spark(w.map((x) => x.revenue_cents))],
+      ["Per hour", perHour == null ? "–" : money(perHour), delta(perHour, prevPerHour, money) || `${hrs(s.hours)} logged`, "", ""],
     ];
-    el.innerHTML = cells.map(([label, value, dl, cls, title, sp]) => `<div class="tick ${cls}" title="${esc(title)}"><span class="tick-l">${label}</span><b>${esc(value)}</b>${dl}${sp}</div>`).join("");
+    return `<div class="stats">${cards.map(([label, value, sub, cls, sp]) => `<div class="stat ${cls}">
+      <span class="stat-l">${label}</span><b class="stat-v">${esc(value)}</b><span class="stat-s">${sub}</span>${sp}</div>`).join("")}</div>`;
   }
   function renderStatus() {
     const demo = cfg.mode === "demo";
@@ -413,11 +425,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const text = demo ? "Sample data · nothing is saved"
       : !state.data ? (state.loading ? "Connecting…" : "Not connected")
       : state.online ? "Connected" : "Offline · showing the last data loaded";
-    $("status").innerHTML = `<span><i class="dot ${dot}"></i>${text}</span>
-      ${state.lastSync ? `<span>Updated ${clock(state.lastSync)}</span>` : ""}
-      <button type="button" data-action="refresh">${icon("refresh")}Refresh</button>
-      <span class="spacer"></span>
-      <span><kbd>${CMD_KEY}</kbd> Search and commands</span><span><kbd>N</kbd> New lead</span><span><kbd>1</kbd>–<kbd>6</kbd> Sections</span>`;
+    $("status").innerHTML = `<i class="dot ${dot}"></i><span><b>${text}</b>${state.lastSync ? `Updated ${clock(state.lastSync)}` : ""}</span>
+      <button type="button" data-action="refresh" aria-label="Refresh">${icon("refresh")}</button>`;
   }
 
   const skeleton = () => `<div class="skeleton" aria-busy="true" aria-label="Loading">${"<i></i>".repeat(6)}</div>`;
@@ -453,28 +462,21 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
     const w = d.weekly, total = w.reduce((a, x) => a + x.revenue_cents, 0);
     const label = `Paid project value over the last 12 weeks, by the week each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
-    const overdueN = d.followups.filter((f) => f.follow_up_at < d.today).length, todayN = d.followups.filter((f) => f.follow_up_at === d.today).length;
-    const summary = [overdueN && `${overdueN} overdue`, todayN && `${todayN} due today`, d.inbox.length && plural(d.inbox.length, "new inquiry", "new inquiries"), d.stale.length && plural(d.stale.length, "call to update", "calls to update")].filter(Boolean).join(" · ");
     return `<div class="vw ov">
+  ${statCards()}
   <section class="pane ov-queue" aria-labelledby="queueTitle">
-    <div class="pane-head ${urgent ? "is-urgent" : ""}"><h2 id="queueTitle">Needs attention</h2><span class="count ${urgent ? "hot" : ""}" title="Due today or earlier">${urgent}</span>
+    <div class="pane-head"><h2 id="queueTitle">Needs attention</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
-    <p class="q-summary ${urgent ? "is-urgent" : ""}">${summary || "All caught up. Nothing is due today or overdue."}</p>
     <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
   </section>
   <section class="pane ov-chart" aria-labelledby="chartTitle">
     <div class="pane-head"><h2 id="chartTitle">Paid project value</h2><div class="pane-tools read" id="chartRead"></div></div>
-    <p class="chart-note">Running total over the last 12 weeks, grouped by the week the call was booked. Payment dates aren't recorded, so this isn't when money arrived.</p>
+    <p class="chart-note">Last 12 weeks, by the week the call was booked.</p>
     <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to read each week."></div>
   </section>
   <section class="pane ov-tabs" aria-label="Reports">
-    <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div>
-      <span class="pane-tools pane-meta">Calls booked ${inPeriod()}</span></div>
+    <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
     <div class="pane-body" role="tabpanel">${report}</div>
-  </section>
-  <section class="pane ov-sched" aria-labelledby="schedTitle">
-    <div class="pane-head"><h2 id="schedTitle">Follow-up schedule</h2><span class="pane-meta"><span class="sched-14">Overdue, then the next 14 days</span><span class="sched-7">Overdue, then the next 7 days</span></span></div>
-    <div class="sched" data-scroll="sched">${scheduleHtml()}</div>
   </section>
 </div>`;
   }
@@ -488,9 +490,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (d.inbox.length) {
       html += `<h3 class="q-title">New from the website <span class="count">${d.inbox.length}</span></h3>` + d.inbox.map((i) => `
         <div class="q-row new">
-          <span class="q-when">${ago(i.created_at)}</span>
+          <span class="q-when new">${ago(i.created_at)}</span>
           <div class="q-main"><span class="who">${esc(i.name)}${i.company ? `<span> · ${esc(i.company)}</span>` : ""}</span>
-            <p>${esc(i.source)} · ${esc(i.email)}</p><p class="q-quote">${esc(i.message)}</p></div>
+            <p>${esc(i.source)}</p><p class="q-quote">${esc(i.message)}</p></div>
           <div class="q-acts"><button class="btn sm primary" type="button" data-action="inbox-convert" data-id="${i.id}" data-fk="conv-${i.id}">Add to pipeline</button>
             <button class="btn sm" type="button" data-action="inbox-dismiss" data-id="${i.id}" data-fk="dis-${i.id}">Dismiss</button></div>
         </div>`).join("");
@@ -498,44 +500,27 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (d.stale.length) {
       html += `<h3 class="q-title">Calls to update <span class="count">${d.stale.length}</span></h3>` + d.stale.map((s) => `
         <div class="q-row late">
-          <span class="q-when">${niceDate(s.call_at)}</span>
+          <span class="q-when late">${niceDate(s.call_at)}</span>
           <div class="q-main">${who(s.id, s.name, s.business)}<p>Still marked as booked. Did this call happen?</p></div>
           <div class="q-acts"><button class="btn sm" type="button" data-action="stale" data-status="held" data-id="${s.id}" data-fk="held-${s.id}">Call held</button>
             <button class="btn sm" type="button" data-action="stale" data-status="no_show" data-id="${s.id}" data-fk="ns-${s.id}">No-show</button></div>
         </div>`).join("");
     }
     if (upcoming.length) {
-      html += `<h3 class="q-title">Follow-ups due within 7 days <span class="count">${upcoming.length}</span></h3>` + upcoming.map((f) => {
+      html += `<h3 class="q-title">Follow-ups this week <span class="count">${upcoming.length}</span></h3>` + upcoming.map((f) => {
         const x = due(f.follow_up_at);
         return `<div class="q-row ${x.cls}">
           <span class="q-when ${x.cls}">${x.text}</span>
           <div class="q-main">${who(f.id, f.name, f.business)}<p>${esc(f.follow_up_note || "Follow up")}</p></div>
           <div class="q-acts"><button class="btn sm" type="button" data-action="fu" data-days="done" data-id="${f.id}" data-fk="fd-${f.id}">${icon("check")}Done</button>
-            <button class="btn sm" type="button" data-action="fu" data-days="1" data-id="${f.id}" data-fk="f1-${f.id}" aria-label="Move to tomorrow">+1 day</button>
-            <button class="btn sm" type="button" data-action="fu" data-days="7" data-id="${f.id}" data-fk="f7-${f.id}" aria-label="Move one week out">+1 week</button></div>
+            <button class="btn ghost sm" type="button" data-action="fu" data-days="1" data-id="${f.id}" data-fk="f1-${f.id}" aria-label="Move to tomorrow">+1 day</button>
+            <button class="btn ghost sm" type="button" data-action="fu" data-days="7" data-id="${f.id}" data-fk="f7-${f.id}" aria-label="Move one week out">+1 week</button></div>
         </div>`;
       }).join("");
     }
     if (!html) html = `<div class="empty"><b>Nothing needs you right now.</b>No new inquiries, no calls to update, and no follow-ups due in the next 7 days.</div>`;
     if (later) html += `<p class="foot-note">${plural(later, "more follow-up")} scheduled after ${niceDate(addDays(t, 7))}.</p>`;
     return html;
-  }
-
-  /** One column for everything overdue, then one per day for two weeks. */
-  function scheduleHtml() {
-    const d = state.data, t = d.today;
-    const cols = [{ cls: "is-late", head: "Overdue", items: d.followups.filter((f) => f.follow_up_at < t) }];
-    for (let i = 0; i < 14; i++) {
-      const day = addDays(t, i), date = at(day), dow = date.getDay();
-      cols.push({
-        cls: `${i === 0 ? "is-today" : ""} ${dow === 0 || dow === 6 ? "is-off" : ""} ${i >= 7 ? "d-later" : ""}`,
-        head: `<span>${i === 0 ? "Today" : date.toLocaleDateString("en-US", { weekday: "short" })}</span><b>${date.getDate()}</b>`,
-        items: d.followups.filter((f) => f.follow_up_at === day),
-      });
-    }
-    return cols.map((c) => `<div class="sc-col ${c.cls}"><div class="sc-head">${c.head}</div><div class="sc-items">
-      ${c.items.slice(0, 3).map((f) => `<button class="sc-item" type="button" data-action="open" data-id="${f.id}" data-fk="sc-${f.id}" title="${esc(f.name)}: ${esc(f.follow_up_note || "Follow up")}">${esc(f.name)}</button>`).join("")}
-      ${c.items.length > 3 ? `<span class="sc-more" title="${esc(c.items.slice(3).map((f) => f.name).join(", "))}">+${c.items.length - 3} more</span>` : ""}</div></div>`).join("");
   }
 
   function reportFunnel() {

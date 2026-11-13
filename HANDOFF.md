@@ -12,6 +12,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## On `tracker-calm` (waiting for "Yes, merge it")
+- The user found the tracker too dense and asked for a calmer, roomier look with colour, glow and gradients
+  (reference shots: dark dashboards with big figures and rounded cards). Restyled `public/tracker/tracker.css`
+  and the frame in `tracker.js`: labelled sidebar with connection status, greeting header, four large stat cards
+  instead of the eight-figure strip, rounded panels on a navy background with violet and blue light, one gradient
+  for primary buttons. Removed the 14-day schedule grid and the bottom status bar. Light mode and phone layout kept.
+- Checks pass; looked at Overview, Pipeline, Leads, lead panel, phone, light mode and the demo page in the preview.
+
 ## Merged to main at `fb0e919`: installable app and notifications, not deployed
 - PWA: `public/admin/manifest.webmanifest`, icons in `public/admin/icons/`, `public/admin-sw.js` (scope `/admin`,
   notifications only, no caching). Apple meta tags in `public/admin/index.html`.
