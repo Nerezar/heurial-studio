@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { links } from "@/components/shell";
+import { siteOrigin } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const origin = process.env.SITE_URL;
-  return origin ? links.map(({ href }) => ({ url: new URL(href, origin).href })) : [];
+  return links.map(({ href }) => ({ url: new URL(href, siteOrigin()).href }));
 }

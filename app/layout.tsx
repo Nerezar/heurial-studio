@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AttributionCapture } from "@/components/attribution";
 import { RouteMotion } from "@/components/route-transition";
 import { Footer, Header } from "@/components/shell";
+import { siteOrigin } from "@/lib/site";
 import "./globals.css";
 import "./shell.css";
 
@@ -15,7 +16,7 @@ const shareImage = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL || "https://www.heurial.studio"),
+  metadataBase: new URL(siteOrigin()),
   title: { default: "HEURIAL Studio | Simple AI workflows for small businesses", template: "%s | HEURIAL Studio" },
   description: shareDescription,
   openGraph: {
