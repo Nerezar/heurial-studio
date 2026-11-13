@@ -20,10 +20,13 @@ Durable rules. Current status lives in `HANDOFF.md`.
   `.catalyst/`) are gitignored and live only in this folder.
 - The CLI can hang on prompts. Run it with a time limit (`perl -e 'alarm 120; exec @ARGV' catalyst ...`) and pass
   `-ni` where it helps.
-- Functions: `catalyst deploy --only functions:<name>` goes to **Development**. Production gets functions, tables
+- Functions: run from `catalyst/` (its `catalyst.json` lists the functions): `catalyst deploy --only
+  functions:pipeline,functions:inquiries` goes to **Development**. Production gets functions, tables
   and settings only by promotion in the console (Production is read-only), which the owner may need to click.
 - Website: the Slate app `heurial` has one live deployment (`heurial-mmoiyutd.onslate.com`, behind
-  www.heurial.studio). `catalyst deploy slate` replaces the live site directly. Deploy and promote functions first,
+  www.heurial.studio). `catalyst deploy slate heurial --production -m "<what> main <sha>" -ni`
+  from the repo root replaces the live site directly (without `--production` it tries to create a new app and fails
+  with 409). A build takes about 2 minutes. Deploy and promote functions first,
   then the site. The connector can list builds and roll back to the previous one.
 - Release steps: `git fetch`, `git switch --detach origin/main`, confirm a clean tree, run the checks, deploy,
   then check `/admin` and the function URLs (an unkeyed request should return `{"error":"Unauthorized"}`).

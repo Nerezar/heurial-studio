@@ -8,8 +8,11 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Not deployed: the live site is still `46d6c31`.
 - Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
   `CLAUDE.md`. The iCloud copy is no longer the deploy source.
-- Live now: website build `46d6c31` (Slate, built Nov 12). Both the Production and Development pipeline functions
-  answer with this code's `Unauthorized` response; which commit they run is unconfirmed.
+- **Released 2026-11-13 by Claude:** website `d0c78ab` is live (calmer design, installable app, notifications UI).
+  Functions `pipeline` and `inquiries` at `d0c78ab` deployed to Development; the owner then promoted to Production.
+- **Open:** Production still has no `PushSubscriptions` table after that promotion, so notifications won't work live
+  until it's promoted (or created) there. Whether the Production functions and the VAPID settings were promoted is
+  unconfirmed (no unkeyed route tells old and new code apart). The rest of the tracker works either way.
 - Two shared keys (`PIPELINE_KEY`, `INQUIRY_KEY`) were exposed in a Claude session's tool output on 2026-11-13.
   Not public; rotating them (site + functions together) is optional.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
