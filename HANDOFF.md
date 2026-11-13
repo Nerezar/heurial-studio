@@ -20,9 +20,6 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   due 2026-11-14 7:00; check it arrived.
 - About 12 labelled test inquiries ("TEST ...", example.com addresses) from 2026-11-12/13 are in Production
   `Inquiries` for the owner to dismiss or delete.
-- **Live website: `f4466a7`** (2026-11-13: new pipeline key picked up, then the contact thank-you screen).
-  Functions in Production: `inquiries` and `pipeline` at `bf68c83`. Next: plan step 3 (C2 booking link, C3
-  thank-you and acknowledgement email, C1 About content).
 - **B5 done 2026-11-13:** both keys rotated. `INQUIRY_KEY` on `inquiries` + `INQUIRY_FUNCTION_KEY` on the site
   (form tested, 201). `PIPELINE_KEY` on `pipeline` and `daily-digest` (Production) + `PIPELINE_FUNCTION_KEY` on the
   site; all three saved values checked by SHA-256 fingerprint. Direct call to `pipeline/data`: new key 200, old key
@@ -47,13 +44,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   from the app for its own "origin server unavailable" page, so a fast 503 on the form means the site refused
   (wrong key or address), not that the server is down. After any key change, send a real test through the form.
 - Two more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
-- **C2 booking link built on branch `c2-booking-link`, not merged, not deployed (2026-11-13):** Zoho Bookings
-  (owner's account, trial of the paid plan ends about 2026-11-28; what it drops to is unchecked). Event type "Free
-  20-min call", 20 min, Google Meet. Hours Mon-Fri 2:50-6:00 pm, Sat-Sun 9:00 am-6:00 pm, America/Chicago. Link
-  `https://heurial.zohobookings.com/4948260000000038065` is `BOOKING_URL` in `lib/site.ts` (contact page "Pick a
-  time" and the thank-you screen) and the default `BOOKING_URL` in the `inquiries` function (one line in the
-  confirmation email; owner has not approved that line yet). Going live: merge, redeploy the site, deploy
-  `inquiries` to Development then a console deployment to Production. No test booking has been made.
+- **C2 booking link live 2026-11-13** (website and `main` at `9ae952c`): Zoho Bookings (owner's account, trial of
+  the paid plan ends about 2026-11-28; what it drops to is unchecked). Event type "Free 20-min call", 20 min,
+  Google Meet. Hours Mon-Fri 2:50-6:00 pm, Sat-Sun 9:00 am-6:00 pm, America/Chicago (slots show on the quarter
+  hour, so weekdays start 3:00). Link `https://heurial.zohobookings.com/4948260000000038065` is `BOOKING_URL` in
+  `lib/site.ts` (contact page "Pick a time" and the thank-you screen) and the default `BOOKING_URL` in `inquiries`
+  (one line in the confirmation email). Console deployment "Booking link in confirmation (9ae952c)" moved only
+  `inquiries`; `ACK_REPLY` and `INQUIRY_KEY` survived. Live form test: 201, `acknowledged: true`, 4.9 s. One more
+  test row ("TEST Booking Link"). No test booking has been made, so the Meet link and invite are unverified.
+- **Live website: `9ae952c`.** Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
