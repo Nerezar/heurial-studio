@@ -6,7 +6,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - Folder: `~/heurial-dev/heurial-design`
 - `origin/main` = `88c7400` (AI drafts, Twilio, inbound email, installable app and notifications, calmer design).
   Not deployed: the live site is still `46d6c31`.
-- The iCloud checkout is ChatGPT's deployment copy, clean on `fb0e919` (2026-11-12). `CLAUDE.md` and `HANDOFF.md` are in git so both agents read the same notes.
+- Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
+  `CLAUDE.md`. The iCloud copy is no longer the deploy source.
+- Live now: website build `46d6c31` (Slate, built Nov 12). Both the Production and Development pipeline functions
+  answer with this code's `Unauthorized` response; which commit they run is unconfirmed.
+- Two shared keys (`PIPELINE_KEY`, `INQUIRY_KEY`) were exposed in a Claude session's tool output on 2026-11-13.
+  Not public; rotating them (site + functions together) is optional.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
