@@ -2,11 +2,11 @@ import { Icon } from "./icon";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const SRC = "/demo/tracker/index.html";
+const SRC = `/demo/tracker/index.html?v=${process.env.TRACKER_VERSION}`;
 // Catalyst adds X-Frame-Options: DENY to hosted files. srcDoc renders the
 // same local-only demo without navigating the frame to a blocked response.
 const DEMO_HTML = readFileSync(join(process.cwd(), "public/demo/tracker/index.html"), "utf8")
-  .replace("<head>", '<head><base href="/demo/tracker/">');
+  .replace("<head>", `<head><base href="/demo/tracker/"><script>window.__TV = ${JSON.stringify(process.env.TRACKER_VERSION)};</script>`);
 // The demo page loads its styles and scripts by absolute path (/tracker/*, /demo/tracker/core.js), so they
 // resolve the same way inside this frame as they do full screen.
 

@@ -13,14 +13,22 @@
   let t = "dark"; try { t = localStorage.getItem("hp-theme") || "dark"; } catch {}
   document.documentElement.dataset.theme = t;
 </script>
-<link rel="stylesheet" href="/tracker/tracker.css">
+<script>
+  // Load the tracker's files with the release fingerprint (?v=...), so a new release is never hidden by the
+  // year-long browser cache the host puts on these files. Without one, load fresh copies.
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/tracker/tracker.css");</script>
 </head>
 <body>
 <noscript>The tracker needs JavaScript to run.</noscript>
 <!-- The public demo. Same interface as the real tracker (/tracker/tracker.js), but all data is made up and lives
      in this page's memory: nothing is saved or sent, and a refresh starts over. -->
-<script src="/demo/tracker/core.js"></script>
-<script src="/tracker/tracker.js"></script>
+<script>__load("js", "/demo/tracker/core.js");</script>
+<script>__load("js", "/tracker/tracker.js");</script>
 <script>
 /* ---------- Demo back end: sample data in memory, same routes and logic as the real tracker ---------- */
 const core = window.__core.exports;

@@ -1,8 +1,18 @@
 import type { NextConfig } from "next";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+// The host caches every file in public/ for a year and ignores the headers below for them. So the tracker's files
+// are loaded with ?v=<fingerprint of their contents>, which changes whenever they do and makes browsers fetch them again.
+const TRACKER_FILES = ["tracker/tracker.css", "tracker/tracker.js", "demo/tracker/core.js", "demo/tracker/index.html", "admin/index.html"];
+const trackerVersion = createHash("sha256")
+  .update(TRACKER_FILES.map((f) => readFileSync(`public/${f}`)).join("\0"))
+  .digest("hex").slice(0, 10);
 
 const config: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
+  env: { TRACKER_VERSION: trackerVersion },
   async headers() {
     const privateArea = [
       { key: "X-Robots-Tag", value: "noindex, nofollow" },

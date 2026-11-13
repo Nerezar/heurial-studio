@@ -18,13 +18,21 @@
   let t = "dark"; try { t = localStorage.getItem("hp-theme") || "dark"; } catch {}
   document.documentElement.dataset.theme = t;
 </script>
-<link rel="stylesheet" href="/tracker/tracker.css">
+<script>
+  // Load the tracker's files with the release fingerprint (?v=...), so a new release is never hidden by the
+  // year-long browser cache the host puts on these files. Without one, load fresh copies.
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/tracker/tracker.css");</script>
 </head>
 <body>
 <noscript>The tracker needs JavaScript to run.</noscript>
 <!-- The real tracker. The interface is shared with the public demo (/tracker/tracker.js); this page only supplies
      the data source: the signed-in owner's session and the /api/admin/* routes. -->
-<script src="/tracker/tracker.js"></script>
+<script>__load("js", "/tracker/tracker.js");</script>
 <script>
 const json = (res) => res.json().catch(() => ({}));
 const fail = (message, status) => Object.assign(new Error(message), { status });
