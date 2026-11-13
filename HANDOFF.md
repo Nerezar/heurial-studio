@@ -1,4 +1,4 @@
-# Handoff — 2026-11-12
+# Handoff — 2026-11-13
 
 Durable rules are in `CLAUDE.md`. This file is current status only.
 
@@ -20,20 +20,28 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   due 2026-11-14 7:00; check it arrived.
 - About 12 labelled test inquiries ("TEST ...", example.com addresses) from 2026-11-12/13 are in Production
   `Inquiries` for the owner to dismiss or delete.
-- **Live website: `665016e`.** Functions in Production: `inquiries` and `pipeline` at `bf68c83`. `origin/main`
-  matches. Next: B5 (rotate `PIPELINE_KEY` and `INQUIRY_KEY` on the site and functions together), then plan step 3
-  (C2 booking link, C3 thank-you and acknowledgement email, C1 About content).
-- **B5 half done 2026-11-13:** `INQUIRY_KEY` is rotated. New value on the `inquiries` function (Production) and as
-  `INQUIRY_FUNCTION_KEY` on the website; live form tested (201). Owner's `~/.heurial-secrets/inquiry-key` is the
-  new one, `inquiry-key.old` the old. **`PIPELINE_KEY` not rotated yet:** the new value waits in
-  `~/.heurial-secrets/pipeline-key.new`; it goes on `pipeline` and `daily-digest` (Production) and as
-  `PIPELINE_FUNCTION_KEY` on the website, then redeploy the site and check /admin data and the morning email.
+- **Live website: `f0c076e`** (redeployed 2026-11-13 to pick up the new pipeline key; code same as `665016e`).
+  Functions in Production: `inquiries` and `pipeline` at `bf68c83`. Next: plan step 3 (C2 booking link, C3
+  thank-you and acknowledgement email, C1 About content).
+- **B5 done 2026-11-13:** both keys rotated. `INQUIRY_KEY` on `inquiries` + `INQUIRY_FUNCTION_KEY` on the site
+  (form tested, 201). `PIPELINE_KEY` on `pipeline` and `daily-digest` (Production) + `PIPELINE_FUNCTION_KEY` on the
+  site; all three saved values checked by SHA-256 fingerprint. Direct call to `pipeline/data`: new key 200, old key
+  401. Secrets: `~/.heurial-secrets/pipeline-production-key` is the new one, `pipeline-production-key.old` the old
+  (`pipeline-key`, 44 chars, is an older non-Production value). **Still to confirm:** the owner logs in to /admin
+  and sees data, and the 2026-11-14 7:00 morning email arrives (first run with the new key on `daily-digest`).
+- Production `pipeline` has only `PIPELINE_KEY`, `DIGEST_FROM`, `DIGEST_TO`, `TIME_ZONE`, `TRACKER_URL`. No VAPID
+  keys there, so phone notifications can't work in Production yet. Development `pipeline` shows no variables at all.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
   A website variable change only applies after `catalyst deploy slate heurial --production`; right after a deploy
   the API can answer 503 for about a minute while it warms up. Prepare both edit boxes before pasting, check the
   saved value's length (43) without reading it, and never screenshot a filled-in key field.
+- Console in the browser pane: it only lays out properly with the viewport emulated at 1366x900 (the size resets
+  each turn). The Variable Environment dropdown won't open by click; switch it with
+  `jQuery('select[data-zcqa="function-env_varaibles"]').val('Production').trigger('change')`. The function variable
+  table shows values in plain text, so no screenshots there. Slate's variables sit in an iframe. Simulated Cmd+V is
+  blocked, so `pbcopy` the key from the file and the owner presses Cmd+V and Save; check each by fingerprint.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
