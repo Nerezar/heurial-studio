@@ -30,7 +30,7 @@
   const RANGES = [["7", "7D", "last 7 days"], ["30", "30D", "last 30 days"], ["90", "90D", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "All", "all time"]];
   const VIEWS = {
     overview: ["Overview", "overview"], pipeline: ["Pipeline", "pipeline"], leads: ["Leads", "leads"], time: ["Time", "time"],
-    messages: ["Messages", "messages"], connections: ["Connections", "plug"],
+    messages: ["Messages", "messages"], connections: ["Connections", "plug"], settings: ["Settings", "gear"],
   };
   const CHANNEL = { note: ["Note", "note"], email: ["Email", "mail"], sms: ["Text", "sms"], call: ["Call", "phone"] };
   const DUE_BUCKETS = [["late", "Overdue", "--down"], ["today", "Due today", "--warn"], ["week", "Next 7 days", "--accent"], ["later", "Later", "--mute"], ["none", "None set", "--mute"]];
@@ -52,6 +52,8 @@
     note: '<path d="M5 4h14v12l-4 4H5zM15 20v-4h4"/>',
     send: '<path d="m4 12 16-8-6 16-3-7z"/>',
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+    up: '<path d="m6 15 6-6 6 6"/>', dn: '<path d="m6 9 6 6 6-6"/>',
     spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
     inbound: '<path d="M4 13v6h16v-6M12 4v10m0 0-4-4m4 4 4-4"/>',
     refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
@@ -126,6 +128,69 @@
   const rangeText = () => RANGES.find((r) => r[0] === state.range)[2];
   /** "in the last 30 days", or "across all time". */
   const inPeriod = () => (state.range === "all" ? "across all time" : `in the ${rangeText()}`);
+
+  // ---------- Preferences (Settings) ----------
+  // Kept in this browser only. Every value is checked against the allowed choices, so an old or edited copy can't
+  // break the tracker. Colours never include purple.
+  const ACCENTS = [["blue", "Blue", "#3478f6"], ["sky", "Sky", "#2ea4e6"], ["teal", "Teal", "#14b3a3"], ["green", "Green", "#2fbf71"],
+    ["amber", "Amber", "#e9a23b"], ["coral", "Coral", "#f0645a"], ["silver", "Silver", "#aab4c0"]];
+  const CHOICES = {
+    background: [["black", "Black"], ["graphite", "Graphite"], ["midnight", "Midnight blue"]],
+    font: [["plex", "IBM Plex Sans"], ["helvetica", "Helvetica"], ["system", "System"], ["serif", "Serif"]],
+    numFont: [["helvetica", "Helvetica"], ["text", "Same as text"], ["mono", "Monospace"]],
+    size: [["compact", "Compact"], ["regular", "Regular"], ["large", "Large"]],
+    corners: [["round", "Round"], ["soft", "Soft"], ["square", "Square"]],
+    ovLayout: [["two", "Two columns"], ["one", "One column"]],
+    cards: [["full", "Full"], ["compact", "Compact"]],
+  };
+  const NAV = ["overview", "pipeline", "leads", "time", "messages", "connections"];
+  const OV_BLOCKS = { stats: "Key figures", queue: "Needs attention", chart: "Paid project value", reports: "Reports" };
+  const LEAD_COLS = { source: "Source", call_at: "Call date", follow_up_note: "Next action", value_cents: "Value", hours: "Hours" };
+  const DEFAULT_PREFS = {
+    accent: "blue", custom: "#3478f6", background: "black", font: "plex", numFont: "helvetica", size: "regular", corners: "round", glow: true,
+    nav: [...NAV], hidden: [], start: "last",
+    ovOrder: ["stats", "queue", "chart", "reports"], ovHidden: [], ovLayout: "two",
+    plMix: true, plClosed: true, cards: "full",
+    ldFilters: true, ldHidden: [],
+    tmChart: true, tmByLead: true,
+    msStatus: true, msUnmatched: true,
+    cnHow: true,
+  };
+  let prefs = { ...DEFAULT_PREFS };
+  function cleanPrefs(raw) {
+    const p = { ...DEFAULT_PREFS }, r = raw && typeof raw === "object" ? raw : {};
+    const pick = (key, list) => { if (list.some(([v]) => v === r[key])) p[key] = r[key]; };
+    pick("accent", [...ACCENTS, ["custom"]]);
+    if (/^#[0-9a-f]{6}$/i.test(r.custom || "")) p.custom = r.custom;
+    for (const key of Object.keys(CHOICES)) pick(key, CHOICES[key]);
+    for (const key of ["glow", "plMix", "plClosed", "ldFilters", "tmChart", "tmByLead", "msStatus", "msUnmatched", "cnHow"]) if (typeof r[key] === "boolean") p[key] = r[key];
+    const order = (list, all) => { const seen = (Array.isArray(list) ? list : []).filter((v, i, a) => all.includes(v) && a.indexOf(v) === i); return [...seen, ...all.filter((v) => !seen.includes(v))]; };
+    const subset = (list, all) => (Array.isArray(list) ? list.filter((v, i, a) => all.includes(v) && a.indexOf(v) === i) : []);
+    p.nav = order(r.nav, NAV);
+    p.hidden = subset(r.hidden, NAV.filter((v) => v !== "overview"));
+    if (r.start === "last" || NAV.includes(r.start)) p.start = r.start;
+    p.ovOrder = order(r.ovOrder, Object.keys(OV_BLOCKS));
+    p.ovHidden = subset(r.ovHidden, Object.keys(OV_BLOCKS));
+    p.ldHidden = subset(r.ldHidden, Object.keys(LEAD_COLS));
+    return p;
+  }
+  const visibleNav = () => prefs.nav.filter((v) => !prefs.hidden.includes(v));
+  const accentHex = () => (prefs.accent === "custom" ? prefs.custom : (ACCENTS.find((a) => a[0] === prefs.accent) || ACCENTS[0])[2]);
+  function applyPrefs() {
+    const root = document.documentElement, hex = accentHex();
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    root.style.setProperty("--accent", hex);
+    root.style.setProperty("--on-accent", lum > 0.62 ? "#0b0c0e" : "#fff"); // dark text on light accents
+    Object.assign(root.dataset, { bg: prefs.background, font: prefs.font, num: prefs.numFont, size: prefs.size, corners: prefs.corners, glow: prefs.glow ? "on" : "off" });
+  }
+  function savePrefs() {
+    store("hp-prefs", JSON.stringify(prefs));
+    applyPrefs();
+    renderNav();
+    if (!visibleNav().includes(state.view) && state.view !== "settings") state.view = "overview";
+    render();
+  }
   const urgentCount = (d) => d.inbox.length + d.stale.length + d.followups.filter((f) => f.follow_up_at <= d.today).length;
   const matches = (lead, q) => !q || [lead.name, lead.business, lead.email, lead.phone, lead.source].some((v) => String(v || "").toLowerCase().includes(q));
   const services = () => (state.data && state.data.services) || null;
@@ -213,9 +278,9 @@
   ${demo ? `<div class="demo-bar" role="note">Sample data. Nothing here is saved or sent, and a refresh starts over.</div>` : ""}
   <nav class="rail" aria-label="Sections">
     <div class="rail-mark" aria-hidden="true"><i class="mark emblem"></i><i class="mark word"></i></div>
-    <div class="rail-nav">${["overview", "pipeline", "leads", "time", "messages"].map(railBtn).join("")}</div>
+    <div class="rail-nav" id="railNav"></div>
     <div class="rail-foot">
-      ${railBtn("connections")}
+      ${railBtn("settings").replace('class="rail-btn"', 'class="rail-btn" data-m="hide"')}
       <button class="rail-btn" type="button" id="themeBtn" data-action="theme" data-m="hide"></button>
       ${cfg.auth ? `<button class="rail-btn" type="button" data-action="signout" data-m="hide" title="Sign out">${icon("out")}<span>Sign out</span></button>` : ""}
       <div class="rail-status" id="status"></div>
@@ -358,6 +423,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   // ---------- Rendering ----------
   function render() { renderChrome(); renderView(); syncInspector(); }
 
+  /** Sidebar sections in the order chosen in Settings. Overview always stays. */
+  function renderNav() {
+    const nav = $("railNav");
+    if (nav) nav.innerHTML = visibleNav().map(railBtn).join("");
+  }
+
   function renderChrome() {
     const d = state.data, urgent = d ? urgentCount(d) : 0;
     document.querySelectorAll(".rail-btn[data-view]").forEach((b) => {
@@ -375,6 +446,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
 
   const SUBTITLE = {
+    settings: "Make the tracker look and work the way you like.",
     pipeline: "Every lead by stage. Drag a card to move it.", leads: "Everyone who booked a call, with filters.",
     time: "Hours logged on each lead.", messages: "Notes, calls, emails and texts.", connections: "What the tracker is connected to.",
   };
@@ -440,7 +512,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 
     let html = state.error ? `<div class="banner" role="alert"><span>${esc(state.error)}</span><button class="btn sm" type="button" data-action="refresh">Try again</button></div>` : "";
     if (!d) html += state.loading ? `<div class="vw pane">${skeleton()}</div>` : "";
-    else html += { overview: viewOverview, pipeline: viewPipeline, leads: viewLeads, time: viewTime, messages: viewMessages, connections: viewConnections }[state.view]();
+    else html += { overview: viewOverview, pipeline: viewPipeline, leads: viewLeads, time: viewTime, messages: viewMessages, connections: viewConnections, settings: viewSettings }[state.view]();
     view.innerHTML = html;
 
     view.querySelectorAll("[data-keep]").forEach((el) => { if (keep[el.dataset.keep]) el.value = keep[el.dataset.keep]; });
@@ -459,26 +531,39 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function viewOverview() {
     const d = state.data, urgent = urgentCount(d);
     const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
-    const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
+    const report = () => ({ conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]());
     const w = d.weekly, total = w.reduce((a, x) => a + x.revenue_cents, 0);
     const label = `Paid project value over the last 12 weeks, by the week each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
-    return `<div class="vw ov">
-  ${statCards()}
-  <section class="pane ov-queue" aria-labelledby="queueTitle">
+    const blocks = {
+      stats: () => statCards(),
+      queue: () => `<section class="pane ov-queue" aria-labelledby="queueTitle">
     <div class="pane-head"><h2 id="queueTitle">Needs attention</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
     <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
-  </section>
-  <section class="pane ov-chart" aria-labelledby="chartTitle">
+  </section>`,
+      chart: () => `<section class="pane ov-chart" aria-labelledby="chartTitle">
     <div class="pane-head"><h2 id="chartTitle">Paid project value</h2><div class="pane-tools read" id="chartRead"></div></div>
     <p class="chart-note">Last 12 weeks, by the week the call was booked.</p>
     <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to read each week."></div>
-  </section>
-  <section class="pane ov-tabs" aria-label="Reports">
+  </section>`,
+      reports: () => `<section class="pane ov-tabs" aria-label="Reports">
     <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
-    <div class="pane-body" role="tabpanel">${report}</div>
-  </section>
-</div>`;
+    <div class="pane-body" role="tabpanel">${report()}</div>
+  </section>`,
+    };
+    const shown = prefs.ovOrder.filter((k) => !prefs.ovHidden.includes(k));
+    if (!shown.length) return `<div class="vw ov"><div class="pane"><div class="empty"><b>Every Overview block is hidden.</b>Turn some back on in Settings.<br><button class="btn" type="button" data-action="view" data-view="settings">${icon("gear")}Open Settings</button></div></div></div>`;
+    // Two columns: key figures run full width; each run of other blocks puts the first on the left and the rest on the right.
+    let html = "", run = [];
+    const flush = () => {
+      if (!run.length) return;
+      html += prefs.ovLayout === "one" || run.length === 1 ? run.map((k) => blocks[k]()).join("")
+        : `<div class="ov-group"><div class="ov-col">${blocks[run[0]]()}</div><div class="ov-col">${run.slice(1).map((k) => blocks[k]()).join("")}</div></div>`;
+      run = [];
+    };
+    for (const k of shown) { if (k === "stats") { flush(); html += blocks.stats(); } else run.push(k); }
+    flush();
+    return `<div class="vw ov">${html}</div>`;
   }
 
   function queueHtml() {
@@ -648,7 +733,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const open = d.leads.filter((l) => OPEN.includes(l.status));
     const mix = d.leads.length ? `<div class="dist" role="img" aria-label="${esc(ORDER.map((st) => `${STATUS[st].label}: ${by(st).length}`).join(", "))}">
       ${ORDER.filter((st) => by(st).length).map((st) => `<div class="dist-seg" style="--c:var(${STATUS[st].c});flex:${by(st).length}" title="${STATUS[st].label}: ${by(st).length}">${STATUS[st].short}<b>${by(st).length}</b></div>`).join("")}</div>` : "";
-    const lanes = ORDER.map((st) => {
+    const lanes = ORDER.filter((st) => prefs.plClosed || OPEN.includes(st)).map((st) => {
       const leads = by(st), total = leads.reduce((a, l) => a + l.value_cents, 0);
       return `<section class="lane" data-status="${st}" style="--c:var(${STATUS[st].c})" aria-label="${STATUS[st].label}, ${plural(leads.length, "lead")}">
         <div class="lane-head"><h2>${STATUS[st].label}</h2><span class="count">${leads.length}</span>${total ? `<span class="sum">${money(total)}</span>` : ""}</div>
@@ -659,14 +744,14 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       <section class="pane" aria-labelledby="mixTitle">
         <div class="pane-head"><h2 id="mixTitle">Stage mix</h2><span class="pane-meta">${plural(d.leads.length, "lead")} booked ${inPeriod()} · ${open.length} open · ${money(open.reduce((a, l) => a + l.value_cents, 0))} quoted on open leads</span>
           <span class="pane-tools pane-meta">Drag a card, or use its Move menu</span></div>
-        ${mix ? `<div class="pl-mix">${mix}</div>` : ""}
+        ${mix && prefs.plMix ? `<div class="pl-mix">${mix}</div>` : ""}
       </section>
       <div class="board" data-scroll="board">${lanes}</div>
     </div>`;
   }
   function cardHtml(l) {
     const next = l.follow_up_at ? `<span>${esc(l.follow_up_note || "Follow up")}</span>${dueTag(l.follow_up_at)}` : `<span>No follow-up set</span><span></span>`;
-    return `<article class="card ${state.lead && state.lead.id === l.id ? "is-selected" : ""}" data-id="${l.id}">
+    return `<article class="card ${prefs.cards === "compact" ? "compact" : ""} ${state.lead && state.lead.id === l.id ? "is-selected" : ""}" data-id="${l.id}">
       <div class="card-top"><button class="card-name" type="button" data-action="open" data-id="${l.id}" data-fk="card-${l.id}">${esc(l.name)}</button>${l.value_cents ? `<span class="num">${money(l.value_cents)}</span>` : ""}</div>
       <div class="card-biz">${esc(l.business || "No business name")}</div>
       <div class="card-next">${next}</div>
@@ -695,6 +780,16 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       return cmp * sign || a.name.localeCompare(b.name);
     });
   }
+  /** A lead's table cells after the name, leaving out the columns hidden in Settings. */
+  function leadCells(l) {
+    const cells = [
+      ["status", `<td>${tag(l.status)}</td>`], ["source", `<td class="col-opt">${esc(l.source)}</td>`], ["booked_at", `<td class="n">${niceDate(l.booked_at)}</td>`],
+      ["call_at", `<td class="n col-opt">${niceDate(l.call_at)}</td>`], ["follow_up_at", `<td>${l.follow_up_at ? dueTag(l.follow_up_at) : `<span class="faint">–</span>`}</td>`],
+      ["follow_up_note", `<td class="col-opt"><div class="trunc muted">${esc(l.follow_up_note || "–")}</div></td>`],
+      ["value_cents", `<td class="r">${l.value_cents ? money(l.value_cents) : "–"}</td>`], ["hours", `<td class="r">${l.hours ? hrs(l.hours) : "–"}</td>`],
+    ];
+    return cells.filter(([key]) => !prefs.ldHidden.includes(key)).map(([, html]) => html).join("");
+  }
   function facetBlock(key, title, rows) {
     const max = Math.max(1, ...rows.map((r) => r[2])), sel = state.facets[key];
     return `<section class="facet" aria-label="Filter by ${title.toLowerCase()}"><h3>${title}${sel.size ? `<button type="button" data-action="facet-clear" data-facet="${key}" data-fk="fc-${key}">Clear</button>` : ""}</h3>
@@ -715,16 +810,14 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (!d.leads.length) body = `<div class="empty"><b>No leads booked ${inPeriod()}.</b>Choose a longer date range, or add the first one.<br><button class="btn primary" type="button" data-action="new-lead">${icon("plus")}New lead</button></div>`;
     else if (!rows.length) body = `<div class="empty"><b>No leads match these filters.</b><button class="btn" type="button" data-action="clear-filters">Clear filters</button></div>`;
     else body = `<table class="tbl" id="leadTable">
-      <thead><tr>${COLUMNS.map(([key, label, align, opt]) => `<th class="sortable ${align} ${opt}" scope="col" ${state.sort.key === key ? `aria-sort="${state.sort.dir === "asc" ? "ascending" : "descending"}"` : ""}>
+      <thead><tr>${COLUMNS.filter(([key]) => !prefs.ldHidden.includes(key)).map(([key, label, align, opt]) => `<th class="sortable ${align} ${opt}" scope="col" ${state.sort.key === key ? `aria-sort="${state.sort.dir === "asc" ? "ascending" : "descending"}"` : ""}>
         <button class="sort" type="button" data-action="sort" data-key="${key}" data-fk="sort-${key}">${label}</button></th>`).join("")}</tr></thead>
       <tbody>${rows.map((l) => `<tr data-action="open" data-id="${l.id}" class="${state.lead && state.lead.id === l.id ? "is-selected" : ""}">
         <td><button class="who" type="button" data-action="open" data-id="${l.id}" data-fk="row-${l.id}">${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}</button></td>
-        <td>${tag(l.status)}</td><td class="col-opt">${esc(l.source)}</td><td class="n">${niceDate(l.booked_at)}</td><td class="n col-opt">${niceDate(l.call_at)}</td>
-        <td>${l.follow_up_at ? dueTag(l.follow_up_at) : `<span class="faint">–</span>`}</td><td class="col-opt"><div class="trunc muted">${esc(l.follow_up_note || "–")}</div></td>
-        <td class="r">${l.value_cents ? money(l.value_cents) : "–"}</td><td class="r">${l.hours ? hrs(l.hours) : "–"}</td></tr>`).join("")}</tbody>
+        ${leadCells(l)}</tr>`).join("")}</tbody>
     </table>`;
-    return `<div class="vw ld">
-      <aside class="pane facets" aria-label="Filters">${facets}</aside>
+    return `<div class="vw ld ${prefs.ldFilters ? "" : "no-facets"}">
+      ${prefs.ldFilters ? `<aside class="pane facets" aria-label="Filters">${facets}</aside>` : ""}
       <section class="pane ld-table" aria-label="Leads">
         <div class="toolbar">
           <input class="in" type="search" data-input="lead-filter" data-fk="lead-filter" value="${esc(state.query)}" placeholder="Filter by name, business, email or source" aria-label="Filter leads">
@@ -787,20 +880,20 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         <div class="pane-head"><h2 id="teTitle">Time entries</h2><span class="pane-meta">${state.time ? `${hrs(total)} h in ${plural(entries.length, "entry", "entries")} · ${rangeText()}` : "Loading…"}</span></div>
         <div class="pane-body" data-scroll="time">${list}</div>
       </section>
-      <section class="pane" aria-labelledby="hwTitle">
-        <div class="pane-head"><h2 id="hwTitle">Hours per week</h2><span class="pane-meta">${hrs(sum12)} h · last 12 weeks</span></div>
+      ${prefs.tmChart || prefs.tmByLead ? `<section class="pane" aria-labelledby="hwTitle">
+        <div class="pane-head"><h2 id="hwTitle">${prefs.tmChart ? "Hours per week" : "Hours by lead"}</h2>${prefs.tmChart ? `<span class="pane-meta">${hrs(sum12)} h · last 12 weeks</span>` : ""}</div>
         <div class="pane-body">
-          <div class="hours" role="img" aria-label="Hours logged per week over the last 12 weeks: ${hrs(sum12)} in total."><span class="cap">${hrs(maxH)} h</span>
+          ${prefs.tmChart ? `<div class="hours" role="img" aria-label="Hours logged per week over the last 12 weeks: ${hrs(sum12)} in total."><span class="cap">${hrs(maxH)} h</span>
             ${sums.map((h, i) => `<div class="col" title="Week of ${niceDate(weeks[i])}: ${hrs(h)} h"><div class="bar ${h ? "" : "zero"}" style="height:${(h / maxH) * 100}%"></div></div>`).join("")}</div>
-          <div class="x-labels" aria-hidden="true">${weeks.map((wk, i) => `<span>${i % 3 ? "" : niceDate(wk)}</span>`).join("")}</div>
-          <h3 class="sub-head">Hours by lead</h3>
+          <div class="x-labels" aria-hidden="true">${weeks.map((wk, i) => `<span>${i % 3 ? "" : niceDate(wk)}</span>`).join("")}</div>` : ""}
+          ${!prefs.tmByLead ? "" : `${prefs.tmChart ? `<h3 class="sub-head">Hours by lead</h3>` : ""}
           ${byLead.length ? `<table class="tbl"><thead><tr><th>Lead</th><th>Stage</th><th class="r">Hours</th><th class="r">Per hour</th></tr></thead><tbody>
             ${byLead.map((l) => `<tr><td><button class="who" type="button" data-action="open" data-id="${l.id}" data-tab="time" data-fk="tl-${l.id}">${esc(l.name)}</button></td><td>${tag(l.status)}</td><td class="r">${hrs(l.hours)}</td>
               <td class="r">${l.status === "paid" && l.value_cents ? money(l.value_cents / l.hours) : "–"}</td></tr>`).join("")}</tbody></table>
             <p class="foot-note">All hours ever logged on leads booked ${inPeriod()}. Per hour is shown for paid projects only.</p>`
-            : `<div class="empty">No hours logged on these leads yet.</div>`}
+            : `<div class="empty">No hours logged on these leads yet.</div>`}`}
         </div>
-      </section>
+      </section>` : ""}
     </div>`;
   }
 
@@ -823,7 +916,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         const t = threads.get(m.lead_id);
         if (t) t.count++; else threads.set(m.lead_id, { latest: m, count: 1 });
       }
-      const unmatched = msgs.filter((m) => !m.lead_id);
+      const unmatched = prefs.msUnmatched ? msgs.filter((m) => !m.lead_id) : [];
       const excerpt = (m) => `${m.status === "draft" ? "Draft" : m.channel === "note" ? "Note" : m.direction === "in" ? "Them" : "You"}: ${esc(m.subject ? `${m.subject} — ` : "")}${esc(m.body)}`;
       const chan = (m) => `<span class="tag">${CHANNEL[m.channel][0]}</span>`;
       body = threads.size || unmatched.length ? `<table class="tbl"><thead><tr><th>Lead</th><th>Type</th><th>Latest message</th><th>When</th><th class="r">In thread</th></tr></thead><tbody>
@@ -838,7 +931,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     }
     return `<div class="vw pane">
       <div class="pane-head"><h2>Conversations</h2><span class="pane-meta">Notes, calls, emails and texts, newest first</span></div>
-      ${strip}${inbox}
+      ${prefs.msStatus ? strip : ""}${inbox}
       <div class="pane-body" data-scroll="messages">${body}</div>
     </div>`;
   }
@@ -895,7 +988,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         "Needs the <code>Messages</code> table in the Catalyst Data Store.", ""],
     ];
     const row = ([ic, name, desc, [c, label], how, action]) => `<div class="conn"><div class="conn-ico">${icon(ic)}</div><h3>${name}</h3>
-      <p>${desc}</p>${how && !demo && label !== "Connected" ? `<p class="how">${how}</p>` : ""}
+      <p>${desc}</p>${how && prefs.cnHow && !demo && label !== "Connected" ? `<p class="how">${how}</p>` : ""}
       <div class="conn-side"><span class="tag" style="--c:var(${c})">${label}</span>${action}</div></div>`;
     return `<div class="vw pane">
       <div class="pane-head"><h2>Services</h2><span class="pane-meta">${demo ? "On this page everything runs on sample data. The real tracker shows what's connected."
@@ -905,13 +998,58 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         ${rows.map(row).join("")}
         ${deviceRows(sv)}
         <h3 class="sub-head">Workspace</h3>
-        <div class="conn"><div class="conn-ico">${icon(dark ? "moon" : "sun")}</div><h3>Appearance</h3><p>${dark ? "Dark" : "Light"} mode is on.</p>
-          <div class="conn-side"><button class="btn sm" type="button" data-action="theme" data-fk="c-theme">Switch to ${dark ? "light" : "dark"}</button></div></div>
+        <div class="conn"><div class="conn-ico">${icon("gear")}</div><h3>Settings</h3><p>Colours, fonts, text size, and how each section is laid out. ${dark ? "Dark" : "Light"} mode is on.</p>
+          <div class="conn-side"><button class="btn sm" type="button" data-action="view" data-view="settings" data-fk="c-settings">Open Settings</button></div></div>
         <div class="conn"><div class="conn-ico">${icon("down")}</div><h3>Export</h3><p>Download the leads booked ${inPeriod()} as a spreadsheet file (CSV).</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="export" data-fk="c-export">Export CSV</button></div></div>
         ${cfg.auth ? `<div class="conn"><div class="conn-ico">${icon("out")}</div><h3>Session</h3><p>You're signed in on this browser.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="signout" data-fk="c-out">Sign out</button></div></div>` : ""}
       </div></div>
+    </div>`;
+  }
+
+  // ----- Settings -----
+  function viewSettings() {
+    const demo = cfg.mode === "demo", dark = (document.documentElement.dataset.theme || "dark") === "dark";
+    const seg = (key, list, style) => `<div class="seg wrap" role="group">${list.map(([v, l]) => `<button type="button" data-action="pref" data-key="${key}" data-value="${v}" data-fk="p-${key}-${v}" aria-pressed="${prefs[key] === v}" ${style ? `style="${style(v)}"` : ""}>${l}</button>`).join("")}</div>`;
+    const toggle = (key, label, hint) => `<label class="set-toggle"><input type="checkbox" data-change="pref" data-key="${key}" data-fk="p-${key}" ${prefs[key] ? "checked" : ""}>
+      <span class="sw-track" aria-hidden="true"></span><span><b>${label}</b>${hint ? `<small>${hint}</small>` : ""}</span></label>`;
+    const row = (title, hint, control) => `<div class="set-row"><div class="set-label"><h3>${title}</h3>${hint ? `<p>${hint}</p>` : ""}</div><div class="set-ctl">${control}</div></div>`;
+    const order = (listKey, hiddenKey, labels, locked = []) => `<ol class="set-order">${prefs[listKey].map((k, i, all) => `<li>
+      <span class="set-name">${labels[k]}</span>
+      <label class="check"><input type="checkbox" data-change="pref-show" data-key="${hiddenKey}" data-item="${k}" data-fk="ps-${hiddenKey}-${k}" ${prefs[hiddenKey].includes(k) ? "" : "checked"} ${locked.includes(k) ? "disabled" : ""}> Show</label>
+      <button class="btn ghost sm icon" type="button" data-action="pref-move" data-key="${listKey}" data-item="${k}" data-dir="-1" data-fk="pm-${listKey}-${k}-u" ${i === 0 ? "disabled" : ""} aria-label="Move ${labels[k]} up">${icon("up")}</button>
+      <button class="btn ghost sm icon" type="button" data-action="pref-move" data-key="${listKey}" data-item="${k}" data-dir="1" data-fk="pm-${listKey}-${k}-d" ${i === all.length - 1 ? "disabled" : ""} aria-label="Move ${labels[k]} down">${icon("dn")}</button></li>`).join("")}</ol>`;
+    const viewLabels = Object.fromEntries(NAV.map((k) => [k, VIEWS[k][0]]));
+    const swatches = `<div class="swatches" role="group" aria-label="Accent colour">${ACCENTS.map(([v, l, hex]) => `<button type="button" class="swatch" data-action="pref" data-key="accent" data-value="${v}" data-fk="p-accent-${v}" aria-pressed="${prefs.accent === v}" title="${l}" aria-label="${l}" style="--sw:${hex}"></button>`).join("")}
+      <label class="swatch custom ${prefs.accent === "custom" ? "on" : ""}" title="Pick any colour" style="--sw:${prefs.custom}"><input type="color" value="${prefs.custom}" data-change="pref-color" data-input="pref-color" data-fk="p-custom" aria-label="Custom accent colour"></label></div>`;
+    const fonts = { plex: '"IBM Plex Sans", sans-serif', helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif', system: "-apple-system, system-ui, sans-serif", serif: '"Iowan Old Style", Georgia, serif',
+      text: "inherit", mono: "ui-monospace, Menlo, monospace" };
+    const pane = (title, body) => `<section class="pane set-pane"><div class="pane-head"><h2>${title}</h2></div><div class="set-body">${body}</div></section>`;
+    return `<div class="vw set">
+      ${demo ? `<div class="set-note">On this sample page, changes last until you refresh. In the real tracker they're saved in your browser.</div>` : ""}
+      <div class="set-grid">
+      ${pane("Look", row("Theme", "", `<div class="seg wrap" role="group">${[["dark", "Dark"], ["light", "Light"]].map(([v, l]) => `<button type="button" data-action="theme-set" data-value="${v}" data-fk="p-theme-${v}" aria-pressed="${(dark ? "dark" : "light") === v}">${l}</button>`).join("")}</div>`)
+        + row("Accent colour", "Buttons, links, selection and charts.", swatches)
+        + row("Background", "Dark mode only.", seg("background", CHOICES.background))
+        + row("Corners", "", seg("corners", CHOICES.corners))
+        + row("Glow", "", toggle("glow", "Soft glow on things that need you")))}
+      ${pane("Text", row("Font", "", seg("font", CHOICES.font, (v) => `font-family:${fonts[v]}`))
+        + row("Numbers", "Figures, dates and money.", seg("numFont", CHOICES.numFont, (v) => `font-family:${fonts[v]}`))
+        + row("Size", "Makes everything a little smaller or larger.", seg("size", CHOICES.size)))}
+      ${pane("Sidebar", row("Sections", "Order and which ones to show. Overview always stays.", order("nav", "hidden", viewLabels, ["overview"]))
+        + row("Open on", "", `<select class="in" data-change="pref" data-key="start" data-fk="p-start"><option value="last" ${prefs.start === "last" ? "selected" : ""}>The section I used last</option>${NAV.map((k) => `<option value="${k}" ${prefs.start === k ? "selected" : ""}>${VIEWS[k][0]}</option>`).join("")}</select>`))}
+      ${pane("Overview", row("Layout", "Two columns puts the first block of each group on the left and the rest on the right.", seg("ovLayout", CHOICES.ovLayout))
+        + row("Blocks", "", order("ovOrder", "ovHidden", OV_BLOCKS)))}
+      ${pane("Pipeline", row("Show", "", toggle("plMix", "Stage mix bar") + toggle("plClosed", "Closed stages", "Paid, Lost and No-show"))
+        + row("Cards", "Compact hides the business name and the source line.", seg("cards", CHOICES.cards)))}
+      ${pane("Leads", row("Show", "", toggle("ldFilters", "Filters panel"))
+        + row("Columns", "Lead, stage, booked and follow-up always show.", `<div class="set-checks">${Object.entries(LEAD_COLS).map(([k, l]) => `<label class="check"><input type="checkbox" data-change="pref-show" data-key="ldHidden" data-item="${k}" data-fk="pc-${k}" ${prefs.ldHidden.includes(k) ? "" : "checked"}> ${l}</label>`).join("")}</div>`))}
+      ${pane("Time", row("Show", "", toggle("tmChart", "Hours per week chart") + toggle("tmByLead", "Hours by lead")))}
+      ${pane("Messages", row("Show", "", toggle("msStatus", "Connection status line") + toggle("msUnmatched", "Messages not matched to a lead")))}
+      ${pane("Connections", row("Show", "", toggle("cnHow", "Setup steps for services that aren't connected")))}
+      </div>
+      <div class="set-foot"><button class="btn" type="button" data-action="pref-reset" data-fk="p-reset">${icon("refresh")}Reset all settings</button></div>
     </div>`;
   }
 
@@ -1000,6 +1138,25 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       case "palette": return openPalette();
       case "refresh": return act(button, load);
       case "theme": return toggleTheme();
+      case "theme-set": { if ((document.documentElement.dataset.theme || "dark") !== el.dataset.value) toggleTheme(); return renderView(); }
+      case "pref": { prefs[el.dataset.key] = el.dataset.value; prefs = cleanPrefs(prefs); return savePrefs(); }
+      case "pref-move": {
+        const list = [...prefs[el.dataset.key]], i = list.indexOf(el.dataset.item), j = i + Number(el.dataset.dir);
+        if (i < 0 || j < 0 || j >= list.length) return;
+        [list[i], list[j]] = [list[j], list[i]];
+        prefs[el.dataset.key] = list;
+        savePrefs();
+        const again = [...$("view").querySelectorAll("[data-fk]")].find((x) => x.dataset.fk === el.dataset.fk && !x.disabled);
+        if (again) again.focus(); // keep the keyboard on the item that moved
+        return;
+      }
+      case "pref-reset": {
+        const ok = await confirmBox({ title: "Reset all settings?", text: "Colours, fonts, size and every layout choice go back to how they started. Your leads and messages aren't touched.", action: "Reset settings" });
+        if (!ok) return;
+        prefs = cleanPrefs({});
+        savePrefs();
+        return toast("Settings reset");
+      }
       case "install": return act(button, async () => { await cfg.device.install(); render(); });
       case "push-on": return act(button, async () => {
         await cfg.device.enablePush();
@@ -1108,11 +1265,19 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 
   function onChange(e) {
     const el = e.target.closest("[data-change]");
-    if (el && el.dataset.change === "move") moveLead(el.dataset.id, el.value);
+    if (!el) return;
+    if (el.dataset.change === "move") moveLead(el.dataset.id, el.value);
+    else if (el.dataset.change === "pref") { prefs[el.dataset.key] = el.type === "checkbox" ? el.checked : el.value; prefs = cleanPrefs(prefs); savePrefs(); }
+    else if (el.dataset.change === "pref-show") {
+      const list = prefs[el.dataset.key].filter((x) => x !== el.dataset.item);
+      prefs[el.dataset.key] = el.checked ? list : [...list, el.dataset.item];
+      savePrefs();
+    } else if (el.dataset.change === "pref-color") { prefs.custom = el.value; prefs.accent = "custom"; prefs = cleanPrefs(prefs); savePrefs(); }
   }
   function onInput(e) {
     const el = e.target.closest("[data-input]");
     if (el && el.dataset.input === "lead-filter") { state.query = el.value; renderView(); }
+    if (el && el.dataset.input === "pref-color" && /^#[0-9a-f]{6}$/i.test(el.value)) document.documentElement.style.setProperty("--accent", el.value); // live preview while picking
   }
 
   async function moveLead(id, status) {
@@ -1559,7 +1724,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const commands = [
       ["Actions", "plus", "New lead", "N", () => { if (state.data) openLead(null); }],
       ["Actions", "time", "Log time", "", () => { setView("time"); const el = $("view").querySelector('[data-fk="t-lead"]'); if (el) el.focus(); }],
-      ...Object.keys(VIEWS).map((key, i) => ["Go to", VIEWS[key][1], VIEWS[key][0], String(i + 1), () => setView(key)]),
+      ...visibleNav().map((key, i) => ["Go to", VIEWS[key][1], VIEWS[key][0], String(i + 1), () => setView(key)]),
+      ["Go to", "gear", "Settings", "", () => setView("settings")],
       ["Actions", "refresh", "Refresh data", "", () => load()],
       ["Actions", "down", "Export leads as CSV", "", exportCsv],
       ["Actions", "mail", "Preview the daily email", "", () => openDigest(null)],
@@ -1647,7 +1813,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       if (typing || e.metaKey || e.ctrlKey || e.altKey || !state.data) return;
       if (e.key === "/") { e.preventDefault(); openPalette(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); openLead(null); }
-      else if (/^[1-6]$/.test(e.key)) setView(Object.keys(VIEWS)[Number(e.key) - 1]);
+      else if (/^[1-9]$/.test(e.key) && visibleNav()[Number(e.key) - 1]) setView(visibleNav()[Number(e.key) - 1]);
     });
 
     // Redraw the chart when the work area changes size (window resize, or the lead panel docking).
@@ -1678,10 +1844,14 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     cfg = config;
     // The sample-data page always opens on Overview and 30 days, and never shares saved preferences with the real tracker.
     const live = cfg.mode !== "demo";
-    const view = live ? stored("hp-view", "overview") : "overview", range = live ? stored("hp-range", "30") : "30";
-    state.view = VIEWS[view] ? view : "overview";
+    try { prefs = cleanPrefs(live ? JSON.parse(stored("hp-prefs", "{}")) : {}); } catch { prefs = cleanPrefs({}); }
+    applyPrefs();
+    const last = live ? stored("hp-view", "overview") : "overview", range = live ? stored("hp-range", "30") : "30";
+    const view = prefs.start === "last" ? last : prefs.start;
+    state.view = VIEWS[view] && (view === "settings" || visibleNav().includes(view)) ? view : "overview";
     state.range = RANGES.some((r) => r[0] === range) ? range : "30";
     mount();
+    renderNav();
     bind();
     render();
     if (cfg.auth) {
