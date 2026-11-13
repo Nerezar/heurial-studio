@@ -11,12 +11,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   `Inquiries` with the right source and attribution; the row was then deleted. Form, server and column limits match
   (name 100, email 254, company 120, source 60, source_detail 200, heard 20; message and attribution are Text).
   No alert was sent for it: there is no inquiry alert yet (B2). Three older test rows from Nov 11-12 are still there.
-- **B1:** fixed on `site-robots` (robots allowed on the real domain only, sitemap lists 6 pages). Not live yet.
+- **B1 done and live 2026-11-13** (website `665016e`): www.heurial.studio/robots.txt allows crawling (blocks `/api/`
+  and `/admin`) and points to a sitemap of the 6 pages; the Slate preview address stays blocked. All six pages
+  return 200. Next: B2 (owner email per inquiry, needs the Mail sender verified) and B5 (rotate the two keys).
 - `origin/main` = `88c7400` (AI drafts, Twilio, inbound email, installable app and notifications, calmer design).
   Not deployed: the live site is still `46d6c31`.
 - Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
   `CLAUDE.md`. The iCloud copy is no longer the deploy source.
-- **Live website: `c4983d9`** (2026-11-13), which adds versioned tracker file addresses so releases aren't hidden
+- **Live website: `665016e`** (2026-11-13): B1 robots fix and the blue tracker colours. Earlier, `c4983d9` added versioned tracker file addresses so releases aren't hidden
   by the host's year-long cache. Before that, website `d0c78ab` went live (calmer design, installable app, notifications UI).
   Functions `pipeline` and `inquiries` at `d0c78ab` deployed to Development; the owner then promoted to Production.
 - **Open:** Production still has no `PushSubscriptions` table after that promotion, so notifications won't work live
