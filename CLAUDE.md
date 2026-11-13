@@ -28,6 +28,9 @@ Durable rules. Current status lives in `HANDOFF.md`.
   from the repo root replaces the live site directly (without `--production` it tries to create a new app and fails
   with 409). A build takes about 2 minutes. Deploy and promote functions first,
   then the site. The connector can list builds and roll back to the previous one.
+- Slate serves every file in `public/` with a one-year browser cache and ignores `next.config.ts` headers for them.
+  Tracker files load with `?v=<fingerprint>` (computed in `next.config.ts`); add any new tracker file to
+  `TRACKER_FILES` there and load it through `__load` in the HTML pages.
 - Release steps: `git fetch`, `git switch --detach origin/main`, confirm a clean tree, run the checks, deploy,
   then check `/admin` and the function URLs (an unkeyed request should return `{"error":"Unauthorized"}`).
 - Don't list function settings through the connector: the response includes secret values. Read settings by name

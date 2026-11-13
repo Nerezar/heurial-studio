@@ -8,7 +8,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Not deployed: the live site is still `46d6c31`.
 - Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
   `CLAUDE.md`. The iCloud copy is no longer the deploy source.
-- **Released 2026-11-13 by Claude:** website `d0c78ab` is live (calmer design, installable app, notifications UI).
+- **Live website: `c4983d9`** (2026-11-13), which adds versioned tracker file addresses so releases aren't hidden
+  by the host's year-long cache. Before that, website `d0c78ab` went live (calmer design, installable app, notifications UI).
   Functions `pipeline` and `inquiries` at `d0c78ab` deployed to Development; the owner then promoted to Production.
 - **Open:** Production still has no `PushSubscriptions` table after that promotion, so notifications won't work live
   until it's promoted (or created) there. Whether the Production functions and the VAPID settings were promoted is
