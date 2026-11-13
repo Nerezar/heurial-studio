@@ -4,6 +4,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Site plan 2026-11-12** (pasted by the owner): launch blockers first (B1-B6), then conversion work. New tracker
+  features are frozen until a real inquiry flows through. Branch `tracker-settings` (Settings screen) is built and
+  pushed but parked for that reason.
+- **B3 verified 2026-11-13:** a labelled test from www.heurial.studio/contact returned 201 and saved to Production
+  `Inquiries` with the right source and attribution; the row was then deleted. Form, server and column limits match
+  (name 100, email 254, company 120, source 60, source_detail 200, heard 20; message and attribution are Text).
+  No alert was sent for it: there is no inquiry alert yet (B2). Three older test rows from Nov 11-12 are still there.
+- **B1:** fixed on `site-robots` (robots allowed on the real domain only, sitemap lists 6 pages). Not live yet.
 - `origin/main` = `88c7400` (AI drafts, Twilio, inbound email, installable app and notifications, calmer design).
   Not deployed: the live site is still `46d6c31`.
 - Claude now handles Catalyst and deploys (2026-11-13), from this folder; see "Catalyst and deploys" in
