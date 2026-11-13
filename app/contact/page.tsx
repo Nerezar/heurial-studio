@@ -3,6 +3,7 @@ import { ContactForm } from "@/components/contact-form";
 import { Icon } from "@/components/icon";
 import { Chip, PageIntro } from "@/components/shell";
 import { inquiryInboxReady } from "@/lib/contact";
+import { BOOKING_URL } from "@/lib/site";
 import "../interiors.css";
 
 export const metadata: Metadata = {
@@ -34,6 +35,10 @@ export default function Contact() {
             <ul className="check-list">
               {prompts.map((prompt) => <li key={prompt}><Icon name="check" size={18} />{prompt}</li>)}
             </ul>
+            <div className="contact-book">
+              <p>Already know you want to talk? Skip the form and pick a time. It’s a 20-minute video call on Google Meet.</p>
+              <a className="button secondary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
+            </div>
             {formReady && <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>}
           </aside>
           {formReady ? <ContactForm /> : (

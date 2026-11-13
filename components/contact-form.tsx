@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { HEARD_OPTIONS } from "@/lib/attribution";
+import { BOOKING_URL } from "@/lib/site";
 import { readVisitSource } from "./attribution";
 import { Icon } from "./icon";
 
@@ -45,14 +46,17 @@ export function ContactForm() {
   if (sent) {
     return <div className="glass is-glow panel contact-thanks" role="status">
       <div className="panel-head"><span className="icon-tile"><Icon name="check" size={20} /></span><h2 ref={thanks} tabIndex={-1}>Thanks, I got your message</h2></div>
-      <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> to set up your free 20-minute call.</p>
+      <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> about your free 20-minute call. If you’d rather not wait, pick a time now.</p>
       <ul className="check-list">
         {sent.acknowledged && <li><Icon name="check" size={18} />I’ve sent a confirmation to that address. If you don’t see it, check your spam folder.</li>}
         <li><Icon name="check" size={18} />My reply will come from hello@heurial.studio.</li>
         <li><Icon name="check" size={18} /><span>Thought of something else? Email me at <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</span></li>
       </ul>
       <p className="form-note">Reference: {sent.id}</p>
-      <button className="button secondary" type="button" onClick={() => setSent(undefined)}>Send another message</button>
+      <div className="contact-thanks-actions">
+        <a className="button primary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
+        <button className="button secondary" type="button" onClick={() => setSent(undefined)}>Send another message</button>
+      </div>
     </div>;
   }
 

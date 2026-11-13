@@ -108,7 +108,9 @@
 .contact-guide h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
 .contact-alt { width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
 .panel > p:not(.form-note, .form-status) { color: var(--text); }
+.contact-book { display: grid; gap: 12px; justify-items: start; width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
 .contact-thanks { align-self: start; }
+.contact-thanks-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .contact-thanks h2:focus { outline: none; }
 .contact-thanks .check-list { margin-block: 18px; }
 .contact-thanks .form-note { margin-bottom: 18px; overflow-wrap: anywhere; }

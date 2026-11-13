@@ -47,6 +47,13 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   from the app for its own "origin server unavailable" page, so a fast 503 on the form means the site refused
   (wrong key or address), not that the server is down. After any key change, send a real test through the form.
 - Two more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
+- **C2 booking link built on branch `c2-booking-link`, not merged, not deployed (2026-11-13):** Zoho Bookings
+  (owner's account, trial of the paid plan ends about 2026-11-28; what it drops to is unchecked). Event type "Free
+  20-min call", 20 min, Google Meet. Hours Mon-Fri 2:50-6:00 pm, Sat-Sun 9:00 am-6:00 pm, America/Chicago. Link
+  `https://heurial.zohobookings.com/4948260000000038065` is `BOOKING_URL` in `lib/site.ts` (contact page "Pick a
+  time" and the thank-you screen) and the default `BOOKING_URL` in the `inquiries` function (one line in the
+  confirmation email; owner has not approved that line yet). Going live: merge, redeploy the site, deploy
+  `inquiries` to Development then a console deployment to Production. No test booking has been made.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.

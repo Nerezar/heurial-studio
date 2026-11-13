@@ -76,7 +76,7 @@ function buildAlert(row, { trackerUrl = "https://www.heurial.studio/admin" } = {
  * The automatic reply the visitor gets. It never repeats their message, and only greets them by name when the
  * name looks like a name, so the form can't be used to send someone else's text to a stranger's inbox.
  */
-function buildAcknowledgement(row, { ownerEmail = "hello@heurial.studio", signature = "Uriyah Moore" } = {}) {
+function buildAcknowledgement(row, { ownerEmail = "hello@heurial.studio", signature = "Uriyah Moore", bookingUrl = "" } = {}) {
   const name = oneLine(row.name);
   const greeting = /^[\p{L}][\p{L}\p{M} .'’-]{0,39}$/u.test(name) ? `Hi ${name},` : "Hi,";
   const text = [
@@ -84,6 +84,7 @@ function buildAcknowledgement(row, { ownerEmail = "hello@heurial.studio", signat
     "",
     "Thanks for getting in touch. Your message reached me. I'll read it and reply by email to set up a free 20-minute call.",
     "",
+    ...(/^https:\/\/\S+$/.test(bookingUrl) ? [`If you'd rather not wait, pick a time for the call here: ${bookingUrl}`, ""] : []),
     "If you want to add anything before then, reply to this email.",
     "",
     signature,
@@ -106,7 +107,7 @@ function withTimeout(promise, ms) {
  * @param res  Node response
  * @param deps { expectedKey: string, insert: (row) => Promise<{ ROWID?: string }>,
  *               notify?: (alert: { subject, text, replyTo }) => Promise<void>,
- *               acknowledge?: (mail: { to, subject, text, replyTo }) => Promise<void>, ownerEmail?: string, signature?: string,
+ *               acknowledge?: (mail: { to, subject, text, replyTo }) => Promise<void>, ownerEmail?: string, signature?: string, bookingUrl?: string,
  *               trackerUrl?: string, alertTimeoutMs?: number }
  */
 async function handle(req, res, deps) {
@@ -136,7 +137,7 @@ async function handle(req, res, deps) {
     };
     const [alerted, acknowledged] = await Promise.all([
       attempt("owner alert", deps.notify && (() => deps.notify(buildAlert(row, { trackerUrl: deps.trackerUrl })))),
-      attempt("visitor confirmation", deps.acknowledge && (() => deps.acknowledge(buildAcknowledgement(row, { ownerEmail: deps.ownerEmail, signature: deps.signature })))),
+      attempt("visitor confirmation", deps.acknowledge && (() => deps.acknowledge(buildAcknowledgement(row, { ownerEmail: deps.ownerEmail, signature: deps.signature, bookingUrl: deps.bookingUrl })))),
     ]);
     return send(201, { ok: true, rowId: saved && saved.ROWID ? String(saved.ROWID) : undefined, alerted, acknowledged });
   } catch (err) {

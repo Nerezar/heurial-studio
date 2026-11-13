@@ -86,3 +86,11 @@ test("a name that isn't a name is left out of the confirmation", () => {
   }
   assert.match(buildAcknowledgement({ ...ROW, name: "Zoë O’Neil-Díaz" }).text, /^Hi Zoë O’Neil-Díaz,\n/);
 });
+
+test("the confirmation carries the booking link only when one is set", () => {
+  const url = "https://heurial.zohobookings.com/4948260000000038065";
+  assert.match(buildAcknowledgement(ROW, { bookingUrl: url }).text, new RegExp(`pick a time for the call here: ${url}\\n`));
+  for (const bookingUrl of ["", "off", "http://insecure.example", "https://a.example b"]) {
+    assert.doesNotMatch(buildAcknowledgement(ROW, { bookingUrl }).text, /pick a time/);
+  }
+});

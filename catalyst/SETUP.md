@@ -94,7 +94,8 @@ Set `ACK_REPLY` = `on` on the `inquiries` function and each visitor gets a short
 email from `hello@heurial.studio`; replying to it reaches the owner. It never repeats the visitor's message, and it
 only greets them by name when the name looks like a name, so the form can't be used to mail someone else's text to a
 stranger. The wording lives in `buildAcknowledgement` in `handler.js`. The website's thank-you screen mentions the
-confirmation only when one was actually sent. Optional: `ACK_REPLY_TO` (where replies go), `ACK_SIGNATURE` (the
+confirmation only when one was actually sent. The email includes the "pick a time" booking link (`BOOKING_URL`,
+default the Zoho Bookings page; `off` leaves it out). Optional: `ACK_REPLY_TO` (where replies go), `ACK_SIGNATURE` (the
 name that signs it, default Uriyah Moore). A failed confirmation shows in the logs as "visitor confirmation failed".
 
 ## 4. Redeploy the site and test

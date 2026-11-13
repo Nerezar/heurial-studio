@@ -12,6 +12,7 @@
 //   ACK_REPLY     optional: set to "on" to send the visitor an automatic "I got your message" email. Off by default.
 //   ACK_REPLY_TO  optional: where the visitor's reply to that email goes. Default hello@heurial.studio.
 //   ACK_SIGNATURE optional: the name that signs it. Default Uriyah Moore.
+//   BOOKING_URL   optional: the "pick a time" link in that email. Default is the Zoho Bookings page; "off" leaves it out.
 
 const { zcAuth } = require("@zcatalyst/auth");
 const { Datastore } = require("@zcatalyst/datastore");
@@ -31,6 +32,7 @@ module.exports = async (req, res) => {
     },
     ownerEmail: env("ACK_REPLY_TO", "hello@heurial.studio"),
     signature: env("ACK_SIGNATURE", "Uriyah Moore"),
+    bookingUrl: env("BOOKING_URL", "https://heurial.zohobookings.com/4948260000000038065"),
     acknowledge: env("ACK_REPLY", "off").toLowerCase() !== "on" ? undefined : async ({ to, subject, text, replyTo }) => {
       await new Mail().sendMail({
         from_email: env("ALERT_FROM", "hello@heurial.studio"),
