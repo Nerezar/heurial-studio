@@ -20,7 +20,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   due 2026-11-14 7:00; check it arrived.
 - About 12 labelled test inquiries ("TEST ...", example.com addresses) from 2026-11-12/13 are in Production
   `Inquiries` for the owner to dismiss or delete.
-- **Live website: `f0c076e`** (redeployed 2026-11-13 to pick up the new pipeline key; code same as `665016e`).
+- **Live website: `f4466a7`** (2026-11-13: new pipeline key picked up, then the contact thank-you screen).
   Functions in Production: `inquiries` and `pipeline` at `bf68c83`. Next: plan step 3 (C2 booking link, C3
   thank-you and acknowledgement email, C1 About content).
 - **B5 done 2026-11-13:** both keys rotated. `INQUIRY_KEY` on `inquiries` + `INQUIRY_FUNCTION_KEY` on the site
@@ -33,10 +33,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   both match `~/.heurial-secrets/vapid.env` by fingerprint). The live function reads them: `push/key` returns the
   matching public key. No redeploy needed; the console's "not deployed" flag is misleading. Still untested on a real
   phone, and no device has subscribed. Development `pipeline` shows no variables at all.
-- **C3 built on branch `c3-thank-you`, not merged, not deployed:** the contact form is replaced by a thank-you
-  panel after a successful send, and the `inquiries` function can email the visitor a confirmation (`ACK_REPLY=on`,
-  off by default; wording in `buildAcknowledgement`, owner has not approved it yet). Going live needs: merge, deploy
-  the `inquiries` function to Production, redeploy the site, then set `ACK_REPLY` once the wording is approved.
+- **C3 thank-you screen live 2026-11-13** (website `f4466a7`, merged to main): after a successful send the contact
+  form is replaced by a thank-you panel; the live bundle was checked for it (no live test inquiry was sent).
+  **Confirmation email to the visitor: built, not live.** `inquiries` with `buildAcknowledgement` is deployed to
+  **Development** only; Production `inquiries` is still `bf68c83`. To finish once the owner approves the wording:
+  console deployment Development → Production (read the diff: it should show only `inquiries`), then add
+  `ACK_REPLY` = `on` on Production `inquiries` and send one test inquiry to an address the owner can read.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
