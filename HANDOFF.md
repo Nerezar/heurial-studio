@@ -35,10 +35,18 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   phone, and no device has subscribed. Development `pipeline` shows no variables at all.
 - **C3 thank-you screen live 2026-11-13** (website `f4466a7`, merged to main): after a successful send the contact
   form is replaced by a thank-you panel; the live bundle was checked for it (no live test inquiry was sent).
-  **Confirmation email to the visitor: built, not live.** `inquiries` with `buildAcknowledgement` is deployed to
-  **Development** only; Production `inquiries` is still `bf68c83`. To finish once the owner approves the wording:
-  console deployment Development → Production (read the diff: it should show only `inquiries`), then add
-  `ACK_REPLY` = `on` on Production `inquiries` and send one test inquiry to an address the owner can read.
+  **Confirmation email to the visitor live 2026-11-13:** console deployment "Visitor confirmation email
+  (f4466a7)" moved only `inquiries` to Production (Serverless only; Job Scheduling, CloudScale and Settings were
+  unticked). `ACK_REPLY` = `on` added on Production `inquiries` (Development view → Create Variable → Production).
+  Live form test: 201 with `acknowledged: true` (took 6.7 s; the notify step to `pipeline` alone takes about 3.7 s
+  now that the VAPID keys are set).
+- **Incident 2026-11-13, fixed:** the website's `INQUIRY_FUNCTION_KEY` and `PIPELINE_FUNCTION_KEY` were found
+  swapped (each held the other's value), so the contact form answered 503 and /admin could not load data from the
+  `f4466a7` deploy until the fix about 40 minutes later. `PIPELINE_FUNCTION_KEY` was correct when checked earlier
+  that day; what changed it is unknown. Both corrected by fingerprint and the site redeployed. Slate swaps any 503
+  from the app for its own "origin server unavailable" page, so a fast 503 on the form means the site refused
+  (wrong key or address), not that the server is down. After any key change, send a real test through the form.
+- Three more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
