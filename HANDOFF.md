@@ -4,15 +4,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- `origin/main` = `fb0e919` (AI drafts, Twilio, inbound email, installable app and notifications). Not deployed:
-  the live site is still `46d6c31`. `tracker-pwa` was fast-forwarded into main on 2026-11-12.
+- `origin/main` = `88c7400` (AI drafts, Twilio, inbound email, installable app and notifications, calmer design).
+  Not deployed: the live site is still `46d6c31`.
 - The iCloud checkout is ChatGPT's deployment copy, clean on `fb0e919` (2026-11-12). `CLAUDE.md` and `HANDOFF.md` are in git so both agents read the same notes.
 - Notifications prepared in Catalyst **Development** (ChatGPT, 2026-11-12): VAPID keys generated and stored outside
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## On `tracker-calm` (waiting for "Yes, merge it")
+## Merged to main at `88c7400`: calmer tracker design, not deployed
 - The user found the tracker too dense and asked for a calmer, roomier look with colour, glow and gradients
   (reference shots: dark dashboards with big figures and rounded cards). Restyled `public/tracker/tracker.css`
   and the frame in `tracker.js`: labelled sidebar with connection status, greeting header, four large stat cards
@@ -74,8 +74,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - AI drafts, Twilio and inbound email are built on `tracker-ai` but untested against the real services.
 
 ## Next task
-1. With the user's go-ahead: promote Development to Production (table + pipeline settings) and deploy `e4f0cf5`
-   (same app code as `fb0e919`). Each feature stays off until its settings exist.
+1. With the user's go-ahead: promote Development to Production (table + pipeline settings) and deploy `88c7400`. Each feature stays off until its settings exist.
 2. Then on a phone: install the app from `/admin`, Connections → Notifications → Turn on → Send test.
 3. Later, when the user wants to pay for them: Anthropic key, Twilio, inbound email provider.
 4. Later (if clients want it): the tracker as a delivered workflow per client, then a multi-tenant app.
