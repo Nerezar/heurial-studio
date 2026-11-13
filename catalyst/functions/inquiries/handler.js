@@ -72,6 +72,29 @@ function buildAlert(row, { trackerUrl = "https://www.heurial.studio/admin" } = {
   return { subject: `New inquiry: ${who}`.slice(0, 150), text: lines.join("\n"), replyTo: row.email };
 }
 
+/**
+ * The automatic reply the visitor gets. It never repeats their message, and only greets them by name when the
+ * name looks like a name, so the form can't be used to send someone else's text to a stranger's inbox.
+ */
+function buildAcknowledgement(row, { ownerEmail = "hello@heurial.studio", signature = "Uriyah Moore" } = {}) {
+  const name = oneLine(row.name);
+  const greeting = /^[\p{L}][\p{L}\p{M} .'’-]{0,39}$/u.test(name) ? `Hi ${name},` : "Hi,";
+  const text = [
+    greeting,
+    "",
+    "Thanks for getting in touch. Your message reached me. I'll read it and reply by email to set up a free 20-minute call.",
+    "",
+    "If you want to add anything before then, reply to this email.",
+    "",
+    signature,
+    "HEURIAL Studio",
+    "https://www.heurial.studio",
+    "",
+    "This is an automatic confirmation that your message arrived. If you didn't contact HEURIAL Studio, you can ignore it.",
+  ].join("\n");
+  return { to: row.email, subject: "I got your message", text, replyTo: ownerEmail };
+}
+
 function withTimeout(promise, ms) {
   let timer;
   return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms); })])
@@ -82,7 +105,9 @@ function withTimeout(promise, ms) {
  * @param req  Node request
  * @param res  Node response
  * @param deps { expectedKey: string, insert: (row) => Promise<{ ROWID?: string }>,
- *               notify?: (alert: { subject, text, replyTo }) => Promise<void>, trackerUrl?: string, alertTimeoutMs?: number }
+ *               notify?: (alert: { subject, text, replyTo }) => Promise<void>,
+ *               acknowledge?: (mail: { to, subject, text, replyTo }) => Promise<void>, ownerEmail?: string, signature?: string,
+ *               trackerUrl?: string, alertTimeoutMs?: number }
  */
 async function handle(req, res, deps) {
   const send = (status, body) => {
@@ -99,21 +124,25 @@ async function handle(req, res, deps) {
     const row = toRow(data);
     if (!row) return send(400, { error: "Invalid inquiry" });
     const saved = await deps.insert(row);
-    // The inquiry is saved. Tell the owner, but a failed or slow email never fails the visitor's submission.
-    let alerted = false;
-    if (deps.notify) {
-      try {
-        await withTimeout(deps.notify(buildAlert(row, { trackerUrl: deps.trackerUrl })), deps.alertTimeoutMs || ALERT_TIMEOUT_MS);
-        alerted = true;
-      } catch (err) {
-        console.error("inquiries: owner alert failed", row.inquiry_id, err && err.message);
+    // The inquiry is saved. Tell the owner and confirm to the visitor at the same time; a failed or slow email
+    // never fails the visitor's submission.
+    const timeout = deps.alertTimeoutMs || ALERT_TIMEOUT_MS;
+    const attempt = async (label, send) => {
+      if (!send) return false;
+      try { await withTimeout(send(), timeout); return true; } catch (err) {
+        console.error(`inquiries: ${label} failed`, row.inquiry_id, err && err.message);
+        return false;
       }
-    }
-    return send(201, { ok: true, rowId: saved && saved.ROWID ? String(saved.ROWID) : undefined, alerted });
+    };
+    const [alerted, acknowledged] = await Promise.all([
+      attempt("owner alert", deps.notify && (() => deps.notify(buildAlert(row, { trackerUrl: deps.trackerUrl })))),
+      attempt("visitor confirmation", deps.acknowledge && (() => deps.acknowledge(buildAcknowledgement(row, { ownerEmail: deps.ownerEmail, signature: deps.signature })))),
+    ]);
+    return send(201, { ok: true, rowId: saved && saved.ROWID ? String(saved.ROWID) : undefined, alerted, acknowledged });
   } catch (err) {
     console.error("inquiries: save failed", err && err.message);
     return send(500, { error: "Could not save the inquiry" });
   }
 }
 
-module.exports = { handle, toRow, keyMatches, buildAlert };
+module.exports = { handle, toRow, keyMatches, buildAlert, buildAcknowledgement };

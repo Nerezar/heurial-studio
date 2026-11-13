@@ -108,6 +108,10 @@
 .contact-guide h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
 .contact-alt { width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
 .panel > p:not(.form-note, .form-status) { color: var(--text); }
+.contact-thanks { align-self: start; }
+.contact-thanks h2:focus { outline: none; }
+.contact-thanks .check-list { margin-block: 18px; }
+.contact-thanks .form-note { margin-bottom: 18px; overflow-wrap: anywhere; }
 
 /* ---------- Guides: the assistant and its sources ---------- */
 .assistant label { display: block; margin-bottom: 10px; color: var(--white); font-weight: 600; }

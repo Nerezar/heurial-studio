@@ -1,14 +1,19 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HEARD_OPTIONS } from "@/lib/attribution";
 import { readVisitSource } from "./attribution";
 import { Icon } from "./icon";
 
 export function ContactForm() {
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<{ error: boolean; message: string }>();
+  const [error, setError] = useState<string>();
+  const [sent, setSent] = useState<{ id: string; email: string; acknowledged: boolean }>();
+  const thanks = useRef<HTMLHeadingElement>(null);
+
+  // Move focus to the thank-you heading so keyboard and screen-reader users land on it.
+  useEffect(() => { if (sent) thanks.current?.focus(); }, [sent]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,7 +21,7 @@ export function ContactForm() {
     const form = event.currentTarget;
     const fields = { ...Object.fromEntries(new FormData(form)), attribution: readVisitSource() };
     setBusy(true);
-    setStatus(undefined);
+    setError(undefined);
 
     try {
       const response = await fetch("/api/contact", {
@@ -26,16 +31,29 @@ export function ContactForm() {
       });
       const data = await response.json();
       if (response.status !== 201 || typeof data.id !== "string") {
-        setStatus({ error: true, message: data.error ?? "Your message couldn’t be saved. Please try again, or email hello@heurial.studio." });
+        setError(data.error ?? "Your message couldn’t be saved. Please try again, or email hello@heurial.studio.");
         return;
       }
-      form.reset();
-      setStatus({ error: false, message: `Thanks! I got your message and will reply by email to set up a time. Reference: ${data.id}` });
+      setSent({ id: data.id, email: String(new FormData(form).get("email") ?? "").trim(), acknowledged: data.acknowledged === true });
     } catch {
-      setStatus({ error: true, message: "Couldn’t confirm your message was received. It’s still in the form, so you can try again." });
+      setError("Couldn’t confirm your message was received. It’s still in the form, so you can try again.");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (sent) {
+    return <div className="glass is-glow panel contact-thanks" role="status">
+      <div className="panel-head"><span className="icon-tile"><Icon name="check" size={20} /></span><h2 ref={thanks} tabIndex={-1}>Thanks, I got your message</h2></div>
+      <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> to set up your free 20-minute call.</p>
+      <ul className="check-list">
+        {sent.acknowledged && <li><Icon name="check" size={18} />I’ve sent a confirmation to that address. If you don’t see it, check your spam folder.</li>}
+        <li><Icon name="check" size={18} />My reply will come from hello@heurial.studio.</li>
+        <li><Icon name="check" size={18} /><span>Thought of something else? Email me at <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</span></li>
+      </ul>
+      <p className="form-note">Reference: {sent.id}</p>
+      <button className="button secondary" type="button" onClick={() => setSent(undefined)}>Send another message</button>
+    </div>;
   }
 
   return <form className="glass is-glow panel contact-form" method="post" action="/api/contact" onSubmit={submit} aria-describedby="inquiry-note">
@@ -53,6 +71,6 @@ export function ContactForm() {
     </div>
     <div hidden><label>Leave this blank<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
     <button className="button primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Request a free call"}<Icon name="arrow" size={17} /></button>
-    <p role="status" className={status?.error ? "form-status form-error" : "form-status"}>{status?.message}</p>
+    <p role="alert" className="form-status form-error">{error}</p>
   </form>;
 }

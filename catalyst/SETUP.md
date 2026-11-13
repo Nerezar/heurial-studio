@@ -89,6 +89,14 @@ Optional settings on the `inquiries` function:
 - `ALERT_FROM`: a different sender. It must be verified in Catalyst Mail first.
 - `TRACKER_URL`: the link in the email (default `https://www.heurial.studio/admin`).
 
+### Automatic reply to the visitor (off by default)
+Set `ACK_REPLY` = `on` on the `inquiries` function and each visitor gets a short plain-text "I got your message"
+email from `hello@heurial.studio`; replying to it reaches the owner. It never repeats the visitor's message, and it
+only greets them by name when the name looks like a name, so the form can't be used to mail someone else's text to a
+stranger. The wording lives in `buildAcknowledgement` in `handler.js`. The website's thank-you screen mentions the
+confirmation only when one was actually sent. Optional: `ACK_REPLY_TO` (where replies go), `ACK_SIGNATURE` (the
+name that signs it, default Uriyah Moore). A failed confirmation shows in the logs as "visitor confirmation failed".
+
 ## 4. Redeploy the site and test
 
 Redeploy the Slate app so it picks up the new variables. Then:

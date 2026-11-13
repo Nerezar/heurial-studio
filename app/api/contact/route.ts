@@ -21,11 +21,11 @@ export async function POST(request: Request) {
     const attribution = cleanAttribution(body.attribution);
     const { source, sourceDetail } = resolveSource(attribution, heard);
     const id = randomUUID();
-    await saveInquiry({
+    const { acknowledged } = await saveInquiry({
       id, createdAt: new Date().toISOString(), name, email, company, message,
       source, sourceDetail, heard: heard ?? "", attribution, status: "new",
     });
-    return reply({ id }, 201);
+    return reply({ id, acknowledged }, 201);
   } catch (error) {
     return handleError(error);
   }

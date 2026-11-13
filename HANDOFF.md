@@ -29,8 +29,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   401. Secrets: `~/.heurial-secrets/pipeline-production-key` is the new one, `pipeline-production-key.old` the old
   (`pipeline-key`, 44 chars, is an older non-Production value). **Still to confirm:** the owner logs in to /admin
   and sees data, and the 2026-11-14 7:00 morning email arrives (first run with the new key on `daily-digest`).
-- Production `pipeline` has only `PIPELINE_KEY`, `DIGEST_FROM`, `DIGEST_TO`, `TIME_ZONE`, `TRACKER_URL`. No VAPID
-  keys there, so phone notifications can't work in Production yet. Development `pipeline` shows no variables at all.
+- Production `pipeline` now also has `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (added by ChatGPT 2026-11-13;
+  both match `~/.heurial-secrets/vapid.env` by fingerprint). The live function reads them: `push/key` returns the
+  matching public key. No redeploy needed; the console's "not deployed" flag is misleading. Still untested on a real
+  phone, and no device has subscribed. Development `pipeline` shows no variables at all.
+- **C3 built on branch `c3-thank-you`, not merged, not deployed:** the contact form is replaced by a thank-you
+  panel after a successful send, and the `inquiries` function can email the visitor a confirmation (`ACK_REPLY=on`,
+  off by default; wording in `buildAcknowledgement`, owner has not approved it yet). Going live needs: merge, deploy
+  the `inquiries` function to Production, redeploy the site, then set `ACK_REPLY` once the wording is approved.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.

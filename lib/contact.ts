@@ -24,7 +24,8 @@ export type Inquiry = {
  * and the hosted tracker can read them.
  */
 interface InquiryStore {
-  save(inquiry: Inquiry): Promise<void>;
+  /** Resolves once the inquiry is saved. `acknowledged` is true only when a confirmation email went to the visitor. */
+  save(inquiry: Inquiry): Promise<{ acknowledged: boolean }>;
 }
 
 export function contactFile() {
@@ -49,6 +50,7 @@ function fileStore(path: string): InquiryStore {
       } finally {
         await file.close();
       }
+      return { acknowledged: false };
     },
   };
 }
@@ -89,6 +91,8 @@ function catalystStore(url: string, key: string): InquiryStore {
         console.error(`Inquiry inbox returned ${response.status}`);
         throw new RequestError(503, "Your message couldn’t be saved. Please try again, or email hello@heurial.studio.");
       }
+      const result: unknown = await response.json().catch(() => undefined);
+      return { acknowledged: typeof result === "object" && result !== null && (result as { acknowledged?: unknown }).acknowledged === true };
     },
   };
 }
@@ -111,8 +115,9 @@ export function inquiryInboxReady() {
 export async function saveInquiry(inquiry: Inquiry) {
   const store = inquiryStore();
   if (!store) throw new RequestError(503, "This site’s inquiry inbox is unavailable.");
-  await store.save(inquiry);
+  const saved = await store.save(inquiry);
   await notifyOwner(inquiry);
+  return saved;
 }
 
 /**

@@ -9,6 +9,9 @@
 //   ALERT_TO      optional: where the new-inquiry email goes. Default hello@heurial.studio. Set to "off" to stop it.
 //   ALERT_FROM    optional: a sender verified in Catalyst Mail. Default hello@heurial.studio (verified 2026-11-11).
 //   TRACKER_URL   optional: link in the email. Default https://www.heurial.studio/admin
+//   ACK_REPLY     optional: set to "on" to send the visitor an automatic "I got your message" email. Off by default.
+//   ACK_REPLY_TO  optional: where the visitor's reply to that email goes. Default hello@heurial.studio.
+//   ACK_SIGNATURE optional: the name that signs it. Default Uriyah Moore.
 
 const { zcAuth } = require("@zcatalyst/auth");
 const { Datastore } = require("@zcatalyst/datastore");
@@ -25,6 +28,18 @@ module.exports = async (req, res) => {
     insert: async (row) => {
       await zcAuth.init(req); // runs inside your Catalyst project with its own access; no stored passwords
       return new Datastore().table("Inquiries").insertRow(row);
+    },
+    ownerEmail: env("ACK_REPLY_TO", "hello@heurial.studio"),
+    signature: env("ACK_SIGNATURE", "Uriyah Moore"),
+    acknowledge: env("ACK_REPLY", "off").toLowerCase() !== "on" ? undefined : async ({ to, subject, text, replyTo }) => {
+      await new Mail().sendMail({
+        from_email: env("ALERT_FROM", "hello@heurial.studio"),
+        to_email: [to],
+        reply_to: [replyTo],
+        subject,
+        content: text,
+        html_mode: false,
+      });
     },
     notify: alertTo.toLowerCase() === "off" ? undefined : async ({ subject, text, replyTo }) => {
       await new Mail().sendMail({

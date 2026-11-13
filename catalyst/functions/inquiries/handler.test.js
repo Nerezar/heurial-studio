@@ -2,7 +2,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { Readable } = require("node:stream");
-const { handle, buildAlert } = require("./handler");
+const { handle, buildAlert, buildAcknowledgement } = require("./handler");
 
 const KEY = "test-inquiry-key-0123456789";
 const ROW = {
@@ -62,4 +62,27 @@ test("the subject can't carry line breaks, and empty optional fields read plainl
   assert.match(a.text, /Business: not given/);
   assert.match(a.text, /Came from: Instagram\n/);
   assert.match(a.text, /heard about you via: Search/);
+});
+
+test("confirms to the visitor without repeating their message, and replies go to the owner", async () => {
+  const mail = [];
+  const r = await post({ expectedKey: KEY, insert: async () => ({ ROWID: "1" }), acknowledge: async (m) => { mail.push(m); } }, ROW);
+  assert.deepEqual([r.status, r.body.acknowledged, r.body.alerted], [201, true, false]);
+  assert.deepEqual([mail[0].to, mail[0].replyTo, mail[0].subject], ["ivy@example.com", "hello@heurial.studio", "I got your message"]);
+  assert.match(mail[0].text, /^Hi Ivy Romero,\n/);
+  assert.match(mail[0].text, /free 20-minute call/);
+  assert.doesNotMatch(mail[0].text, /Booking requests|Ivy Lane Salon|Instagram/);
+});
+
+test("no confirmation unless it's switched on, and a failed one still saves the inquiry", quiet(async () => {
+  assert.equal((await post({ expectedKey: KEY, insert: async () => ({}) }, ROW)).body.acknowledged, false);
+  const r = await post({ expectedKey: KEY, insert: async () => ({}), notify: async () => {}, acknowledge: async () => { throw new Error("mail down"); } }, ROW);
+  assert.deepEqual([r.status, r.body.alerted, r.body.acknowledged], [201, true, false]);
+}));
+
+test("a name that isn't a name is left out of the confirmation", () => {
+  for (const name of ["Free money at http://spam.example", "Pat\r\nBcc: x@example.com", "A".repeat(60), "<b>Pat</b>"]) {
+    assert.match(buildAcknowledgement({ ...ROW, name }).text, /^Hi,\n/);
+  }
+  assert.match(buildAcknowledgement({ ...ROW, name: "Zoë O’Neil-Díaz" }).text, /^Hi Zoë O’Neil-Díaz,\n/);
 });
