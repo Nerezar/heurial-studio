@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
@@ -37,6 +38,13 @@ const deliverables = [
   "14 days of support",
 ];
 
+// Prices and contents were set by the owner on 2026-11-13. The $495 package is the founding offer, unchanged.
+const packages = [
+  { name: "Quick fix", price: 295, time: "A few days", tag: "", note: "One simple automation for one small job.", items: ["One simple automation", "Setup inside your own tools", "7 days of support"] },
+  { name: "One workflow", price: 495, time: "About one week", tag: "Founding offer", note: "One workflow, built in your own tools. For my first three clients.", items: deliverables },
+  { name: "Two workflows", price: 895, time: "About two weeks", tag: "", note: "Two workflows that work together.", items: ["Two connected workflows", "Setup inside your own tools", "A plain-English guide", "A handoff call", "30 days of support"] },
+];
+
 const fits = [
   "Reply to new inquiries and log them",
   "Nudge leads who went quiet",
@@ -51,6 +59,21 @@ const promises = [
   { title: "No surprises with your data.", body: "I’ll tell you which AI services touch it before we start." },
   { title: "Straight answers.", body: "If I’m not the right fit, I’ll say so." },
 ];
+
+const REEL = [...Array(20).keys()].map((n) => n % 10);
+
+/** A price whose digits roll into place like a counter when the card scrolls into view. */
+function Price({ value }: { value: number }) {
+  return <p className="price num">
+    <span className="sr-only">${value}</span>
+    <span aria-hidden="true">$</span>
+    {String(value).split("").map((digit, index) => (
+      <span className="price-roll" aria-hidden="true" key={index} style={{ "--d": digit, "--i": index } as CSSProperties}>
+        <span>{REEL.map((n, at) => <i key={at}>{n}</i>)}</span>
+      </span>
+    ))}
+  </p>;
+}
 
 export default function Home() {
   return <>
@@ -140,31 +163,41 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section offer" aria-labelledby="offer-title">
+    <section className="section offer" id="pricing" aria-labelledby="offer-title">
       <div className="wrap">
         <header className="section-head">
-          <Chip>Founding offer</Chip>
-          <h2 id="offer-title">One price. One workflow. About a week.</h2>
-          <p>For my first three clients. Half to start, half at handoff.</p>
+          <Chip>Pricing</Chip>
+          <h2 id="offer-title">Pick the size of the job.</h2>
+          <p>Three fixed prices, each for a clear piece of work. Half to start, half at handoff.</p>
         </header>
-        <div className="offer-stage">
-          <article className="glass is-glow offer-card">
-            <p className="offer-label">Founding offer</p>
-            <p className="offer-price num">$495</p>
-            <p className="offer-note">One workflow, built in your own tools, about one week from kickoff.</p>
-            <ul className="check-list">
-              {deliverables.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}
-            </ul>
-            <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
-          </article>
-          <article className="fit-card">
+        <div className="price-grid">
+          {packages.map(({ name, price, time, tag, note, items }) => (
+            <article className={`glass price-card${tag ? " is-glow is-featured" : ""}`} key={name}>
+              <header className="price-head">
+                <h3>{name}</h3>
+                {tag && <span className="chip" style={tone("signal")}><i aria-hidden="true" />{tag}</span>}
+              </header>
+              <Price value={price} />
+              <p className="price-note">{note}</p>
+              <p className="step-time"><Icon name="clock" size={14} />{time}</p>
+              <ul className="check-list">
+                {items.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}
+              </ul>
+              <ButtonLink href="/contact" secondary={!tag}>Book a free 20-min call</ButtonLink>
+            </article>
+          ))}
+        </div>
+        <div className="fit-card">
+          <div>
             <h3>Tasks it fits</h3>
             <p>The best first workflow is one small task you repeat all the time. For example:</p>
+          </div>
+          <div>
             <ul className="fit-list">
               {fits.map((label) => <li key={label}>{label}</li>)}
             </ul>
             <p className="fit-foot">Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
-          </article>
+          </div>
         </div>
       </div>
     </section>

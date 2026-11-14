@@ -385,15 +385,24 @@ button.board-node:active { transform: scale(.985); }
 
 /* ---------- Offer ---------- */
 .offer { border-top: 1px solid var(--line); }
-.offer-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(24px, 4vw, 64px); align-items: start; }
-.offer-card { display: grid; gap: 16px; align-content: start; padding: clamp(24px, 3.4vw, 44px); }
-.offer-label { color: var(--muted); }
-.offer-price { color: var(--white); font-size: clamp(4.2rem, 9vw, 7.4rem); font-weight: 400; letter-spacing: -.07em; line-height: .9; }
-.offer-note { max-width: 34ch; color: var(--text); }
-.offer-card .check-list { margin-block: 8px 14px; }
-.fit-card { display: grid; gap: 14px; align-content: start; padding-top: clamp(8px, 2vw, 24px); }
+.price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); align-items: stretch; }
+.price-card { display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 14px; justify-items: start; padding: clamp(22px, 2.6vw, 34px); }
+.price-card.is-featured { background: radial-gradient(120% 55% at 50% 0%, rgb(52 120 246 / .2), transparent 70%), var(--surface); }
+.price-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 30px; }
+.price-head h3 { color: var(--text); font-size: 1.12rem; font-weight: 500; letter-spacing: -.02em; }
+.price { display: flex; align-items: center; color: var(--white); font-size: clamp(3.6rem, 6.4vw, 5.6rem); letter-spacing: -.06em; line-height: 1; }
+/* Each digit is a window onto a reel of 0-9 twice over; the reel slides up until the right digit shows. */
+.price-roll { height: 1em; overflow: hidden; }
+.price-roll > span { display: flex; flex-direction: column; transform: translateY(calc((10 + var(--d)) * -5%)); transition: transform 1.5s cubic-bezier(.16, .84, .3, 1) calc(.2s + var(--i) * .14s); }
+.price-roll i { display: block; height: 1em; font-style: normal; }
+/* Waiting to scroll into view: reels rest at zero. Without the reveal script the final price simply shows. */
+.reveal:not(.is-visible) .price-roll > span { transform: none; transition: none; }
+.price-note { min-height: 3.2em; color: var(--text); }
+.price-card .check-list { align-content: start; margin-block: 6px 12px; }
+.fit-card { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 14px clamp(24px, 4vw, 64px); align-items: start; margin-top: clamp(36px, 5vw, 64px); padding-top: clamp(24px, 3vw, 36px); border-top: 1px solid var(--line); }
+.fit-card > div { display: grid; gap: 14px; }
 .fit-card h3 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); letter-spacing: -.05em; }
-.fit-card > p:not(.fit-foot) { color: var(--muted); }
+.fit-card p:not(.fit-foot) { color: var(--muted); }
 .fit-list { list-style: none; padding: 0; border-bottom: 1px solid var(--line); }
 .fit-list li { padding-block: 13px; border-top: 1px solid var(--line); color: var(--white); font-size: 1.02rem; }
 .fit-foot { color: var(--faint); font-size: .86rem; }
@@ -432,7 +441,8 @@ button.board-node:active { transform: scale(.985); }
   .board { margin-left: 0; }
 }
 @media (max-width: 860px) {
-  .flow, .calc, .offer-stage, .demo-grid, .steps { grid-template-columns: 1fr; }
+  .flow, .calc, .price-grid, .fit-card, .demo-grid, .steps { grid-template-columns: 1fr; }
+  .price-note { min-height: 0; }
   /* Stacked, the rail runs down the left side. */
   .steps { gap: 40px; }
   .steps::before, .steps::after { left: 6px; right: auto; top: 0; bottom: 0; width: 2px; height: auto; }
@@ -460,4 +470,5 @@ button.board-node:active { transform: scale(.985); }
 @media (prefers-reduced-motion: reduce) {
   .flow-in, .flow-window, .flow-btn.is-primary, .flow-btn.is-primary::after, .flow-caret::after { animation: none; }
   .board .is-new, .board-flash, .board-approve, .board-ring { animation: none; }
+  .price-roll > span { transition: none; }
 }

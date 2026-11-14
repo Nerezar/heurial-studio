@@ -34,7 +34,7 @@ const questions = [
   {
     id: "cost",
     title: "What does it cost?",
-    body: "$495 for my first three clients: 50% to start and 50% at handoff. Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.",
+    body: "Three fixed prices: a quick fix for $295, one workflow for $495 (my founding offer for the first three clients), or two connected workflows for $895. Each is 50% to start and 50% at handoff. Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.",
   },
   {
     id: "examples",

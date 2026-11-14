@@ -78,6 +78,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
 
 ## Pushed, not merged (2026-11-13)
+- `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
+  top of it, so it carries all four changes and is the one to release.
+- `pricing-packages`: three packages chosen by the owner on 2026-11-13: Quick fix $295 (one simple automation, a few
+  days, 7 days of support), One workflow $495 (the founding offer, unchanged), Two workflows $895 (two connected
+  workflows, about two weeks, 30 days of support). Home pricing section (`app/page.tsx`, `#pricing`) shows three
+  cards with digits that roll into place on scroll. Also updated: the services page cost answer and the assistant's
+  `content/knowledge.json`. Unchanged and still true: the hero's "$495 founding price" and the calculator's $495
+  example. **Owner to confirm before release:** half to start / half at handoff applies to all three; the extra
+  bullet lines on the $295 and $895 cards (setup in your tools, guide, handoff call); "first three clients" is
+  shown on the $495 card only.
 - `calc-impact`: home page calculator reworked. New "People who do it" slider (1-10, default 1). The chart now
   compares a year of the task by hand with the same year with a $495 workflow; the shaded gap is what is kept. The
   hours are restated as work weeks (40 h), value of time, and a multiple of the price. All figures are the same
