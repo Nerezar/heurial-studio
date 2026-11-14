@@ -289,12 +289,39 @@ button.board-node:active { transform: scale(.985); }
 .flow-toggle:hover { border-color: var(--signal); color: var(--signal); }
 
 /* ---------- Steps ---------- */
-.steps { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); }
-.step { display: grid; gap: 12px; align-content: start; padding-top: 22px; border-top: 1px solid var(--white); }
-.step .step-orb { width: auto; height: auto; place-items: start; border: 0; background: none; color: var(--muted); font-size: .9rem; }
+.steps { position: relative; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); view-timeline: --steps block; }
+/* The rail: a grey track, and a blue line over it that draws itself as the steps scroll into view. */
+.steps::before, .steps::after { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--line); }
+.steps::after { background: var(--signal); transform-origin: left top; }
+.step { position: relative; display: grid; gap: 12px; align-content: start; justify-items: start; padding-top: 46px; }
+.step-dot { position: absolute; top: 0; left: 0; z-index: 1; width: 14px; height: 14px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 5px var(--paper); }
+.step-count { color: var(--line-strong); font-size: clamp(3.4rem, 6vw, 5.2rem); letter-spacing: -.06em; line-height: .9; transition: color .3s ease; }
+.step:hover .step-count { color: var(--signal); }
 .step h3 { font-size: clamp(1.8rem, 3vw, 2.6rem); letter-spacing: -.055em; }
-.step p { color: var(--muted); }
-.steps-more { margin-top: 30px; }
+.step-time { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--text); font-size: .82rem; }
+.step-time svg { color: var(--signal); }
+.step-body { max-width: 38ch; color: var(--muted); }
+.step-get { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; width: 100%; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--text); font-size: .93rem; }
+.step-get svg { margin-top: 4px; color: var(--green); }
+.step-get b { color: var(--white); font-weight: 600; }
+.steps-more { margin-top: 36px; }
+
+/* Where the browser can tie an animation to scrolling, the rail draws and each dot lights up as the line reaches it.
+   Everywhere else the rail is simply shown complete. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .steps::after, .step-dot { animation: linear both; animation-timeline: --steps; animation-range: entry 25% cover 28%; }
+    .steps::after { animation-name: steps-draw; }
+    .step:nth-child(1) .step-dot { animation-name: steps-dot-1; }
+    .step:nth-child(2) .step-dot { animation-name: steps-dot-2; }
+    .step:nth-child(3) .step-dot { animation-name: steps-dot-3; }
+  }
+}
+@keyframes steps-draw { from { transform: scaleX(0); } }
+@keyframes steps-draw-y { from { transform: scaleY(0); } }
+@keyframes steps-dot-1 { from { background: var(--line-strong); transform: scale(.7); } 3%, to { background: var(--signal); transform: none; } }
+@keyframes steps-dot-2 { from, 33% { background: var(--line-strong); transform: scale(.7); } 37%, to { background: var(--signal); transform: none; } }
+@keyframes steps-dot-3 { from, 67% { background: var(--line-strong); transform: scale(.7); } 71%, to { background: var(--signal); transform: none; } }
 
 /* ---------- Calculator ---------- */
 .calc { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(14px, 2vw, 26px); align-items: stretch; }
@@ -406,6 +433,12 @@ button.board-node:active { transform: scale(.985); }
 }
 @media (max-width: 860px) {
   .flow, .calc, .offer-stage, .demo-grid, .steps { grid-template-columns: 1fr; }
+  /* Stacked, the rail runs down the left side. */
+  .steps { gap: 40px; }
+  .steps::before, .steps::after { left: 6px; right: auto; top: 0; bottom: 0; width: 2px; height: auto; }
+  .steps::after { animation-name: steps-draw-y; }
+  .steps::after, .step-dot { animation-range: entry 20% cover 58%; }
+  .step { padding: 0 0 0 38px; }
   .flow-steps { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   .flow-steps button, .flow-steps li:last-child button { grid-template-columns: 1fr; justify-items: center; padding: 3px 0; }
   .flow-step-text, .flow-step-time { display: none; }

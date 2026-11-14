@@ -23,9 +23,9 @@ const problems = [
 ];
 
 const steps = [
-  { title: "Talk", body: "A free 20-minute call. You tell me what eats your time, and I tell you honestly whether I can help." },
-  { title: "Build", body: "I set up one workflow in the tools you already use, test it on real examples, and keep you in the loop." },
-  { title: "Hand off", body: "I walk you through it, give you a plain-English guide, and stick around for 14 days of questions." },
+  { title: "Talk", time: "20 minutes, free", body: "A free 20-minute call. You tell me what eats your time, and I tell you honestly whether I can help.", get: "A clear yes or no, and a short written scope if it’s a fit." },
+  { title: "Build", time: "About one week", body: "I set up one workflow in the tools you already use, test it on real examples, and keep you in the loop.", get: "One working workflow, set up in your own accounts." },
+  { title: "Hand off", time: "14 days of support", body: "I walk you through it, give you a plain-English guide, and stick around for 14 days of questions.", get: "A written guide, and a workflow that’s yours to keep." },
 ];
 
 const deliverables = [
@@ -114,11 +114,14 @@ export default function Home() {
           <p>We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff.</p>
         </header>
         <ol className="steps">
-          {steps.map(({ title, body }, index) => (
+          {steps.map(({ title, time, body, get }, index) => (
             <li className="step" key={title}>
-              <span className="step-orb" aria-hidden="true">{index + 1}</span>
+              <span className="step-dot" aria-hidden="true" />
+              <p className="step-count num" aria-hidden="true">0{index + 1}</p>
               <h3>{title}</h3>
-              <p>{body}</p>
+              <p className="step-time"><Icon name="clock" size={14} />{time}</p>
+              <p className="step-body">{body}</p>
+              <p className="step-get"><Icon name="check" size={16} /><span><b>You get:</b> {get}</span></p>
             </li>
           ))}
         </ol>
