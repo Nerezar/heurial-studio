@@ -69,6 +69,13 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Live 2026-11-14: intro skipped on phones and tablets (`c33b4d8`)
+
+Website only. The `100lvh` height fix below did **not** remove the strip at the bottom on the owner's iPhone, and there
+is no iPhone or simulator on this Mac to test another attempt (the simulator needs a full Xcode install). The intro's
+inline script now also returns under `(hover: none) and (pointer: coarse)`, so touch devices go straight to the page.
+Computers are unchanged. To bring it back on phones: reproduce in a simulator first, then fix.
+
 ## Live 2026-11-14: intro phone fix and three review changes (`9f9dd4b`)
 
 Website only (Slate Production); no Catalyst function or table change. Branches `intro-phone-height` and
