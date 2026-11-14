@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BOOKING_URL } from "@/lib/site";
 import { Icon } from "./icon";
-import Link from "next/link";
+import { MotionLink } from "./route-transition";
 
 type NavLink = { href: string; label: string };
 
@@ -30,7 +30,7 @@ export function Navigation({ links }: { links: NavLink[] }) {
 
   return <>
     <nav className="nav-links" aria-label="Main navigation">
-      {links.map(({ href, label }) => <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>{label}</Link>)}
+      {links.map(({ href, label }) => <MotionLink key={href} href={href} aria-current={path === href ? "page" : undefined}>{label}</MotionLink>)}
     </nav>
     <button
       className="nav-menu"
@@ -52,10 +52,10 @@ export function Navigation({ links }: { links: NavLink[] }) {
       </div>
       <nav aria-label="Main navigation">
         {links.map(({ href, label }) =>
-          <Link key={href} href={href} aria-current={path === href ? "page" : undefined} onClick={close}>
+          <MotionLink key={href} href={href} aria-current={path === href ? "page" : undefined} onClick={close}>
             {label}
             <Icon name="diagonal" size={20} />
-          </Link>
+          </MotionLink>
         )}
       </nav>
       <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="button primary" onClick={close}>Book a free call<Icon name="arrow" size={17} /></a>

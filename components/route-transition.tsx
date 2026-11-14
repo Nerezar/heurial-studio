@@ -1,18 +1,43 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
-const prefersReduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MotionContext = createContext<((href: string) => boolean) | null>(null);
+const reducedMotion = "(prefers-reduced-motion: reduce)";
+const prefersReduced = () => window.matchMedia(reducedMotion).matches;
+
+// The wipe is kept short so a page change never feels like a wait.
+const COVER_IN = { duration: 300, easing: "cubic-bezier(.76, 0, .24, 1)" };
+const COVER_OUT = { duration: 420, easing: "cubic-bezier(.76, 0, .24, 1)" };
+const MAX_WAIT = 4000;
+
+/** Resolves when an animation ends, or just after it should have. A tab in the background never ticks its animations, and a page change must not wait on one. */
+const settled = (animation: Animation, ms: number) =>
+  Promise.race([animation.finished, new Promise((resolve) => window.setTimeout(resolve, ms + 150))]);
 
 // Blocks that rise into view. Nested matches are skipped so a card moves as one piece.
 const REVEAL = "h2, h3, p, li, figure, article, .button, .glass, .note";
 const REVEAL_SKIP = ".hero-visual, dialog, [data-no-reveal]";
 
-/** Sticky-header state, a short fade when the page changes, and scroll reveal for the whole site. */
+/** Page changes (cover wipe), sticky-header state, and scroll reveal for the whole site. */
 export function RouteMotion({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const cover = useRef<HTMLDivElement>(null);
   const previousPath = useRef(pathname);
+  const busy = useRef(false);
+  const arrived = useRef<(() => void) | null>(null);
   const firstReveal = useRef(true);
 
   // Frosted header once the page has scrolled.
@@ -27,15 +52,21 @@ export function RouteMotion({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", update);
   }, []);
 
-  // A short fade so a page change isn't abrupt. Nothing covers the page or makes the visitor wait.
+  // Tell a pending navigation that the new page has rendered.
   useLayoutEffect(() => {
     if (previousPath.current === pathname) return;
     previousPath.current = pathname;
-    if (prefersReduced()) return;
-    document.getElementById("main")?.animate(
-      [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
-      { duration: 280, easing: "cubic-bezier(.22, .75, .25, 1)" },
-    );
+    if (arrived.current) {
+      arrived.current();
+      return;
+    }
+    // Back/forward buttons: no wipe, just a gentle fade so the swap isn't abrupt.
+    if (!prefersReduced()) {
+      document.getElementById("main")?.animate(
+        [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
+        { duration: 280, easing: "cubic-bezier(.22, .75, .25, 1)" },
+      );
+    }
   }, [pathname]);
 
   // Scroll reveal, set up again for every page.
@@ -82,5 +113,80 @@ export function RouteMotion({ children }: { children: ReactNode }) {
     };
   }, [pathname]);
 
-  return children;
+  const navigate = useCallback((href: string) => {
+    const panel = cover.current;
+    const main = document.getElementById("main");
+    const url = new URL(href, window.location.href);
+    if (!panel || !main || busy.current || prefersReduced() || !panel.animate ||
+        url.origin !== window.location.origin || url.pathname === window.location.pathname) return false;
+
+    busy.current = true;
+    const run = async () => {
+      // 1. Old page sinks away while the panel wipes up over it.
+      panel.classList.add("is-active");
+      const leave = main.animate(
+        [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-16px)" }],
+        { duration: 220, easing: "ease-in", fill: "forwards" },
+      );
+      await settled(panel.animate(
+        [{ transform: "translateY(101%)" }, { transform: "translateY(0)" }],
+        { ...COVER_IN, fill: "forwards" },
+      ), COVER_IN.duration);
+
+      // 2. Swap pages behind the panel.
+      panel.classList.add("is-waiting");
+      await new Promise<void>((resolve) => {
+        const timer = window.setTimeout(done, MAX_WAIT);
+        function done() {
+          window.clearTimeout(timer);
+          arrived.current = null;
+          resolve();
+        }
+        arrived.current = done;
+        router.push(url.pathname + url.search + url.hash, { scroll: false });
+      });
+      panel.classList.remove("is-waiting");
+      // A link to a section on another page (like /#how-it-works) lands on that section, not the top.
+      const section = url.hash ? document.getElementById(decodeURIComponent(url.hash.slice(1))) : null;
+      if (section) section.scrollIntoView({ behavior: "instant" });
+      else window.scrollTo({ top: 0, behavior: "instant" });
+      leave.cancel();
+
+      // 3. Panel pulls away upward and the new page rises in.
+      main.animate(
+        [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }],
+        { duration: 420, delay: 60, easing: "cubic-bezier(.22, .75, .25, 1)", fill: "backwards" },
+      );
+      await settled(panel.animate(
+        [{ transform: "translateY(0)" }, { transform: "translateY(-101%)" }],
+        { ...COVER_OUT, fill: "forwards" },
+      ), COVER_OUT.duration);
+      panel.getAnimations().forEach((animation) => animation.cancel());
+      panel.classList.remove("is-active");
+    };
+
+    run().catch(() => {
+      panel.getAnimations().forEach((animation) => animation.cancel());
+      main.getAnimations().forEach((animation) => animation.cancel());
+      panel.classList.remove("is-active", "is-waiting");
+      if (window.location.pathname !== url.pathname) router.push(url.pathname + url.search + url.hash);
+    }).finally(() => { busy.current = false; });
+    return true;
+  }, [router]);
+
+  return <MotionContext.Provider value={navigate}>
+    {children}
+    <div ref={cover} className="route-cover" aria-hidden="true" />
+  </MotionContext.Provider>;
+}
+
+type MotionLinkProps = Omit<ComponentProps<typeof Link>, "href"> & { href: string };
+
+export function MotionLink({ href, onNavigate, ...props }: MotionLinkProps) {
+  const navigate = useContext(MotionContext);
+  return <Link {...props} href={href} onNavigate={(event) => {
+    onNavigate?.(event);
+    if (onNavigate || props.replace || props.scroll === false) return;
+    if (navigate?.(href)) event.preventDefault();
+  }} />;
 }

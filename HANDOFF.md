@@ -9,8 +9,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   headline and pitch over the workflow board as one wide window, with three facts under it; "Tasks it fits" is
   folded into the problems rows; the calculator is one panel with the result first and a chart legend; pricing is a
   rate card on paper (one row per package, the $49 plan as the last row, one booking button); the price digit roll
-  is gone. Site-wide: 1200px width, smaller display type, flat panels, one blue action colour, the full-screen
-  page wipe replaced by a 280 ms fade, quicker scroll reveals, `components/system-field.tsx` (unused) deleted.
+  is gone. Site-wide: 1200px width, smaller display type, flat panels, one blue action colour, the page-change
+  wipe kept but about twice as fast (300 ms in, 420 ms out), quicker scroll reveals, `components/system-field.tsx` (unused) deleted.
   Contact, About and Guides lost their glows; the Contact form button is secondary so "Pick a time" is the one
   primary. Prices, package contents and promises are unchanged. Checked in the preview on every page at 1440 and
   375 wide and Home at 900: no sideways scroll, no console errors. Not checked: a real phone, Safari, the intro

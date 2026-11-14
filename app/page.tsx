@@ -1,7 +1,7 @@
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
 import { Intro } from "@/components/intro";
-import Link from "next/link";
+import { MotionLink } from "@/components/route-transition";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
 import { WorkflowDemo } from "@/components/workflow-demo";
@@ -129,7 +129,7 @@ export default function Home() {
             </li>
           ))}
         </ol>
-        <p className="steps-more"><Link href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></Link></p>
+        <p className="steps-more"><MotionLink href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></MotionLink></p>
       </div>
     </section>
 
@@ -217,7 +217,7 @@ export default function Home() {
             <div className="demo-body">
               <h3>Follow-up tracker</h3>
               <p>The tool I use to keep every inquiry and follow-up from slipping. Move cards, check reminders, and preview the daily email.</p>
-              <Link href="/products" className="text-link">Try the tracker demo <Icon name="diagonal" size={16} /></Link>
+              <MotionLink href="/products" className="text-link">Try the tracker demo <Icon name="diagonal" size={16} /></MotionLink>
             </div>
           </article>
           <article className="glass lift demo-card">
@@ -235,7 +235,7 @@ export default function Home() {
             <div className="demo-body">
               <h3>Knowledge assistant</h3>
               <p>An assistant that answers questions from a set of documents and links to its sources. Try it on my own guides.</p>
-              <Link href="/resources" className="text-link">Try the assistant <Icon name="diagonal" size={16} /></Link>
+              <MotionLink href="/resources" className="text-link">Try the assistant <Icon name="diagonal" size={16} /></MotionLink>
             </div>
           </article>
         </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DemoFrame } from "@/components/demo-frame";
 import { Icon } from "@/components/icon";
-import Link from "next/link";
+import { MotionLink } from "@/components/route-transition";
 import { Chip, Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
@@ -46,7 +46,7 @@ export default function Products() {
               </article>
             ))}
           </div>
-          <p className="more-link"><Link href="/resources" className="text-link">Try the other demo: the knowledge assistant <Icon name="diagonal" size={16} /></Link></p>
+          <p className="more-link"><MotionLink href="/resources" className="text-link">Try the other demo: the knowledge assistant <Icon name="diagonal" size={16} /></MotionLink></p>
         </div>
       </section>
       <Closing />

@@ -1,4 +1,4 @@
-/* Site frame: header, footer, page intros, the closing call to action, and scroll reveal. */
+/* Site frame: header, footer, page intros, the closing call to action, and page-change motion. */
 
 /* ---------- Header: clear over the page, a dark bar once you scroll ---------- */
 .site-header {
@@ -158,6 +158,46 @@ html[data-scrolled] .site-header {
 .closing-panel h2 { max-width: 13ch; font-size: clamp(2.4rem, 5.2vw, 4.75rem); letter-spacing: -.045em; }
 .closing-panel .closing-copy { display: grid; gap: 22px; justify-items: start; }
 .closing-panel .closing-copy p { max-width: 40ch; color: var(--text); font-size: var(--fs-lead); }
+
+/* ---------- Page change: a panel wipes up over the old page, then pulls away ---------- */
+.route-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  background: #0d0f12;
+  transform: translateY(101%);
+  visibility: hidden;
+}
+.route-cover.is-active { visibility: visible; }
+.route-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: var(--signal);
+  opacity: .7;
+}
+.route-cover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(200px, 40vw);
+  height: 1px;
+  translate: -50% -50%;
+  background: linear-gradient(90deg, transparent 0%, var(--signal) 50%, transparent 100%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: route-progress 1.1s linear infinite;
+  transition: opacity .2s ease;
+}
+.route-cover.is-waiting::after { opacity: .85; }
+@keyframes route-progress {
+  from { background-position: -100% 0; }
+  to { background-position: 200% 0; }
+}
 
 /* Blocks rise into place as they scroll into view. */
 .reveal { opacity: 0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
