@@ -69,7 +69,25 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Branch `paid-date`: pushed, not merged, not deployed (2026-11-14)
+## Live 2026-11-14: paid date on leads (`e1ce08a`)
+Released on the owner's go-ahead, in this order:
+1. **Column in Development:** `Leads.paid_at` created through the Catalyst connector (`Create_Column`: varchar, max
+   length 10, not mandatory, not unique, no search index, no audit), the same shape as `booked_at`. Proved with a
+   test row in Development: a date stored, changed, then cleared with an empty string; the row was deleted.
+2. **Function to Development:** `catalyst deploy --only functions:pipeline` from `e1ce08a`. Development `pipeline`
+   has no `PIPELINE_KEY`, so every request there answers 401 and a keyed test is not possible in Development.
+3. **Console deployment "Paid date on leads (e1ce08a)":** Serverless and CloudScale ticked, Job Scheduling and
+   Settings unticked. The diff listed exactly two entities, `pipeline` Updated and `Leads.paid_at` Added, and
+   nothing else. Deployment Successful.
+4. **Production checked:** the connector lists `paid_at` on Production `Leads`; the function answers 401 without a
+   key and 200 with it, and every lead in the reply carries a `paid_at` field (5 leads, none paid yet). Its key
+   survived the deployment.
+5. **Website:** main fast-forwarded to `e1ce08a` and deployed to Slate Production. All public pages 200, `/admin`
+   redirects, tracker files reload under fingerprint `7236813f8e`. On the live demo a lead moved to Paid gets
+   today as Paid on, and Total earned, Won so far and the payments list move together. No console errors.
+- Not checked: `/admin` after sign-in, and marking a real lead Paid in Production (that would change real data).
+
+### What that release changed
 Built on the money view that went live at `1bd524b`. Main (`8eff53c`) is merged in, so this branch fast-forwards.
 Asked for: the money line should put each payment on the day it was paid, not the day its call was booked.
 - **New lead field `paid_at`** (`YYYY-MM-DD`, optional) in `core.js` and its browser copy (in sync). The rule lives in
@@ -90,7 +108,7 @@ Asked for: the money line should put each payment on the day it was paid, not th
 - Also fixed: the panel now refreshes from every lead, not just those booked in the chosen period. Before, a lead
   opened from outside the period kept showing its old values after a save.
 
-**Catalyst: `Leads` needs a `paid_at` column. It has not been created anywhere.**
+**Catalyst: done 2026-11-14 (see above).** The steps below are how a column reaches Production, kept for the next schema change.
 - **Development:** console → Project-Rainfall → Development → CloudScale → Data Store → `Leads` → **Schema View** →
   **+ New Column** → Column Name `paid_at`, Data Type **Var Char**, Max Length `10`, everything else off or empty →
   **Create**. (Button names are from Catalyst's help page; I did not click through the console.)
