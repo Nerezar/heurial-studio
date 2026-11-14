@@ -80,8 +80,11 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
-- `demos-polish` is built on `pricing-packages`, so it now carries all five home-page changes and is the one to
-  release. It restyles "See what's possible": each demo card has a window bar and a small live-looking preview (a
+- `services-polish` is built on `demos-polish`, so it carries everything below and is the one to release. On the
+  How it works page the three steps now use the same rail, numerals, time tags and "You get" line as the home page
+  (the steps styles moved from `app/home.css` to `app/globals.css`; the old timeline styles are deleted), and the
+  intro and page description say "fixed price from $295" instead of only the $495 offer. FAQ and banner untouched.
+- `demos-polish` is built on `pricing-packages` and carries all five home-page changes. It restyles "See what's possible": each demo card has a window bar and a small live-looking preview (a
   tracker board where one card moves a column; a chat that types an answer). They play once on scroll and loop on
   hover. The whole card is the link. The violet chips are gone (the owner wants no purple anywhere).
 - `pricing-packages`: three packages chosen by the owner on 2026-11-13: Quick fix $295 (one simple automation, a few
