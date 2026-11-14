@@ -52,7 +52,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   (one line in the confirmation email). Console deployment "Booking link in confirmation (9ae952c)" moved only
   `inquiries`; `ACK_REPLY` and `INQUIRY_KEY` survived. Live form test: 201, `acknowledged: true`, 4.9 s. One more
   test row ("TEST Booking Link"). No test booking has been made, so the Meet link and invite are unverified.
-- **Live website: `9ae952c`.** Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
+- **Live website: `dcd870f`** (interactive hero, see below). Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
@@ -69,14 +69,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Live 2026-11-13: interactive hero (`dcd870f`)
+- Merged to main and deployed to Slate Production. `components/flow-board.tsx` replaces the abstract canvas in the
+  hero (`system-field.tsx` is kept, unused, so switching back is a two-line change in `app/page.tsx`). Three tasks on
+  the left, the workflow in the middle, four tools on the right; replies wait for an Approve tap (the demo taps by
+  itself after 3.8 s). On phones it sits below the hero buttons.
+- Checked live on www.heurial.studio: the board renders, tasks run, no console errors; /contact 200, /admin 307.
+  Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
+
 ## Pushed, not merged (2026-11-13)
 - `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
   Home was looked at.
-- `hero-board`: interactive hero visual `components/flow-board.tsx` replaces the abstract canvas (`system-field.tsx`
-  is kept, unused, so switching back is a two-line change in `app/page.tsx`). Three tasks on the left, the workflow in
-  the middle, four tools on the right; replies wait for an Approve tap (the demo taps by itself after 3.8 s).
-  On phones it sits below the hero buttons. Checked in the preview at 375, 1024 and 1366 px; reduced motion and a
-  real phone are unchecked.
 
 ## Merged to main at `88c7400`: calmer tracker design, not deployed
 - The user found the tracker too dense and asked for a calmer, roomier look with colour, glow and gradients
