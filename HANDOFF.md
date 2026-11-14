@@ -1,4 +1,4 @@
-# Handoff — 2026-11-13
+# Handoff — 2026-11-14
 
 Durable rules are in `CLAUDE.md`. This file is current status only.
 
@@ -68,6 +68,19 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
+
+## Branch `intro-animation`: pushed, not merged, not deployed (2026-11-14)
+- Opening animation on the home page only: the tiger lands, breathes fire, and the page burns through from where
+  the fire lands. About two seconds. `components/intro.tsx`, styles at the end of `app/home.css`, one line in
+  `app/page.tsx`.
+- Shows once per browser tab (sessionStorage `heurial-intro`), never under reduced motion, never on a page change
+  back to home. Any tap, key or scroll skips it. To see it again: open the site in a new tab.
+- It is hidden by default and an inline script shows it during page load, so with scripts off the page is just the
+  page. If the script that runs it never arrives, CSS fades it out after 4 seconds.
+- The emblem path is copied into `intro.tsx` (split into body and mouth flame). If `public/brand/emblem.svg` ever
+  changes, update `BODY`, `WISP` and `MOUTH` there.
+- Checked in the preview at phone and desktop sizes: 60 frames a second, no console errors, skip, reload, page
+  change and the CSS fallback all behave. Not checked: a real phone, Safari, reduced-motion mode.
 
 ## Live 2026-11-13: interactive hero (`dcd870f`)
 - Merged to main and deployed to Slate Production. `components/flow-board.tsx` replaces the abstract canvas in the

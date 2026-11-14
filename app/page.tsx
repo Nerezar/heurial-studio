@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
+import { Intro } from "@/components/intro";
 import { MotionLink } from "@/components/route-transition";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
@@ -77,6 +78,7 @@ function Price({ value }: { value: number }) {
 
 export default function Home() {
   return <>
+    <Intro />
     <section className="hero is-navy" aria-labelledby="hero-title">
       <div className="wrap hero-inner">
         <div className="hero-copy">
