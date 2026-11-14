@@ -69,6 +69,28 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Live 2026-11-14: intro phone fix and three review changes (`9f9dd4b`)
+
+Website only (Slate Production); no Catalyst function or table change. Branches `intro-phone-height` and
+`review-quick-wins`, both merged.
+
+- **Intro on phones:** the veil was sized from `window.innerHeight`, so a strip of the page showed at the bottom on a
+  phone. `.intro` is now `100lvh` tall (`min-height: 100vh` for browsers without `lvh`) and the canvases take their
+  height from it. Not reproducible in the preview (no browser bars); **needs a look on a real phone**.
+- **Assistant pricing answer:** `content/knowledge.json` passage `founding-offer` is now prices and terms only; what each
+  package includes is a new passage `packages` right after it. Passages may contain line breaks (`white-space: pre-line`
+  in the chat and the source list).
+- **Demos page:** `PageIntro` has a `compact` option, used on `/products` so the tracker starts on the first screen.
+- **Book a call:** every "Book a free call" button opens `BOOKING_URL` in a new tab (`ButtonLink` renders a plain link
+  for an `http` address). Contact stays in the navigation for messages.
+
+Checked live: all public pages 200, `/admin` 307, `/api/ask` returns the short pricing answer, the compact intro and
+the `.intro` height rule are served. Not checked: a real phone, the Zoho calendar itself.
+
+Still open from the same review (each needs the owner first): tracker project page, package examples and limits,
+support and reliability section, About photo and video, Zoho Bookings branding. Left out on purpose: three guided
+buttons above the demo, and the three practical guides.
+
 ## Live 2026-11-14: paid date on leads (`e1ce08a`)
 Released on the owner's go-ahead, in this order:
 1. **Column in Development:** `Leads.paid_at` created through the Catalyst connector (`Create_Column`: varchar, max
