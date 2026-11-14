@@ -155,7 +155,7 @@ html[data-scrolled] .site-header {
   padding-block: clamp(70px, 10vw, 150px);
 }
 .closing-panel .label { grid-column: 1 / -1; }
-.closing-panel h2 { max-width: 13ch; font-size: clamp(2.6rem, 6vw, 6rem); letter-spacing: -.07em; }
+.closing-panel h2 { max-width: 13ch; font-size: clamp(2.6rem, 6vw, 6rem); letter-spacing: -.045em; }
 .closing-panel .closing-copy { display: grid; gap: 22px; justify-items: start; }
 .closing-panel .closing-copy p { max-width: 40ch; color: var(--text); font-size: clamp(1rem, 1.4vw, 1.15rem); }
 
