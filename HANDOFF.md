@@ -52,7 +52,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   (one line in the confirmation email). Console deployment "Booking link in confirmation (9ae952c)" moved only
   `inquiries`; `ACK_REPLY` and `INQUIRY_KEY` survived. Live form test: 201, `acknowledged: true`, 4.9 s. One more
   test row ("TEST Booking Link"). No test booking has been made, so the Meet link and invite are unverified.
-- **Live website: `2003c60`** (see "Live 2026-11-13" below). Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
+- **Live website: `7a8e598`** (see "Live 2026-11-13" below). Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
@@ -87,12 +87,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   saved in about 5 s, thank-you screen shown with the confirmation line. One more test row to dismiss.
 - Unchecked after this deploy: a test booking (the Meet invite is still unverified), signing in to /admin with the
   new tracker files, a real phone, light mode in the tracker.
-- **Font live 2026-11-13 (`2003c60`):** `site-font` merged and deployed with the owner's go-ahead. All site text is
+- **Font live 2026-11-13 (`7a8e598`):** `site-font` merged and deployed with the owner's go-ahead. All site text is
   Inter Tight, numbers in sentences included. Standalone figures (class `num`: prices, totals, counters) are
   Helvetica. The first version left digits out of the font so they fell back to Helvetica everywhere, which made
   numbers in sentences look heavier than the words around them; that was changed before release. Checked on every
   page at desktop and on Home, Contact and Questions at phone size: no overflow or cut-off text. The tracker keeps
-  its own font (IBM Plex Sans).
+  its own font (IBM Plex Sans). **Mistake and fix:** the first font file (`inter-tight.woff2`, shipped in
+  `2003c60`) was a single light weight, so bold text and headings rendered regular on the live site for about ten
+  minutes. Caught in the live check by measuring text width at several weights; replaced with the variable file
+  under a new name (`inter-tight-var.woff2`, because Slate caches `public/` files for a year) and redeployed. When
+  adding a font, confirm the width changes with weight.
 - Still not merged: `tracker-settings` (parked).
 
 ## Branch notes for that release (all merged except `site-font`)
