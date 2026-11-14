@@ -35,6 +35,11 @@ Durable rules. Current status lives in `HANDOFF.md`.
   from the repo root replaces the live site directly (without `--production` it tries to create a new app and fails
   with 409). A build takes about 2 minutes. Deploy and promote functions first,
   then the site. The connector can list builds and roll back to the previous one.
+- Slate runs the whole site as one serverless function (`slate-13796000000005003`): pages, `robots.txt` and 404s all
+  go through it; only `/_next/static/*` and `public/` files skip it. Zoho stops it after 5 idle minutes and the next
+  request waits for a new instance. It is billed per second alive, priced by its memory size (deployment →
+  Configuration → Memory). Its logs: connector `Get_Logs` with `resource_list` `151260000000016002` (Production),
+  `logType` `access` or `application`, dates as `dd/MM/yyyy HH:mm`; ask for 300 rows so the result lands in a file.
 - Deleting rows or creating anything in Production through the connector is blocked by Claude's safety checks;
   the owner deletes test rows (Data Store → table) or dismisses them in the tracker.
 - Slate serves every file in `public/` with a one-year browser cache and ignores `next.config.ts` headers for them.

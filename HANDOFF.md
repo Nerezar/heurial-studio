@@ -18,8 +18,9 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   at full speed (the preview pane throttles timers), the tracker (untouched). **Live check after the deploy:** every
   public page 200, `/admin` 307, the home page serves the new markup at 1200px wide with the blue primary button and
   no failed requests. The first request after the deploy took 6.0 s, the rest under 1 s.
-- The live site's slow first load is the host waking up, not the app: `/` is prerendered static in the build. A
-  separate session started on 2026-11-14 to find the cause and a fix; nothing from it is merged yet.
+- **Slow first load (2026-11-14):** cause found (Zoho stops the site's server after 5 idle minutes, and since
+  06:00 today a restart takes 8-30 s). A keep-warm schedule is built in Development and waits for the owner's
+  go-ahead. See "Slow first load" below.
 - The Catalyst CLI prints a warning on every deploy: the Node.js it runs on (v26.0.0) has high-severity security
   bugs fixed in v26.12.1. The owner has been told. Node has not been upgraded.
 - **Site plan 2026-11-12** (pasted by the owner): launch blockers first (B1-B6), then conversion work. New tracker
@@ -86,6 +87,116 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   git, both set on the Development pipeline function, `PushSubscriptions` table created with no App User permissions.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
+
+## Slow first load: cause found, keep-warm built in Development, waiting for go-ahead (branch `slate-keep-warm`, 2026-11-14)
+
+Nothing in Production was changed and nothing was deployed. The branch changes `HANDOFF.md` and `CLAUDE.md` and adds
+`catalyst/zoho-support-draft.md`.
+
+**Cause**
+- Slate does not serve the pages as files. It runs the whole Next.js site as one serverless function
+  (`slate-13796000000005003`, packed with OpenNext). Every page, `robots.txt` and every 404 goes through it,
+  including the pages the build lists as static. Only `/_next/static/*` and the files in `public/` skip it.
+- Zoho stops that function after 5 minutes without a request, and the next request waits for it to start. In 26
+  hours of the function's logs, all 107 quiet gaps of 5 minutes or more ended on a new instance, and the longest gap
+  that stayed on the same instance was 4 min 53 s. So 30 idle minutes are no worse than 6.
+- The start is what got slow, and that is on Zoho's side. Until 2026-11-14 about 06:00 every start took 1.7-2.0 s
+  (36 of 36, including after 35 and 42 idle minutes). Since 06:00 every start has taken 7.6 s or more (17 of 17,
+  median 9.6 s), and past 30 s Zoho's gateway answers 524 or 503 instead of the page. Warm pages slowed at the same
+  time on the same build (about 100 ms to about 350 ms inside the function). Nothing was deployed between about
+  02:30 and 09:05 and no setting changed. The Development copy of the site (`heurial-ckhkknbr.onslate.com`, a build
+  from Nov 11) is just as slow.
+- Slate has no setting that keeps an instance running. A deployment has three settings: build command, cache on/off
+  and memory. Memory is at the maximum (2048 MB) and does not shorten the start: a cold start on the Development
+  copy took 29.6 s at 2048 MB and more than 30 s (524) at 256 MB.
+- There is no Cloudflare in front of the site. `www` points at Zoho (`nimbuspop.com`) and the 524 page is Zoho's.
+  The bare domain is Porkbun's forwarder.
+
+**Measured 2026-11-14** (`curl -w "%{http_code} %{time_total}"`; rows marked "logs" come from the function's log)
+
+| | First request to `/` | Next requests |
+|---|---|---|
+| Live site at 12:26, 10 min after the previous request | 524 after 30.2 s, retry 200 after 18.9 s | 0.3-0.6 s |
+| Live site, 17 cold starts since 06:00 (logs; one after 35 idle minutes: 21 s) | 7.6-29 s | |
+| Live site, 36 cold starts before 06:00 (logs) | 1.7-2.0 s | |
+| Development copy at 12:02, idle for at least 12 hours | 29.6 s | 1.0 s |
+| Development copy at 12:46, after 36 min with only `keep_warm` requesting it | 1.3 s | 0.3 s |
+| Live site at 13:43, after 35 min of `keep_warm` requesting it (run from Development) | 0.75 s | 0.6 s |
+
+- The live site never had 30 quiet minutes while I watched: a crawler or a WordPress scanner arrives every 10-20
+  minutes (108 wake-ups in 26 hours, 47 of them `/wp-admin/install.php`), and other traffic reached the site during
+  the 13:08-13:43 run. The clean 30-minute test is the Development one.
+- With requests coming, an instance is not recycled: one instance served the live site from 12:27 to at least 13:28.
+
+**Fix built (Development only)**
+- Job Scheduling: a Webhook job pool `keepwarm` (capacity 1) and a cron `keep_warm` (`*/2 * * * *`) that sends
+  `GET https://www.heurial.studio/robots.txt`. A request every 2 minutes never lets the function reach the 5-minute
+  limit, and one missed run still leaves only a 4-minute gap. `robots.txt` is the cheapest route through the
+  function (about 5 ms: no page render, no cache write). No code, no site deploy.
+- Created with the Catalyst connector (`Create_Job_Pool`, `Create_Cron_Job`; a Webhook job takes `target_id: ""` and
+  the full address in `url`). **Switched off** in Development now. It ran every 2 minutes from 12:10 to 13:42 (each
+  run Success in Job Scheduling → Jobs): against the Development copy until 13:06, then against the live address
+  with a 14:10 end time, then switched off at 13:43.
+- What reached the live site from this work: my timing requests, 14 requests for `robots.txt` from this Mac
+  (12:27-13:03) and 18 from the cron (13:08-13:42). No setting changed and nothing was deployed.
+- It does not help the first request after a deploy, because a deploy starts a new instance. The next scheduled run
+  takes that wait within 2 minutes, instead of a visitor.
+
+**What it costs**
+- The billing page counts the seconds a function instance is alive, at a price set by its memory size: $0.000032 a
+  second at 2048 MB, $0.000004 at 256 MB. It labels them GB-Seconds, but the price scales with memory, and the
+  166,245 seconds since Nov 11 match the time the site was awake, not the time spent on requests. Settings → Billing
+  → Breakdown at 13:37: $5.32 for the function, $3.52 for builds (about 9 cents a deploy), $8.87 for the whole
+  project this month, $4.92 after the free allowance. Development is billed too: the test at 256 MB showed up as its
+  own line.
+- The function is alive about 56% of the day now, woken about 100 times a day, mostly by crawlers and scanners. At
+  2048 MB that is about $46 a month for a site that is still slow. With `keep_warm` it never sleeps:
+
+  | Memory | As it is today | Awake all month |
+  |---|---|---|
+  | 2048 MB (now) | about $46 | about $83 |
+  | 512 MB | about $12 | about $21 |
+  | 256 MB | about $6 | about $10 |
+
+  Estimates, before the free allowance (about $4 this month). No line for the scheduler itself has appeared.
+- Memory made no difference to speed on the Development copy: the same time per request at 256 MB and 2048 MB
+  (`/contact` 16 against 14 ms, `/` 626 against 628 ms), and 180 requests in bursts of six at 256 MB all returned
+  200, none over 3 s. Not tested: a small size on the live build (it renders pages on every request, see the cache
+  error below) or over days. 512 MB is the careful choice; 256 MB is the cheapest and passed the short test.
+  Development is back at 2048 MB.
+
+**To put it live (each step changes Production and needs the owner's go-ahead)**
+1. Memory: Production → Slate → `heurial` → `default` → Configuration → Memory → pencil → size → tick. The running
+   instance is replaced, so the next request is one cold start. Then check every public page and `/admin`. To undo,
+   set it back to 2048 the same way.
+2. Console deployment (steps in `CLAUDE.md`) with only **Job Scheduling** ticked. The diff should list the pool
+   `keepwarm` and the cron `keep_warm` as added. `daily_email` is on in Production and off in Development: if the
+   diff lists it as changed, switch it back on in Production right after.
+3. Production → Job Scheduling → Cron → `keep_warm` → Status on.
+4. Check: Job Scheduling → Jobs shows a Success every 2 minutes. An hour later,
+   `curl -s -o /dev/null -w "%{http_code} %{time_total}\n" https://www.heurial.studio/` should print 200 and under
+   1 s. Read Settings → Billing → Breakdown the next day.
+- To undo: switch `keep_warm` off in Production. Nothing else depends on it.
+
+**Also found**
+- In Production every page render logs `Failed to set cache Error: Org identifier given is not valid` (since at
+  least Nov 13). Slate's page cache refuses the function, so "static" pages are rendered again on every request
+  (`x-nextjs-cache: MISS` every time). The Development deployment does not have this. It does not cause the slow
+  start, but it adds about 0.3 s to every page view. Probably tied to the app having been created with
+  `catalyst deploy slate --production`. Only Zoho can fix it.
+- `catalyst/zoho-support-draft.md` is a message for Zoho support, **not sent**: the slower starts since Nov 14 12:00
+  UTC, the cache error, and whether an instance can be kept running.
+- The `daily_email` job ran in Production at 07:00 on Nov 14 with status Success. Whether the email arrived is still
+  for the owner to confirm.
+- The bare domain redirects to `www` with a 302 (temporary) from Porkbun's forwarder. A 301 is the usual choice.
+
+**Not done, not checked**
+- Nothing is in Production. The live 0.75 s came with the cron running from Development, and other traffic reached
+  the site at the time.
+- A smaller memory size on the live site. Only the Development copy was tried, for about 20 minutes.
+- Why Zoho's start got slow at 06:00, and whether it goes back to 2 s by itself.
+- From 12:56 this Mac kept falling asleep (lid closed). Requests that overlapped a sleep never reached the site (they
+  are not in its log) and were thrown out, including two at 13:40-13:42.
 
 ## Live 2026-11-14: $49 workflow plan and package examples (`2342fec`)
 
