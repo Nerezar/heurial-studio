@@ -60,21 +60,21 @@ export function ContactForm() {
     </div>;
   }
 
-  return <form className="glass is-glow panel contact-form" method="post" action="/api/contact" onSubmit={submit} aria-describedby="inquiry-note">
-    <div className="panel-head"><span className="icon-tile"><Icon name="send" size={20} /></span><h2>Tell me about the task</h2></div>
-    <p className="form-note" id="inquiry-note">Required fields are marked with an asterisk. Your message is saved for me to review, along with how you found this site (for example, the link you clicked). Leave out sensitive information.</p>
+  return <form className="glass panel contact-form" method="post" action="/api/contact" onSubmit={submit} aria-describedby="inquiry-note">
+    <div className="panel-head"><span className="icon-tile"><Icon name="send" size={20} /></span><h2>Or send me a message</h2></div>
     <div className="form-fields">
-      <label>Name *<input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>
-      <label>Email *<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
-      <label className="span-two">Business<input name="company" autoComplete="organization" maxLength={120} /></label>
-      <label className="span-two">How did you hear about HEURIAL?<select name="heard" defaultValue="">
-        <option value="">Choose one (optional)</option>
+      <label>Name<input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>
+      <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
+      <label className="span-two">What task eats up your time?<textarea name="message" required minLength={10} maxLength={1200} rows={4} placeholder="For example: I spend an hour a day replying to the same questions from customers." /></label>
+      <label>Business (optional)<input name="company" autoComplete="organization" maxLength={120} /></label>
+      <label>How did you hear about me? (optional)<select name="heard" defaultValue="">
+        <option value="">Choose one</option>
         {Object.entries(HEARD_OPTIONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <label className="span-two">What task eats up your time? *<textarea name="message" required minLength={10} maxLength={1200} rows={5} placeholder="For example: I spend an hour a day replying to the same questions from customers." /></label>
     </div>
     <div hidden><label>Leave this blank<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
-    <button className="button primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Request a free call"}<Icon name="arrow" size={17} /></button>
+    <button className="button primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Send message"}<Icon name="arrow" size={17} /></button>
     <p role="alert" className="form-status form-error">{error}</p>
+    <p className="form-note" id="inquiry-note">Your message is saved for me to review, along with how you found this site (for example, the link you clicked). Leave out sensitive information.</p>
   </form>;
 }

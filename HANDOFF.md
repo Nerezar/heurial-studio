@@ -80,6 +80,11 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
+- `booking-simple` is built on `tracker-ease`, so it carries everything below. Contact page: booking is now the
+  main card ("Pick a time", primary button to Zoho Bookings) and the form is the second choice ("Or send me a
+  message"). The "What to include" list is gone. The form has the same fields and field names, in a new order
+  (name, email, task, then business and how-heard marked optional), a "Send message" button, and the saved-data
+  note under the button. `/api/contact` is untouched; no test message was sent.
 - `tracker-ease` (`f018e72`) is built on `questions-page` and adds an ease-of-use pass on the tracker
   (`public/tracker/`, so it changes the real /admin too, not just the demo). The owner asked for a full redo for
   older users; this is the targeted version. Text is about 2 px larger everywhere; buttons and fields are 40-46 px

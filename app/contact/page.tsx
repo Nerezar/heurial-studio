@@ -12,12 +12,6 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-const prompts = [
-  "The task that eats up your time.",
-  "The tools you use for it today.",
-  "A couple of times that work for a 20-minute call.",
-];
-
 export default function Contact() {
   const formReady = inquiryInboxReady();
   return (
@@ -25,21 +19,16 @@ export default function Contact() {
       <PageIntro
         label="Free 20-minute call"
         title="Let’s find one thing to take off your plate."
-        description="Tell me about a task you’re tired of doing. I’ll reply by email to set up a free 20-minute call."
+        description="Pick a time for a free 20-minute call, or send me a message first."
       />
       <section className="section is-tight" aria-labelledby="inquiry-guide">
         <div className="wrap contact-grid">
-          <aside className="glass contact-guide">
-            <Chip>Before the call</Chip>
-            <h2 id="inquiry-guide">What to include</h2>
-            <ul className="check-list">
-              {prompts.map((prompt) => <li key={prompt}><Icon name="check" size={18} />{prompt}</li>)}
-            </ul>
-            <div className="contact-book">
-              <p>Already know you want to talk? Skip the form and pick a time. It’s a 20-minute video call on Google Meet.</p>
-              <a className="button secondary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
-            </div>
-            {formReady && <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>}
+          <aside className="glass is-glow contact-guide">
+            <Chip>Fastest way</Chip>
+            <h2 id="inquiry-guide">Pick a time</h2>
+            <p>Choose a slot that suits you. It’s a free 20-minute video call on Google Meet, and you tell me about the task you’re tired of doing.</p>
+            <a className="button primary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
+            <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>
           </aside>
           {formReady ? <ContactForm /> : (
             <div className="glass is-glow panel">

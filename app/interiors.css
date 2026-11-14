@@ -75,7 +75,8 @@
 .contact-guide h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
 .contact-alt { width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
 .panel > p:not(.form-note, .form-status) { color: var(--text); }
-.contact-book { display: grid; gap: 12px; justify-items: start; width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
+.contact-guide > p:not(.contact-alt, .label) { color: var(--text); }
+.contact-form .form-note { margin-top: 14px; }
 .contact-thanks { align-self: start; }
 .contact-thanks-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .contact-thanks h2:focus { outline: none; }
