@@ -69,7 +69,20 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Branch `assistant-and-tracker-look`: pushed, not merged, not deployed (2026-11-14)
+## Live 2026-11-14: assistant chat and tracker money view (`1bd524b`)
+- Merged to main by fast-forward (main had not moved) and deployed to Slate Production on the owner's go-ahead.
+- Checked live on www.heurial.studio: every public page returns 200 and `/admin` still redirects; the assistant on
+  `/resources` answered "What does it cost?" with its source chip; the tracker demo loads the new files (fingerprint
+  `0ec69d7818`) and shows the three tiles, Total earned and the payment steps; no console errors.
+- Not checked: `/admin` after sign-in. It now makes a second request (`/api/data?range=all`) on every refresh, the
+  same request the All button has always made.
+- **Deploying while another session uses the dev folder:** a second session (branch `paid-date`, adding a paid
+  date to leads) had `~/heurial-dev/heurial-design` checked out on its own branch, and a deploy builds whatever is in
+  the folder. So this release was built from a clean copy: `git worktree add --detach ~/heurial-dev/heurial-release
+  <sha>`, `cp -cR node_modules` into it, copy `.catalyst/`, `.catalystrc` and `catalyst.json` (all untracked), deploy
+  from there, then remove the copy. Check `git status` and the branch before any deploy.
+
+### What that release changed
 Asked for: the real knowledge assistant and the real tracker should look and move like their previews on the home
 page, and the tracker should be simpler, with lines that "follow the path of your money".
 - **Assistant** (`components/assistant.tsx`, `app/interiors.css`): a chat. Questions on the right, answers on the
