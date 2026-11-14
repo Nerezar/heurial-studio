@@ -69,7 +69,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Branch `intro-animation`: pushed, not merged, not deployed (2026-11-14)
+## Live 2026-11-14: opening animation (`b6a2888`)
+- Merged to main by fast-forward (main had not moved) and deployed to Slate Production on the owner's go-ahead.
+  Checked live on www.heurial.studio: the intro shows on first load, ends by itself about 2.0 seconds after first
+  paint, no console errors; `/contact` and `/services` return 200 and `/admin` still redirects.
+- Deploy note: the first deploy run printed nothing and exited 1 when its output was piped through `grep | tail`.
+  Run again with the output written to a file, it built and went live. Write the deploy output to a file, then read it.
 - Opening animation on the home page only, about two seconds: the tiger lands and breathes blue pixel fire. The fire
   flies into the page's own words and buttons, burns there as pixels, cools into code characters, and leaves the real
   page. `components/intro.tsx`, styles at the end of `app/home.css`, one line in `app/page.tsx`.
