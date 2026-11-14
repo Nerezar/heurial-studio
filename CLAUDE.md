@@ -52,7 +52,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 
 ## Copy and brand
 - Brand is HEURIAL in capitals. Assets are in `public/brand/`. Never use the Curivis brand.
-- Text is Inter Tight (`public/fonts/inter-tight.woff2`, chosen 2026-11-13); numbers use Helvetica (digits are left out of the font so they fall back to it).
+- Text is Inter Tight (`public/fonts/inter-tight.woff2`, chosen 2026-11-13), numbers in sentences included. Standalone figures (prices, totals, counters) carry the `num` class and use Helvetica.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
 - Editorial look. The glass style was rejected as looking AI-made.
 
