@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BOOKING_URL } from "@/lib/site";
 import { Icon } from "./icon";
 import { MotionLink } from "./route-transition";
 
@@ -57,7 +58,7 @@ export function Navigation({ links }: { links: NavLink[] }) {
           </MotionLink>
         )}
       </nav>
-      <MotionLink href="/contact" className="button primary" onClick={close}>Book a free call<Icon name="arrow" size={17} /></MotionLink>
+      <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="button primary" onClick={close}>Book a free call<Icon name="arrow" size={17} /></a>
     </dialog>
   </>;
 }

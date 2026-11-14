@@ -136,6 +136,9 @@ html[data-scrolled] .site-header {
 }
 .page-intro-inner { display: grid; gap: clamp(18px, 2.4vw, 26px); justify-items: start; }
 .page-intro h1 { max-width: 14ch; font-size: clamp(2.9rem, 6.8vw, 6.4rem); }
+.page-intro.is-compact { padding: calc(var(--masthead-height) + clamp(28px, 3.4vw, 44px)) 0 clamp(24px, 2.6vw, 36px); }
+.page-intro.is-compact .page-intro-inner { gap: 12px; }
+.page-intro.is-compact h1 { max-width: none; font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
 .intro-title { display: block; }
 @keyframes intro-mask {
   from { transform: translateY(.22em); clip-path: inset(100% 0 0); }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { BOOKING_URL } from "@/lib/site";
 import { tone } from "@/lib/style";
 import { Icon } from "./icon";
 import { Navigation } from "./navigation";
@@ -18,7 +19,10 @@ export const links = [...primaryLinks, { href: "/resources", label: "Guides" }];
 type Tone = Parameters<typeof tone>[0];
 
 export function ButtonLink({ href, children, secondary = false }: { href: string; children: ReactNode; secondary?: boolean }) {
-  return <MotionLink className={`button ${secondary ? "secondary" : "primary"}`} href={href}>{children}<Icon name="arrow" size={17} /></MotionLink>;
+  const className = `button ${secondary ? "secondary" : "primary"}`;
+  // Another site (the booking calendar) opens in a new tab, as it does from the Contact page.
+  if (href.startsWith("http")) return <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}<Icon name="arrow" size={17} /></a>;
+  return <MotionLink className={className} href={href}>{children}<Icon name="arrow" size={17} /></MotionLink>;
 }
 
 /** Small label that sits above a heading. */
@@ -31,7 +35,7 @@ export function Header() {
     <div className="wrap header-inner">
       <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></MotionLink>
       <Navigation links={primaryLinks} />
-      <MotionLink href="/contact" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></MotionLink>
+      <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></a>
     </div>
   </header>;
 }
@@ -52,8 +56,9 @@ export function Footer() {
   </footer>;
 }
 
-export function PageIntro({ label, title, description }: { label: string; title: string; description: string }) {
-  return <section className="page-intro is-navy">
+/** `compact` is for pages whose main thing is below the intro and should be on the first screen. */
+export function PageIntro({ label, title, description, compact = false }: { label: string; title: string; description: string; compact?: boolean }) {
+  return <section className={`page-intro is-navy${compact ? " is-compact" : ""}`}>
     <div className="wrap page-intro-inner">
       <Chip>{label}</Chip>
       <h1><span className="intro-title">{title}</span></h1>
@@ -69,7 +74,7 @@ export function Closing() {
       <h2 id="closing-title">Got a task you’re tired of doing?</h2>
       <div className="closing-copy">
         <p>Tell me about it. If I can help, I’ll show you exactly how. If not, I’ll point you somewhere useful.</p>
-        <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
+        <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
       </div>
     </div>
   </section>;

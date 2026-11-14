@@ -20,6 +20,7 @@ export default function Products() {
   return (
     <>
       <PageIntro
+        compact
         label="Demo with sample data"
         title="Never lose track of a lead."
         description="This is the follow-up tracker I built for my own business, running on made-up people. Add a lead, move a card, log some time. Nothing is saved or sent."

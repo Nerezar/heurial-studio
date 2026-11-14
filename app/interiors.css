@@ -128,7 +128,7 @@
 .chat-thread { display: grid; align-content: start; gap: 12px; min-height: 280px; max-height: min(62vh, 560px); overflow-y: auto; padding: clamp(18px, 3vw, 28px); }
 .chat-turn { display: grid; gap: 10px; justify-items: start; }
 .chat-q { justify-self: end; max-width: 80%; padding: 10px 16px; border-radius: 14px 14px 4px 14px; background: var(--paper); color: var(--ink); overflow-wrap: anywhere; }
-.chat-a { justify-self: start; max-width: 88%; padding: 12px 16px; border-radius: 14px 14px 14px 4px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); color: var(--text); }
+.chat-a { justify-self: start; max-width: 88%; padding: 12px 16px; border-radius: 14px 14px 14px 4px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); color: var(--text); white-space: pre-line; }
 .chat-dots { justify-self: start; display: inline-flex; gap: 5px; padding: 16px; border-radius: 14px 14px 14px 4px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); }
 .chat-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: chat-blink 1s ease-in-out infinite; }
 .chat-dots i:nth-child(2) { animation-delay: .15s; }
@@ -160,7 +160,7 @@
 @media (prefers-reduced-motion: reduce) { .chat-q, .chat-a, .chat-dots, .chat-dots i, .chat-source { animation: none; } }
 .source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px, 1.6vw, 22px); }
 .source-card { display: grid; gap: 10px; align-content: start; padding: clamp(22px, 3vw, 34px); scroll-margin-top: calc(var(--masthead-height) + 12px); }
-.source-card p { color: var(--muted); }
+.source-card p { color: var(--muted); white-space: pre-line; }
 .source-card:target { border-color: var(--signal); box-shadow: inset 3px 0 0 var(--signal); }
 
 @media (max-width: 860px) {

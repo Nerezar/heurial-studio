@@ -6,6 +6,7 @@ import { MotionLink } from "@/components/route-transition";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
 import { WorkflowDemo } from "@/components/workflow-demo";
+import { BOOKING_URL } from "@/lib/site";
 import { tone } from "@/lib/style";
 import "./home.css";
 
@@ -86,7 +87,7 @@ export default function Home() {
           <h1 id="hero-title">Make work <span className="accent">flow better.</span></h1>
           <p className="hero-lede">I build small AI-powered workflows that take repetitive work off your plate: following up with leads, answering the same questions, moving information between tools. All inside the tools you already use.</p>
           <div className="hero-actions">
-            <ButtonLink href="/contact">Book a free 20-min call</ButtonLink>
+            <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
             <a href="#example" className="button secondary">Watch an example <Icon name="arrow" size={17} /></a>
           </div>
           <ul className="hero-facts">
@@ -185,7 +186,7 @@ export default function Home() {
               <ul className="check-list">
                 {items.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}
               </ul>
-              <ButtonLink href="/contact" secondary={!tag}>Book a free 20-min call</ButtonLink>
+              <ButtonLink href={BOOKING_URL} secondary={!tag}>Book a free 20-min call</ButtonLink>
             </article>
           ))}
         </div>
