@@ -52,7 +52,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   (one line in the confirmation email). Console deployment "Booking link in confirmation (9ae952c)" moved only
   `inquiries`; `ACK_REPLY` and `INQUIRY_KEY` survived. Live form test: 201, `acknowledged: true`, 4.9 s. One more
   test row ("TEST Booking Link"). No test booking has been made, so the Meet link and invite are unverified.
-- **Live website: `dcd870f`** (interactive hero, see below). Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
+- **Live website: `47d2cf4`** (see "Live 2026-11-13" below). Production `inquiries` matches it; `pipeline` and `daily-digest` are still `bf68c83`.
 - Where the keys live: functions → Serverless → Functions → <fn> → Configuration → "Variable Environment" =
   Production → row ⋯ → Edit. Website → Slate → heurial → expand → **default** deployment → Configuration →
   Environment Variables → row ⋯ (right end, may be off-screen) → Edit. Slate App Settings has no variables.
@@ -77,7 +77,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - Checked live on www.heurial.studio: the board renders, tasks run, no console errors; /contact 200, /admin 307.
   Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
 
-## Pushed, not merged (2026-11-13)
+## Live 2026-11-13 (`47d2cf4`): everything in the branch notes below except `site-font`
+- Merged to main (fast-forward from `contact-polish`) and deployed to Slate Production with the owner's go-ahead,
+  which also confirmed the three package details. Website only; no Catalyst function changed.
+- Checked live on www.heurial.studio: home (hero board, steps rail, calculator, three price cards, demo previews),
+  Questions page (11 questions, menu label), Contact (booking card, form), the demo tracker (period labels, Revenue
+  $1,500 equals the chart total, no console errors); /admin 307; `/api/contact` answers 400 to an empty body.
+- Unchecked after this deploy: a real contact-form send, a test booking (the Meet invite is still unverified),
+  signing in to /admin with the new tracker files, a real phone, light mode in the tracker.
+- Still not merged: `site-font` (`10e116b`, Inter Tight).
+
+## Branch notes for that release (all merged except `site-font`)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
 - `contact-polish` is built on `booking-simple`, so it carries everything below and is the one to release. The
