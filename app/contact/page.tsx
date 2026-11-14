@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact-form";
 import { Icon } from "@/components/icon";
-import { Chip, PageIntro } from "@/components/shell";
+import { PageIntro } from "@/components/shell";
 import { inquiryInboxReady } from "@/lib/contact";
 import { BOOKING_URL } from "@/lib/site";
 import "../interiors.css";
@@ -23,12 +23,30 @@ export default function Contact() {
       />
       <section className="section is-tight" aria-labelledby="inquiry-guide">
         <div className="wrap contact-grid">
-          <aside className="glass is-glow contact-guide">
-            <Chip>Fastest way</Chip>
-            <h2 id="inquiry-guide">Pick a time</h2>
-            <p>Choose a slot that suits you. It’s a free 20-minute video call on Google Meet, and you tell me about the task you’re tired of doing.</p>
-            <a className="button primary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
-            <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>
+          <aside className="glass contact-card contact-book" aria-labelledby="inquiry-guide">
+            <div className="contact-bar"><span><Icon name="calendar" size={15} />Free call</span><span>20 minutes · Google Meet</span></div>
+            <div className="contact-card-body">
+              <div className="contact-book-head">
+                {/* A clock face with 20 of its 60 minutes filled in. */}
+                <svg className="contact-dial" viewBox="0 0 80 80" aria-hidden="true">
+                  <circle className="dial-track" cx="40" cy="40" r="34" />
+                  <circle className="dial-arc" cx="40" cy="40" r="34" pathLength="60" />
+                  <text className="dial-num" x="40" y="41">20</text>
+                  <text className="dial-unit" x="40" y="55">min</text>
+                </svg>
+                <div>
+                  <h2 id="inquiry-guide">Pick a time</h2>
+                  <p>Choose a slot that suits you. It’s free.</p>
+                </div>
+              </div>
+              <ol className="contact-steps">
+                <li><b>Pick a time</b><span>My booking page opens in a new tab.</span></li>
+                <li><b>Tell me the task</b><span>The one you’re tired of doing, and the tools you use for it.</span></li>
+                <li><b>Get a straight answer</b><span>I’ll tell you honestly whether I can help.</span></li>
+              </ol>
+              <a className="button primary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer">Pick a time<Icon name="arrow" size={17} /></a>
+              <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>
+            </div>
           </aside>
           {formReady ? <ContactForm /> : (
             <div className="glass is-glow panel">

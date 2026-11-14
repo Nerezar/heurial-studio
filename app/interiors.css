@@ -70,12 +70,49 @@
 .strip p:not(.label) { max-width: 48ch; color: var(--muted); }
 
 /* ---------- Contact ---------- */
-.contact-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(14px, 2vw, 26px); align-items: start; }
-.contact-guide { display: grid; gap: 18px; justify-items: start; padding: clamp(22px, 3vw, 36px); }
-.contact-guide h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
-.contact-alt { width: 100%; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
+.contact-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(14px, 2vw, 26px); align-items: stretch; }
+/* Both cards are small windows: a title bar, then the content, with a blue light in one corner. */
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 14px;
+  border-color: rgb(255 255 255 / .12);
+  background: radial-gradient(110% 60% at 100% 0%, rgb(52 120 246 / .16), transparent 62%), linear-gradient(180deg, #15181d, #0e1013);
+  box-shadow: 0 40px 70px -40px rgb(0 0 0 / .8), inset 0 1px 0 rgb(255 255 255 / .05);
+}
+.contact-book { border-top-color: #56719a; background: radial-gradient(120% 70% at 100% 0%, rgb(52 120 246 / .26), transparent 64%), linear-gradient(180deg, #15181d, #0e1013); }
+.contact-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 13px clamp(18px, 2.4vw, 28px); border-bottom: 1px solid rgb(255 255 255 / .08); color: var(--muted); font-size: .82rem; }
+.contact-bar > span:first-child { display: inline-flex; align-items: center; gap: 9px; color: var(--white); font-weight: 500; }
+.contact-bar > span:first-child svg { color: var(--signal); }
+.contact-card-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 24px; padding: clamp(22px, 3vw, 36px); }
+.contact-book-head { display: flex; align-items: center; gap: 18px; }
+.contact-book-head h2 { font-size: clamp(1.9rem, 3vw, 2.7rem); }
+.contact-book-head p { margin-top: 4px; color: var(--text); }
+.contact-dial { flex: none; width: 84px; height: 84px; }
+.contact-dial circle { fill: none; stroke-width: 5; }
+.dial-track { stroke: rgb(255 255 255 / .1); }
+.dial-arc { stroke: var(--signal); stroke-linecap: round; stroke-dasharray: 20 60; transform: rotate(-90deg); transform-origin: center; animation: dial-fill 1.2s .4s var(--ease-out) both; }
+.contact-dial text { text-anchor: middle; font-family: Helvetica, Arial, sans-serif; }
+.dial-num { fill: var(--white); font-size: 24px; font-weight: 500; letter-spacing: -.04em; }
+.dial-unit { fill: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+@keyframes dial-fill { from { stroke-dashoffset: 20; } }
+.contact-steps { list-style: none; padding: 0; display: grid; gap: 16px; }
+.contact-steps li { position: relative; display: grid; gap: 1px; padding-left: 30px; }
+.contact-steps li::before { content: ""; position: absolute; left: 0; top: 6px; width: 11px; height: 11px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 4px rgb(145 182 255 / .16); }
+.contact-steps li:not(:last-child)::after { content: ""; position: absolute; left: 5px; top: 24px; bottom: -16px; width: 1px; background: var(--line-strong); }
+.contact-steps b { color: var(--white); font-weight: 600; }
+.contact-steps span { color: var(--muted); font-size: .93rem; }
+.contact-book .button { min-height: 54px; padding-inline: 22px; font-size: 1rem; box-shadow: 0 12px 30px -14px rgb(145 182 255 / .7); }
+.contact-form .panel { flex: 1; }
+.contact-form h2 { font-size: 1.45rem; letter-spacing: -.03em; }
+.contact-form :is(input, select, textarea) { border-radius: 8px; border-color: rgb(255 255 255 / .18); background: rgb(0 0 0 / .35); transition: border-color .2s ease, box-shadow .2s ease; }
+.contact-form :is(input, select, textarea):focus { border-color: var(--signal); box-shadow: 0 0 0 3px rgb(145 182 255 / .2); }
+.contact-thanks .icon-tile { animation: contact-pop .5s var(--ease-out) both; }
+@keyframes contact-pop { from { opacity: 0; transform: scale(.5); } 70% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .dial-arc, .contact-thanks .icon-tile { animation: none; } }
+.contact-alt { width: 100%; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
 .panel > p:not(.form-note, .form-status) { color: var(--text); }
-.contact-guide > p:not(.contact-alt, .label) { color: var(--text); }
 .contact-form .form-note { margin-top: 14px; }
 .contact-thanks { align-self: start; }
 .contact-thanks-actions { display: flex; flex-wrap: wrap; gap: 12px; }

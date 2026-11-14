@@ -80,6 +80,11 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
+- `contact-polish` is built on `booking-simple`, so it carries everything below and is the one to release. The
+  contact page's two cards are now matching "window" cards (title bar, blue corner light). The booking card has a
+  clock dial with 20 of 60 minutes filled, three steps on a small rail (pick a time, tell me the task, get a
+  straight answer) and a larger "Pick a time" button. The form sits in the second card with softer fields and a
+  blue focus ring. Same form fields and `/api/contact`; no test message or booking was sent.
 - `booking-simple` is built on `tracker-ease`, so it carries everything below. Contact page: booking is now the
   main card ("Pick a time", primary button to Zoho Bookings) and the form is the second choice ("Or send me a
   message"). The "What to include" list is gone. The form has the same fields and field names, in a new order

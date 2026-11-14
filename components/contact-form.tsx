@@ -60,8 +60,10 @@ export function ContactForm() {
     </div>;
   }
 
-  return <form className="glass panel contact-form" method="post" action="/api/contact" onSubmit={submit} aria-describedby="inquiry-note">
-    <div className="panel-head"><span className="icon-tile"><Icon name="send" size={20} /></span><h2>Or send me a message</h2></div>
+  return <form className="glass contact-card contact-form" method="post" action="/api/contact" onSubmit={submit} aria-describedby="inquiry-note">
+    <div className="contact-bar"><span><Icon name="send" size={15} />Message</span><span>I reply by email</span></div>
+    <div className="panel">
+    <h2>Or send me a message</h2>
     <div className="form-fields">
       <label>Name<input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>
       <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
@@ -76,5 +78,6 @@ export function ContactForm() {
     <button className="button primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Send message"}<Icon name="arrow" size={17} /></button>
     <p role="alert" className="form-status form-error">{error}</p>
     <p className="form-note" id="inquiry-note">Your message is saved for me to review, along with how you found this site (for example, the link you clicked). Leave out sensitive information.</p>
+    </div>
   </form>;
 }
