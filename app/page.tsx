@@ -148,7 +148,7 @@ export default function Home() {
             </li>
           ))}
         </ol>
-        <p className="steps-more"><MotionLink href="/services" className="text-link">See each step in detail <Icon name="diagonal" size={16} /></MotionLink></p>
+        <p className="steps-more"><MotionLink href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></MotionLink></p>
       </div>
     </section>
 

@@ -1,4 +1,4 @@
-/* Interior pages: How it works, Demos, About, Contact, Guides. */
+/* Interior pages: Questions, Demos, About, Contact, Guides. */
 
 .section.is-tight { padding-top: clamp(40px, 5vw, 72px); }
 .wrap.is-narrow { width: min(100% - var(--gutter) * 2, 920px); }

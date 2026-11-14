@@ -141,7 +141,10 @@ export function RouteMotion({ children }: { children: ReactNode }) {
         router.push(url.pathname + url.search + url.hash, { scroll: false });
       });
       panel.classList.remove("is-waiting");
-      window.scrollTo({ top: 0, behavior: "instant" });
+      // A link to a section on another page (like /#how-it-works) lands on that section, not the top.
+      const section = url.hash ? document.getElementById(decodeURIComponent(url.hash.slice(1))) : null;
+      if (section) section.scrollIntoView({ behavior: "instant" });
+      else window.scrollTo({ top: 0, behavior: "instant" });
       leave.cancel();
 
       // 3. Panel pulls away upward and the new page rises in.

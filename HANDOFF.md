@@ -80,7 +80,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
-- `services-polish` is built on `demos-polish`, so it carries everything below and is the one to release. On the
+- `questions-page` is built on `services-polish`, so it carries everything below and is the one to release. The
+  owner found the three steps shown twice (home section and the How it works page) and chose to turn the page into
+  **Questions**: `/services` now holds only the FAQ, grown from 4 to 11 questions (every answer restates something
+  the site already says), the menu label is "Questions", and the steps live only on the home page. The address is
+  still `/services`. Also: links to a section on another page (like `/#how-it-works` from About) now land on that
+  section (`components/route-transition.tsx`); the assistant's "After handoff" text lists support per package.
+- `services-polish` is built on `demos-polish`. Its step restyle of the old page is superseded by the line above;
+  what remains from it is the shared steps styles in `app/globals.css`. On the
   How it works page the three steps now use the same rail, numerals, time tags and "You get" line as the home page
   (the steps styles moved from `app/home.css` to `app/globals.css`; the old timeline styles are deleted), and the
   intro and page description say "fixed price from $295" instead of only the $495 offer. FAQ and banner untouched.

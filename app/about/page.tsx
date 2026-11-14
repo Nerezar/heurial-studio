@@ -53,7 +53,7 @@ export default function About() {
               <h2 id="about-studio-title">One task at a time.</h2>
               <p>Start with one repetitive task. I’ll build a workflow for it in your own tools in about a week.</p>
             </div>
-            <ButtonLink href="/services" secondary>See how it works</ButtonLink>
+            <ButtonLink href="/#how-it-works" secondary>See how it works</ButtonLink>
           </div>
         </div>
       </section>

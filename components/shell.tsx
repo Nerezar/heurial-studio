@@ -7,7 +7,7 @@ import { MotionLink } from "./route-transition";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
-  { href: "/services", label: "How it works" },
+  { href: "/services", label: "Questions" },
   { href: "/products", label: "Demos" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },

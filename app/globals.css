@@ -273,7 +273,7 @@ main a:not(.button, .text-link):hover, .site-footer a:hover { color: var(--hover
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
 }
 
-/* ---------- Steps (home and How it works) ---------- */
+/* ---------- Steps (home) ---------- */
 .steps { position: relative; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); view-timeline: --steps block; }
 /* The rail: a grey track, and a blue line over it that draws itself as the steps scroll into view. */
 .steps::before, .steps::after { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--line); }
