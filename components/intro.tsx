@@ -10,7 +10,8 @@ const MOUTH = { x: 334, y: 95 };
 
 // Runs while the page is still being read, so the intro is there from the first paint. It shows once per browser tab,
 // never under reduced motion, and stays hidden when scripts are off or anything here fails.
-const SHOW = `(function(s){try{if(sessionStorage.getItem("heurial-intro")||matchMedia("(prefers-reduced-motion: reduce)").matches)return;sessionStorage.setItem("heurial-intro","1");s.parentElement.previousElementSibling.hidden=false}catch(e){}})(document.currentScript)`;
+// Phones and tablets (touch, no hover) skip it: on an iPhone a strip of the page showed under the veil, and I could not test a fix.
+const SHOW = `(function(s){try{if(sessionStorage.getItem("heurial-intro")||matchMedia("(prefers-reduced-motion: reduce), (hover: none) and (pointer: coarse)").matches)return;sessionStorage.setItem("heurial-intro","1");s.parentElement.previousElementSibling.hidden=false}catch(e){}})(document.currentScript)`;
 
 // Seconds after the tiger has landed.
 const IGNITE = .25; // the fire starts
