@@ -83,8 +83,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - Checked live on www.heurial.studio: home (hero board, steps rail, calculator, three price cards, demo previews),
   Questions page (11 questions, menu label), Contact (booking card, form), the demo tracker (period labels, Revenue
   $1,500 equals the chart total, no console errors); /admin 307; `/api/contact` answers 400 to an empty body.
-- Unchecked after this deploy: a real contact-form send, a test booking (the Meet invite is still unverified),
-  signing in to /admin with the new tracker files, a real phone, light mode in the tracker.
+- Live form test after this deploy (owner approved): sent as "TEST Release Check" with the owner's own address,
+  saved in about 5 s, thank-you screen shown with the confirmation line. One more test row to dismiss.
+- Unchecked after this deploy: a test booking (the Meet invite is still unverified), signing in to /admin with the
+  new tracker files, a real phone, light mode in the tracker.
 - Still not merged: `site-font` (`10e116b`, Inter Tight).
 
 ## Branch notes for that release (all merged except `site-font`)
