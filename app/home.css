@@ -363,6 +363,15 @@ button.board-node:active { transform: scale(.985); }
 /* Waiting to scroll into view: reels rest at zero. Without the reveal script the final price simply shows. */
 .reveal:not(.is-visible) .price-roll > span { transform: none; transition: none; }
 .price-note { min-height: 3.2em; color: var(--text); }
+.price-example { color: var(--muted); font-size: .92rem; }
+.price-example b { color: var(--text); font-weight: 500; }
+.plan-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px clamp(20px, 3vw, 40px); align-items: center; margin-bottom: clamp(18px, 2.4vw, 28px); padding: clamp(20px, 2.4vw, 30px); border: 1px solid var(--line-strong); border-radius: var(--radius); }
+.plan-strip > div { display: grid; gap: 8px; }
+.plan-strip h3 { color: var(--text); font-size: 1.12rem; font-weight: 500; letter-spacing: -.02em; }
+.plan-strip p { color: var(--muted); max-width: 62ch; }
+.plan-price { display: grid; justify-items: end; gap: 2px; }
+.plan-price .price-num { color: var(--text); font-size: 2.4rem; letter-spacing: -.04em; line-height: 1; }
+.plan-price span:last-child { font-size: .86rem; }
 .price-card .check-list { align-content: start; margin-block: 6px 12px; }
 .fit-card { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 14px clamp(24px, 4vw, 64px); align-items: start; margin-top: clamp(36px, 5vw, 64px); padding-top: clamp(24px, 3vw, 36px); border-top: 1px solid var(--line); }
 .fit-card > div { display: grid; gap: 14px; }
@@ -450,6 +459,8 @@ button.board-node:active { transform: scale(.985); }
 @media (max-width: 860px) {
   .flow, .calc, .price-grid, .fit-card, .demo-grid { grid-template-columns: 1fr; }
   .price-note { min-height: 0; }
+  .plan-strip { grid-template-columns: 1fr; }
+  .plan-price { justify-items: start; }
   .flow-steps { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   .flow-steps button, .flow-steps li:last-child button { grid-template-columns: 1fr; justify-items: center; padding: 3px 0; }
   .flow-step-text, .flow-step-time { display: none; }

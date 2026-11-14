@@ -12,8 +12,9 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-export default function Contact() {
+export default async function Contact({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const formReady = inquiryInboxReady();
+  const plan = (await searchParams).plan === "1";
   return (
     <>
       <PageIntro
@@ -48,7 +49,7 @@ export default function Contact() {
               <p className="contact-alt">Prefer email? Write to <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>.</p>
             </div>
           </aside>
-          {formReady ? <ContactForm /> : (
+          {formReady ? <ContactForm plan={plan} /> : (
             <div className="glass is-glow panel">
               <div className="panel-head"><span className="icon-tile"><Icon name="mail" size={20} /></span><h2>Book a free call</h2></div>
               <p>Email <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a> with the task you’d like help with, and I’ll reply to set up a time.</p>

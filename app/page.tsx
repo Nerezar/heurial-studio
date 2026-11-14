@@ -42,9 +42,9 @@ const deliverables = [
 
 // Prices and contents were set by the owner on 2026-11-13. The $495 package is the founding offer, unchanged.
 const packages = [
-  { name: "Quick fix", price: 295, time: "A few days", tag: "", note: "One simple automation for one small job.", items: ["One simple automation", "Setup inside your own tools", "7 days of support"] },
-  { name: "One workflow", price: 495, time: "About one week", tag: "Founding offer", note: "One workflow, built in your own tools. For my first three clients.", items: deliverables },
-  { name: "Two workflows", price: 895, time: "About two weeks", tag: "", note: "Two workflows that work together.", items: ["Two connected workflows", "Setup inside your own tools", "A plain-English guide", "A handoff call", "30 days of support"] },
+  { name: "Quick fix", price: 295, time: "A few days", tag: "", note: "One simple automation for one small job.", example: "Form submissions go into a spreadsheet, and you get a text for each one.", items: ["One simple automation", "Setup inside your own tools", "7 days of support"] },
+  { name: "One workflow", price: 495, time: "About one week", tag: "Founding offer", note: "One workflow, built in your own tools. For my first three clients.", example: "A new inquiry is logged, a reply is drafted for you to approve, and a follow-up is booked.", items: deliverables },
+  { name: "Two workflows", price: 895, time: "About two weeks", tag: "", note: "Two workflows that work together.", example: "Inquiry follow-up, plus a weekly report of where your leads came from and what they earned.", items: ["Two connected workflows", "Setup inside your own tools", "A plain-English guide", "A handoff call", "30 days of support"] },
 ];
 
 const fits = [
@@ -91,7 +91,7 @@ export default function Home() {
             <a href="#example" className="button secondary">Watch an example <Icon name="arrow" size={17} /></a>
           </div>
           <ul className="hero-facts">
-            <li><Icon name="check" size={15} />$495 founding price</li>
+            <li><Icon name="check" size={15} />Start from $49</li>
             <li><Icon name="check" size={15} />About one week</li>
             <li><Icon name="check" size={15} />You own everything</li>
           </ul>
@@ -173,8 +173,16 @@ export default function Home() {
           <h2 id="offer-title">Pick the size of the job.</h2>
           <p>Three fixed prices, each for a clear piece of work. Half to start, half at handoff.</p>
         </header>
+        <div className="plan-strip">
+          <div>
+            <h3>Not sure yet? Start with a $49 workflow plan.</h3>
+            <p>Tell me one task you repeat. I’ll send you a one-page plan: the steps, the tools, what it would cost to run, and whether it’s worth automating at all. Keep it and build it yourself, or have me build it and the $49 comes off the price.</p>
+          </div>
+          <p className="plan-price"><span className="price-num num">$49</span><span>One task, one plan</span></p>
+          <ButtonLink href="/contact?plan=1">Get a plan</ButtonLink>
+        </div>
         <div className="price-grid">
-          {packages.map(({ name, price, time, tag, note, items }) => (
+          {packages.map(({ name, price, time, tag, note, example, items }) => (
             <article className={`glass price-card${tag ? " is-glow is-featured" : ""}`} key={name}>
               <header className="price-head">
                 <h3>{name}</h3>
@@ -182,6 +190,7 @@ export default function Home() {
               </header>
               <Price value={price} />
               <p className="price-note">{note}</p>
+              <p className="price-example"><b>For example:</b> {example}</p>
               <p className="step-time"><Icon name="clock" size={14} />{time}</p>
               <ul className="check-list">
                 {items.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}

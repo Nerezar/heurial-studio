@@ -7,7 +7,8 @@ import { BOOKING_URL } from "@/lib/site";
 import { readVisitSource } from "./attribution";
 import { Icon } from "./icon";
 
-export function ContactForm() {
+/** `plan` starts the message as a request for the $49 workflow plan. */
+export function ContactForm({ plan = false }: { plan?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [sent, setSent] = useState<{ id: string; email: string; acknowledged: boolean }>();
@@ -46,6 +47,7 @@ export function ContactForm() {
   if (sent) {
     return <div className="glass is-glow panel contact-thanks" role="status">
       <div className="panel-head"><span className="icon-tile"><Icon name="check" size={20} /></span><h2 ref={thanks} tabIndex={-1}>Thanks, I got your message</h2></div>
+      {plan && <p>For a workflow plan, I’ll reply with a payment link. Once it’s paid, I’ll send your plan within three working days.</p>}
       <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> about your free 20-minute call. If you’d rather not wait, pick a time now.</p>
       <ul className="check-list">
         {sent.acknowledged && <li><Icon name="check" size={18} />I’ve sent a confirmation to that address. If you don’t see it, check your spam folder.</li>}
@@ -67,7 +69,7 @@ export function ContactForm() {
     <div className="form-fields">
       <label>Name<input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>
       <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
-      <label className="span-two">What task eats up your time?<textarea name="message" required minLength={10} maxLength={1200} rows={4} placeholder="For example: I spend an hour a day replying to the same questions from customers." /></label>
+      <label className="span-two">What task eats up your time?<textarea name="message" defaultValue={plan ? "I’d like a $49 workflow plan. The task is: " : undefined} required minLength={10} maxLength={1200} rows={4} placeholder="For example: I spend an hour a day replying to the same questions from customers." /></label>
       <label>Business (optional)<input name="company" autoComplete="organization" maxLength={120} /></label>
       <label>How did you hear about me? (optional)<select name="heard" defaultValue="">
         <option value="">Choose one</option>
