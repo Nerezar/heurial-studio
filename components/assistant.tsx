@@ -1,7 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Icon } from "./icon";
 
 const suggestions = [
@@ -11,58 +10,69 @@ const suggestions = [
   "How do I start a project?",
 ];
 
-type Answer = { mode: "keyword" | "model" | "no-match"; passages: { title: string; text: string; href: string }[] };
+type Passage = { title: string; text: string; href: string };
+// A question, then what came back for it. Neither `passages` nor `error` yet means the answer is still on its way.
+type Turn = { id: number; question: string; passages?: Passage[]; error?: string };
 
+/** The knowledge assistant as a chat, laid out like its preview on the home page. */
 export function Assistant() {
   const [question, setQuestion] = useState("");
-  const [asked, setAsked] = useState("");
-  const [answer, setAnswer] = useState<Answer>();
-  const [error, setError] = useState("");
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
+  const thread = useRef<HTMLDivElement>(null);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
+  // Keep the newest message in view, scrolling the thread only and never the page.
+  useEffect(() => {
+    if (thread.current) thread.current.scrollTop = thread.current.scrollHeight;
+  }, [turns]);
+
+  async function ask(text: string) {
+    const asked = text.trim();
+    if (busy || asked.length < 3) return;
+    const id = Date.now();
     setBusy(true);
-    setError("");
-    setAnswer(undefined);
-    setAsked(question.trim());
+    setQuestion("");
+    setTurns((all) => [...all, { id, question: asked }]);
+    let result: Pick<Turn, "passages" | "error">;
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question: asked }),
       });
       const data = await response.json();
-      if (!response.ok) setError(data.error ?? "The assistant is unavailable. Please try again.");
-      else setAnswer(data);
+      result = response.ok ? { passages: data.passages ?? [] } : { error: data.error ?? "The assistant is unavailable. Please try again." };
     } catch {
-      setError("The assistant could not connect. Please try again.");
-    } finally {
-      setBusy(false);
+      result = { error: "The assistant could not connect. Please try again." };
     }
+    setTurns((all) => all.map((turn) => (turn.id === id ? { ...turn, ...result } : turn)));
+    setBusy(false);
   }
 
-  return <section className="assistant glass is-glow panel" aria-labelledby="assistant-title">
-    <div className="panel-head"><span className="icon-tile"><Icon name="spark" size={20} /></span><h2 id="assistant-title">Knowledge assistant</h2><span className="chip">Public guides</span></div>
-    <form method="post" action="/api/ask" onSubmit={submit}>
-      <label htmlFor="question">What would you like to know about HEURIAL?</label>
-      <div className="question-row"><input id="question" name="question" value={question} onChange={(event) => setQuestion(event.target.value)} required minLength={3} maxLength={400} placeholder="Ask about pricing, your data, or getting started" /><button type="submit" className="button primary" disabled={busy}>Ask <Icon name="send" size={16} /></button></div>
-    </form>
-    <div className="suggestions" aria-label="Suggested questions">{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={busy} onClick={() => {
-      setQuestion(suggestion);
-      document.getElementById("question")?.focus();
-    }}>{suggestion}</button>)}</div>
-    <p className="form-note">It only answers from the public guides on this page, and links to the passage it used.</p>
-    <div className="answer" role="status" aria-live="polite">
-      {busy && <p>Searching the guides…</p>}
-      {error && <p className="form-error">{error}</p>}
-      {answer && <>
-        <p className="asked"><strong>{asked}</strong></p>
-        {answer.passages.length ? answer.passages.map((passage, index) => <div className="passage" key={passage.href}>
-          <p>{passage.text}</p><a href={passage.href} className="text-link"><Icon name="book" size={15} /> [{index + 1}] {passage.title}</a>
-        </div>) : <p>I couldn’t find that in the guides. Try asking about pricing, your data, or getting started.</p>}
-      </>}
+  return <section className="assistant glass is-glow" aria-labelledby="assistant-title">
+    <div className="chat-bar"><h2 id="assistant-title"><Icon name="chat" size={16} />Knowledge assistant</h2><span className="chip">Public guides</span></div>
+    <div className="chat-thread" ref={thread} role="log" aria-live="polite" aria-label="Conversation">
+      <p className="chat-a">Ask about pricing, your data, or how a project starts.</p>
+      {turns.map((turn) => <Fragment key={turn.id}>
+        <p className="chat-q">{turn.question}</p>
+        {turn.error ? <p className="chat-a form-error">{turn.error}</p>
+          : !turn.passages ? <span className="chat-dots" role="img" aria-label="Searching the guides"><i /><i /><i /></span>
+          : !turn.passages.length ? <p className="chat-a">I couldn’t find that in the guides. Try asking about pricing, your data, or getting started.</p>
+          : turn.passages.map((passage) => <div className="chat-turn" key={passage.href}>
+            <p className="chat-a">{passage.text}</p>
+            <a className="chip chat-source" href={passage.href}><Icon name="book" size={14} />{passage.title}</a>
+          </div>)}
+      </Fragment>)}
     </div>
+    <div className="suggestions" aria-label="Suggested questions">{suggestions.map((suggestion) => <button type="button" key={suggestion} disabled={busy} onClick={() => ask(suggestion)}>{suggestion}</button>)}</div>
+    <form className="chat-ask panel" method="post" action="/api/ask" onSubmit={(event) => {
+      event.preventDefault();
+      ask(question);
+    }}>
+      <label htmlFor="question" className="sr-only">Your question</label>
+      <input id="question" name="question" value={question} onChange={(event) => setQuestion(event.target.value)} required minLength={3} maxLength={400} placeholder="Ask a question" autoComplete="off" />
+      <button type="submit" className="button primary" disabled={busy}>Ask <Icon name="send" size={16} /></button>
+    </form>
+    <p className="form-note">It only answers from the public guides on this page, and links to the passage it used.</p>
   </section>;
 }
