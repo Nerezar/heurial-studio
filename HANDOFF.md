@@ -4,7 +4,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Branch `refero-direction` (2026-11-14): pushed, not merged, not deployed.** A full design pass on the website,
+- **Design pass (`refero-direction`, 2026-11-14): merged to main on the owner's "Yes, merge it", not deployed.** A full design pass on the website,
   guided by the Refero Styles guides for Linear, Ramp and Intercom (rules now in `CLAUDE.md`). Home: the hero is a
   headline and pitch over the workflow board as one wide window, with three facts under it; "Tasks it fits" is
   folded into the problems rows; the calculator is one panel with the result first and a chart legend; pricing is a
