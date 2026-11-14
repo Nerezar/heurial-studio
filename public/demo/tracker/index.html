@@ -45,15 +45,16 @@ const demo = (() => {
   });
   const leads = [
     // Paid work spread over four months, so the money line on Overview has a real path to follow in every period.
-    mk("Nora Castillo", "Castillo Tax Prep", "Personal network", "paid", 118, 295),
-    mk("Leo Brandt", "Brandt Auto Repair", "Referral", "paid", 96, 495),
-    mk("Priya Nair", "Nair Physio", "Website", "paid", 74, 895),
-    mk("Dana Whitfield", "Whitfield Plumbing", "Personal network", "paid", 52, 495),
-    mk("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 44, 495),
-    mk("Greg Haldane", "Haldane Roofing", "Referral", "paid", 33, 1200, { follow_up_at: day(10), follow_up_note: "Ask for a testimonial" }),
-    mk("Aisha Rahman", "Rahman Dental", "Referral", "paid", 27, 1500, { follow_up_at: day(14), follow_up_note: "Ask about a second workflow" }),
-    mk("Theo Marsh", "Marsh Veterinary", "Partner", "paid", 16, 895),
-    mk("Jules Okafor", "Okafor Print Shop", "Instagram", "paid", 5, 495),
+    // Each was paid some days after its call was booked (longer for the larger jobs), as real projects are.
+    mk("Nora Castillo", "Castillo Tax Prep", "Personal network", "paid", 118, 295, { paid_at: day(-109) }),
+    mk("Leo Brandt", "Brandt Auto Repair", "Referral", "paid", 96, 495, { paid_at: day(-88) }),
+    mk("Priya Nair", "Nair Physio", "Website", "paid", 74, 895, { paid_at: day(-61) }),
+    mk("Dana Whitfield", "Whitfield Plumbing", "Personal network", "paid", 52, 495, { paid_at: day(-45) }),
+    mk("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 44, 495, { paid_at: day(-38) }),
+    mk("Greg Haldane", "Haldane Roofing", "Referral", "paid", 33, 1200, { paid_at: day(-21), follow_up_at: day(10), follow_up_note: "Ask for a testimonial" }),
+    mk("Aisha Rahman", "Rahman Dental", "Referral", "paid", 27, 1500, { paid_at: day(-12), follow_up_at: day(14), follow_up_note: "Ask about a second workflow" }),
+    mk("Theo Marsh", "Marsh Veterinary", "Partner", "paid", 16, 895, { paid_at: day(-6) }),
+    mk("Jules Okafor", "Okafor Print Shop", "Instagram", "paid", 5, 495, { paid_at: day(-2) }),
     mk("Ben Carter", "Carter Law Office", "Website", "proposal", 21, 1500, { follow_up_at: day(-3), follow_up_note: "Check if he's reviewed the proposal", phone: "(555) 010-0142" }),
     mk("Elena Petrova", "Petrova Bookkeeping", "Partner", "proposal", 13, 1200, { follow_up_at: day(0), follow_up_note: "Send the revised scope", phone: "(555) 010-0177" }),
     mk("Chris Doyle", "Doyle Electric", "Instagram", "held", 9, 0, { follow_up_at: day(2), follow_up_note: "Ask about the booking inbox" }),
@@ -106,12 +107,12 @@ async function api(path, method = "GET", body) {
   let m;
 
   if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true }));
-  if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.cleanLead(body, false, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
+  if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.withPaidDate(core.cleanLead(body, false, today), null, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
   if ((m = p.match(/^leads\/(\d+)$/))) {
     const row = find(demo.leads, m[1]);
     if (!row) throw bad("Not found.", 404);
     if (method === "GET") { const hours = demo.time.filter((t) => String(t.lead_id) === m[1]).reduce((s, t) => s + t.hours, 0); return core.leadFromRow(row, { [m[1]]: hours }); }
-    if (method === "PATCH") { Object.assign(row, wrap(() => core.cleanLead(body, true, today))); return { ok: true }; }
+    if (method === "PATCH") { Object.assign(row, wrap(() => core.withPaidDate(core.cleanLead(body, true, today), row, today))); return { ok: true }; }
     if (method === "DELETE") { demo.leads.splice(demo.leads.indexOf(row), 1); for (let i = demo.time.length - 1; i >= 0; i--) if (String(demo.time[i].lead_id) === m[1]) demo.time.splice(i, 1);
       for (let i = demo.messages.length - 1; i >= 0; i--) if (String(demo.messages[i].lead_id) === m[1]) demo.messages.splice(i, 1); return { ok: true }; }
   }

@@ -69,6 +69,52 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Branch `paid-date`: pushed, not merged, not deployed (2026-11-14)
+Built on `assistant-and-tracker-look`, so it carries that branch too and is the one to release. Asked for: the money
+line should put each payment on the day it was paid, not the day its call was booked.
+- **New lead field `paid_at`** (`YYYY-MM-DD`, optional) in `core.js` and its browser copy (in sync). The rule lives in
+  one function, `withPaidDate`: moving a lead to Paid stamps today unless a date is given; while it is Paid the date
+  can be changed or emptied; **leaving Paid clears it**, and paying again stamps the day you do it. So a card dragged
+  out of Paid and back by mistake needs its Paid on corrected. A paid date sent for an unpaid lead is dropped.
+- **Tracker** (`tracker.js`): `moneyPath()` uses `paid_at` and falls back to `booked_at` for a lead with none. The
+  payments list shows the paid date. The lead panel has **Paid on** beside the value, shown only for the Paid stage
+  (it starts on today for a lead that is just becoming paid). The CSV export has a `paid_at` column.
+- **Won so far changed source.** It used the server's revenue figure, which counts leads *booked* in the period. That
+  no longer matches a line drawn by paid date, so the tile now reads the line itself: what the period added, and its
+  arrow compares with the period before. Line, Total earned, Won so far and the payments list are one calculation.
+- **Footnote:** the "sits on the day its call was booked" line is gone. A footnote appears only while payments in view
+  have no paid date, with the count, and says how to fix it (fill in Paid on).
+- **Left alone on purpose:** Conversion, Sources, Earned per hour, the Pipeline and Leads lists and the daily email
+  still group by the day the call was booked ("of the calls booked in this period..."). Their revenue for a period can
+  differ from Won so far. Say so if the owner wants those moved to paid dates too.
+- Also fixed: the panel now refreshes from every lead, not just those booked in the chosen period. Before, a lead
+  opened from outside the period kept showing its old values after a save.
+
+**Catalyst: `Leads` needs a `paid_at` column. It has not been created anywhere.**
+- **Development:** console → Project-Rainfall → Development → CloudScale → Data Store → `Leads` → **Schema View** →
+  **+ New Column** → Column Name `paid_at`, Data Type **Var Char**, Max Length `10`, everything else off or empty →
+  **Create**. (Button names are from Catalyst's help page; I did not click through the console.)
+- **Production:** read-only, so there is no direct step. After the Development column exists: Settings (gear) →
+  Environments → Deployments → **Create Deployment** → tick **CloudScale** (and **Serverless** to move `pipeline` in
+  the same deployment) → **Generate Diff** → check it lists the `Leads` column and the `pipeline` change and nothing
+  unexpected → **Initiate Deployment** → **Yes, Proceed**.
+- Existing rows are left as they are. A lead already marked Paid has no paid date until Paid on is filled in.
+- **Safe before the column exists.** The function saves the lead first and the paid date in a second update. If
+  Catalyst refuses that one, the lead is still saved, the reply carries `paid_at_saved: false`, and the tracker says
+  "The paid date wasn't saved: the Leads table may still need its paid_at column." A save that doesn't change the
+  paid date never writes the column at all. A test makes the store refuse the column and checks all of this.
+- **Release order:** column in Development → `pipeline` to Development → console deployment (CloudScale + Serverless)
+  → website. Other orders don't break anything; paid dates are just not kept until column and function are both
+  live. With the new website and the old function, Paid on shows but is dropped without a warning, so do the
+  function first.
+- Checks: tsc, eslint, `next build`, 21 pipeline tests (2 new). In the preview (`/demo/tracker/index.html`): all
+  five periods agree (Month: Total earned $6,765, $4,090 from 4 payments, Won so far $4,090); editing Paid on moves
+  the payment; choosing Paid in the panel and the Move menu both land on today, not the booked date; leaving Paid
+  clears the date; emptying Paid on brings back the booked date and the footnote; the warning shows on all three
+  save paths (tried with a stand-in reply); phone width stacks the fields.
+- Not checked: `/admin` signed in (the local dev setup has no sign-in values now), the real Catalyst refusal (the
+  code does not depend on its wording), a real phone, Safari, light mode for the new field.
+
 ## Branch `assistant-and-tracker-look`: pushed, not merged, not deployed (2026-11-14)
 Asked for: the real knowledge assistant and the real tracker should look and move like their previews on the home
 page, and the tracker should be simpler, with lines that "follow the path of your money".
@@ -81,10 +127,10 @@ page, and the tracker should be simpler, with lines that "follow the path of you
   the list of those payments. Then Needs attention and the reports. Removed: the sparkline, the calls-booked bars
   under the chart, and the Per hour tile (still in the Earned per hour report).
 - **How the line is built:** `moneyPath()` in the browser, from every paid lead. `load()` now also requests
-  `/api/data?range=all` so the line can start from what was earned before the period. No back-end change:
-  `core.js` and its browser copy are untouched.
-- **Limit:** a lead has no paid date, so a payment sits on the day its call was booked (the panel says so). A true
-  paid date needs a `paid_at` column in the Catalyst `Leads` table, which is console work.
+  `/api/data?range=all` so the line can start from what was earned before the period. No back-end change on this
+  branch: `core.js` and its browser copy are untouched here.
+- **Limit, answered on `paid-date` (above):** on this branch a lead has no paid date, so a payment sits on the day
+  its call was booked and the panel says so.
 - **Pipeline:** plain columns; each card has a dot (red late, amber due today, blue upcoming, green paid, grey
   nothing set), name, business, next step and the Move menu. The stage-mix bar is gone. A card that changes column
   travels there with a lifted blue edge (after a drop, from where it was let go).

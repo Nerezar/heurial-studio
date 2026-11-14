@@ -255,3 +255,56 @@ test("works before the Messages table exists, and with a Leads table that has no
   assert.equal((await call(deps, "POST", "/messages", { lead_id: made.body.id, body: "Note" })).status, 503);
   assert.equal((await call(deps, "DELETE", `/leads/${made.body.id}`)).status, 200);
 });
+
+test("paid date: stamped when a lead becomes paid, editable, and cleared when it leaves paid", async () => {
+  const { deps } = setup({ Leads: [{ ROWID: "7", name: "Older Co", status: "paid", booked_at: "2026-10-01", value_cents: 49500 }] });
+  const paidAt = async (id) => (await call(deps, "GET", `/leads/${id}`)).body.paid_at;
+  const patch = (id, body) => call(deps, "PATCH", `/leads/${id}`, body);
+
+  const { body: { id } } = await call(deps, "POST", "/leads", { name: "Pay Co", booked_at: "2026-10-20", value: 495 });
+  assert.equal(await paidAt(id), "");
+  assert.deepEqual((await patch(id, { status: "paid" })).body, { ok: true });
+  assert.equal(await paidAt(id), "2026-11-11"); // today in Chicago, not the booked date
+
+  assert.equal((await patch(id, { paid_at: "2026-11-03" })).status, 200);
+  assert.equal(await paidAt(id), "2026-11-03");
+  await patch(id, { notes: "Paid by card" }); // other edits leave it alone
+  assert.equal(await paidAt(id), "2026-11-03");
+  assert.equal((await patch(id, { paid_at: "11/03/2026" })).body.error, "Paid date must be YYYY-MM-DD.");
+
+  await patch(id, { status: "proposal" }); // no longer paid: no paid date
+  assert.equal(await paidAt(id), "");
+  await patch(id, { status: "paid", paid_at: "2026-11-05" }); // paid again, with the day given
+  assert.equal(await paidAt(id), "2026-11-05");
+  await patch(id, { status: "paid", paid_at: "" }); // emptied on purpose
+  assert.equal(await paidAt(id), "");
+
+  // A lead that was paid before paid dates existed isn't stamped by an unrelated save.
+  await patch("7", { status: "paid", paid_at: "", notes: "Sent the guide" });
+  assert.equal(await paidAt("7"), "");
+
+  // New leads: paid ones get today or the day given; a paid date on an unpaid lead is dropped.
+  const made = async (body) => paidAt((await call(deps, "POST", "/leads", { name: "New Co", ...body })).body.id);
+  assert.equal(await made({ status: "paid" }), "2026-11-11");
+  assert.equal(await made({ status: "paid", paid_at: "2026-10-30" }), "2026-10-30");
+  assert.equal(await made({ status: "booked", paid_at: "2026-10-30" }), "");
+});
+
+test("a Leads table with no paid_at column still saves the lead, and the reply says the date was left out", async () => {
+  const { deps, store } = setup();
+  for (const op of ["insert", "update"]) {
+    const real = store[op].bind(store);
+    store[op] = async (table, row) => { if (table === "Leads" && "paid_at" in row) throw new Error("Invalid input value for column name"); return real(table, row); };
+  }
+  const made = await call(deps, "POST", "/leads", { name: "Early Co", status: "paid", value: 295 });
+  assert.equal(made.status, 201);
+  assert.equal(made.body.paid_at_saved, false);
+  const { id } = (await call(deps, "POST", "/leads", { name: "Later Co" })).body;
+  assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "paid", value: 495 })).body, { ok: true, paid_at_saved: false });
+  const lead = (await call(deps, "GET", `/leads/${id}`)).body;
+  assert.deepEqual([lead.status, lead.value_cents, lead.paid_at], ["paid", 49500, ""]);
+  // Nothing about the paid date is written when it doesn't change, so every other save is untouched.
+  assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "paid", paid_at: "", notes: "Thanks sent" })).body, { ok: true });
+  assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "lost" })).body, { ok: true });
+  assert.equal((await call(deps, "GET", "/data?range=30")).body.summary.revenue_cents, 29500);
+});

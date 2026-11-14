@@ -37,7 +37,7 @@ function cleanLead(body, partial = false, today) {
     out.status = body.status ?? "booked";
     if (!STATUSES.includes(out.status)) throw new Bad("Unknown status.");
   }
-  for (const [key, label, fallback] of [["booked_at", "Booked date", today], ["call_at", "Call date", ""], ["follow_up_at", "Follow-up date", ""]]) {
+  for (const [key, label, fallback] of [["booked_at", "Booked date", today], ["call_at", "Call date", ""], ["follow_up_at", "Follow-up date", ""], ["paid_at", "Paid date", ""]]) {
     if (!partial || has(key)) {
       const v = body[key] || fallback;
       if (v && !DATE.test(v)) throw new Bad(`${label} must be YYYY-MM-DD.`);
@@ -51,6 +51,22 @@ function cleanLead(body, partial = false, today) {
     out.value_cents = Math.round(dollars * 100);
   }
   if (!partial || has("notes")) out.notes = text(body.notes, 4000);
+  return out;
+}
+
+/**
+ * The paid date follows the stage. Becoming paid stamps today unless a date is given; while paid, the date can be
+ * changed or emptied; leaving paid clears it, so a stored date always belongs to a paid lead.
+ * `existing` is the stored row, or null for a new lead. paid_at stays in the result only when it has to be written,
+ * so a Leads table without that column is never asked to store one it doesn't need.
+ */
+function withPaidDate(changes, existing, today) {
+  const was = Boolean(existing) && existing.status === "paid";
+  const had = (existing && existing.paid_at) || "";
+  const paid = (changes.status ?? (existing ? existing.status : "booked")) === "paid";
+  const next = !paid ? "" : changes.paid_at || (!was ? today : changes.paid_at === undefined ? had : "");
+  const out = { ...changes };
+  if (next === had) delete out.paid_at; else out.paid_at = next;
   return out;
 }
 
@@ -77,6 +93,7 @@ function leadFromRow(row, hoursByLead = {}) {
     status: STATUSES.includes(row.status) ? row.status : "booked",
     booked_at: row.booked_at || "",
     call_at: row.call_at || "",
+    paid_at: row.paid_at || "",
     follow_up_at: row.follow_up_at || "",
     follow_up_note: row.follow_up_note || "",
     value_cents: Number(row.value_cents) || 0,
@@ -326,6 +343,6 @@ ${trackerUrl ? `<p style="margin:16px 0 0"><a href="${esc(trackerUrl)}" style="d
 }
 
 module.exports = {
-  Bad, STATUSES, CHANNELS, cleanLead, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
+  Bad, STATUSES, CHANNELS, cleanLead, withPaidDate, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
   inboxFromRows, leadFromInquiry, buildDigest, todayIn, addDays, ID,
 };

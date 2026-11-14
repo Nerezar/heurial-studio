@@ -174,6 +174,18 @@ async function handle(req, res, deps) {
       if (!row) throw new core.Bad("Not found.", 404);
       return row;
     };
+    // The paid date is saved in a write of its own. A Leads table made before the paid_at column existed rejects
+    // it, and the lead itself must still save; the reply then says the date was left out.
+    const savePaidDate = async (id, paid_at) => {
+      if (paid_at === undefined) return {};
+      try {
+        await store.update(TABLES.leads, { ROWID: id, paid_at });
+        return {};
+      } catch (err) {
+        console.error("pipeline: paid date not saved", err && err.message);
+        return { paid_at_saved: false };
+      }
+    };
 
     if (method === "GET" && path === "data") {
       const range = url.searchParams.get("range") || "30";
@@ -182,10 +194,10 @@ async function handle(req, res, deps) {
     }
 
     if (path === "leads" && method === "POST") {
-      const lead = core.cleanLead(await readJson(req), false, today);
+      const { paid_at, ...lead } = core.withPaidDate(core.cleanLead(await readJson(req), false, today), null, today);
       if (!lead.phone) delete lead.phone; // a Leads table made before the phone column existed still accepts this row
       const row = await store.insert(TABLES.leads, { ...lead, inquiry_id: "" });
-      return send(201, { id: String(row.ROWID) });
+      return send(201, { id: String(row.ROWID), ...(await savePaidDate(String(row.ROWID), paid_at)) });
     }
     if ((m = path.match(/^leads\/(\d{1,20})$/))) {
       const id = m[1];
@@ -196,10 +208,10 @@ async function handle(req, res, deps) {
       }
       if (method === "PATCH") {
         const existing = await getLead(id);
-        const changes = core.cleanLead(await readJson(req), true, today);
+        const { paid_at, ...changes } = core.withPaidDate(core.cleanLead(await readJson(req), true, today), existing, today);
         if (changes.phone === "" && !existing.phone) delete changes.phone; // same reason as above
         if (Object.keys(changes).length) await store.update(TABLES.leads, { ...changes, ROWID: id });
-        return send(200, { ok: true });
+        return send(200, { ok: true, ...(await savePaidDate(id, paid_at)) });
       }
       if (method === "DELETE") {
         await getLead(id);

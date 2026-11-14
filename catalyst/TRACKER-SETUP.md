@@ -55,6 +55,17 @@ function the tracker still opens, but the Time page is slower and Connections ca
 | `notes`          | Text          |
 | `inquiry_id`     | Var Char 36   |
 | `phone`          | Var Char 40   |
+| `paid_at`        | Var Char 10   |
+
+`paid_at` is the day a lead's money came in (`YYYY-MM-DD`), and is what places each payment on the Overview line.
+The tracker fills it in by itself: moving a lead to Paid stamps today's date, **Paid on** in the lead panel changes
+it, and moving a lead out of Paid clears it, so only paid leads carry one. A lead that was already paid before this
+column existed has no paid date; its payment sits on the day its call was booked until you fill in **Paid on**.
+
+To add the column to an existing `Leads` table: Data Store → `Leads` → **Schema View** → **+ New Column** → Column
+Name `paid_at`, Data Type **Var Char**, Max Length `10`, everything else left off or empty → **Create**. Do this in
+Development. Production is read-only, so the column gets there with a console deployment that includes CloudScale
+(Settings → Environments → Deployments → Create Deployment). Existing rows are left as they are.
 
 **`TimeEntries`**:
 
@@ -80,6 +91,10 @@ function the tracker still opens, but the Time page is slower and Connections ca
 
 The tracker works before `Messages` exists and before `Leads` has a `phone` column: Connections shows the message log
 as "Not connected", and leads save as long as the phone field is left empty. Add both when you want messages.
+
+It also works before `Leads` has a `paid_at` column. The paid date is saved in a separate step after the lead
+itself, so a lead still saves and can still be moved to Paid; only the date is dropped, and the tracker says so
+("The paid date wasn't saved") each time that happens. Until the column exists every payment sits on its booked date.
 
 **`PushSubscriptions`**: one row per device with notifications turned on (optional, for notifications):
 

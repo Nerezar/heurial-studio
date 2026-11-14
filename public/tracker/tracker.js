@@ -286,6 +286,7 @@
             <label class="field"><span>Date booked</span><input name="booked_at" type="date"></label>
             <label class="field"><span>Call date</span><input name="call_at" type="date"></label>
             <label class="field wide"><span>Value paid or quoted (USD)</span><input name="value" type="number" min="0" step="1" inputmode="decimal" aria-describedby="e-value"><small class="field-err" id="e-value" hidden></small></label>
+            <label class="field" id="paidField" hidden><span>Paid on</span><input name="paid_at" type="date"></label>
           </div>
         </fieldset>
         <fieldset class="fs">
@@ -418,26 +419,30 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (Math.abs(diff) < 1e-9) return `<span class="delta flat" title="${title}">0</span>`;
     return `<span class="delta ${neutral ? "flat" : diff > 0 ? "up" : "down"}" title="${title}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</span>`;
   }
+  /** The day a lead's money came in. A lead paid before paid dates were recorded only has the day its call was booked. */
+  const paidDay = (l) => l.paid_at || l.booked_at;
   /**
    * The money line: everything paid so far, as a running total across the chosen period. It starts from what had
-   * already been earned before the period and steps up on the day of each paid project. A lead only records the day
-   * its call was booked, so that is the day used. Built from the leads themselves, so the line, the total and the
-   * list of payments under it always agree.
+   * already been earned before the period and steps up on the day each project was paid. Built from the leads
+   * themselves, so the line, the total, the Won so far tile and the list of payments under it always agree.
+   * `before` is what the period just before this one added, for the tile's comparison.
    */
   function moneyPath() {
-    const d = state.data;
-    const paid = (state.all || []).filter((l) => l.status === "paid" && l.booked_at && l.value_cents > 0)
-      .sort((a, b) => a.booked_at.localeCompare(b.booked_at));
-    const first = state.range === "all" ? addDays(paid.length ? paid[0].booked_at : d.today, -2) : addDays(d.today, -Number(state.range));
+    const d = state.data, days = Number(state.range);
+    const paid = (state.all || []).filter((l) => l.status === "paid" && paidDay(l) && l.value_cents > 0)
+      .sort((a, b) => paidDay(a).localeCompare(paidDay(b)));
+    const first = state.range === "all" ? addDays(paid.length ? paidDay(paid[0]) : d.today, -2) : addDays(d.today, -days);
+    const prior = state.range === "all" ? "" : addDays(first, -days);
     const span = Math.max(1, dayDiff(d.today, first));
-    let total = 0, start = 0;
+    let total = 0, start = 0, before = 0;
     const steps = [];
     for (const l of paid) {
-      if (l.booked_at < first) start += l.value_cents;
-      else steps.push({ day: Math.max(0, Math.min(span, dayDiff(l.booked_at, first))), total: total + l.value_cents, lead: l });
+      const when = paidDay(l);
+      if (when >= first) steps.push({ day: Math.max(0, Math.min(span, dayDiff(when, first))), total: total + l.value_cents, lead: l });
+      else { start += l.value_cents; if (prior && when >= prior) before += l.value_cents; }
       total += l.value_cents;
     }
-    return { first, span, start, total, steps };
+    return { first, span, start, total, steps, before };
   }
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
   /** Roll the headline figures to their values on first view and whenever they change. */
@@ -462,7 +467,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   /** Three headline figures for Overview, set out like the tracker's preview on the website. */
   function statCards() {
-    const d = state.data, s = d.summary, p = d.previous;
+    const d = state.data, m = moneyPath(), won = m.total - m.start;
     const urgent = urgentCount(d);
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
     const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls")].filter(Boolean).join(" · ");
@@ -470,7 +475,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const cards = [
       ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, ""],
       ["Due today", String(urgent), why || "Nothing due", urgent ? "hot" : "calm"],
-      ["Won so far", money(s.revenue_cents), delta(s.revenue_cents, p && p.revenue_cents, money) || sentence(rangeText()), ""],
+      ["Won so far", money(won), delta(won, m.before, money) || sentence(rangeText()), ""],
     ];
     return `<div class="stats">${cards.map(([label, value, sub, cls]) => `<div class="stat ${cls}">
       <b class="stat-v">${esc(value)}</b><span class="stat-l">${label}</span><span class="stat-s">${sub}</span></div>`).join("")}</div>`;
@@ -552,6 +557,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       : `<b>▲ ${money(gain)}${m.start ? ` (${Math.round((gain / m.start) * 100)}%)` : ""}</b> ${inPeriod()}`;
     const label = `Total earned ${money(m.total)}. ${gain ? `${money(gain)} from ${plural(m.steps.length, "payment")} ${inPeriod()}` : `No payments ${inPeriod()}`}`;
     const who = (l) => `${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}`;
+    const undated = m.steps.filter((x) => !x.lead.paid_at).length;
     return `<section class="pane ov-money" aria-labelledby="moneyTitle">
     <div class="money-head">
       <div><h2 class="stat-l" id="moneyTitle">Total earned</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
@@ -560,10 +566,10 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the payments."></div>
     <h3 class="sub-head">Payments ${inPeriod()}</h3>
     ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map((x) => `<li><button class="ledger-row" type="button" data-action="open" data-id="${x.lead.id}" data-fk="pay-${x.lead.id}">
-      <span class="ledger-when">${niceDate(x.lead.booked_at)}</span><span class="ledger-who">${who(x.lead)}</span><b>+${money(x.lead.value_cents)}</b></button></li>`).join("")}</ul>
+      <span class="ledger-when">${niceDate(paidDay(x.lead))}</span><span class="ledger-who">${who(x.lead)}</span><b>+${money(x.lead.value_cents)}</b></button></li>`).join("")}</ul>
       ${rows.length > 6 ? `<p class="foot-note">And ${rows.length - 6} earlier. Every paid project is listed in Leads.</p>` : ""}`
     : `<p class="foot-note">${m.total ? `No payments ${inPeriod()}.` : "Nothing has been marked Paid yet."} When you move a lead to Paid, its value is added to this line.</p>`}
-    <p class="foot-note">A payment sits on the day its call was booked. The tracker doesn't record a separate paid date.</p>
+    ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}
   </section>`;
   }
 
@@ -1209,8 +1215,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     lead.status = status;
     renderView();
     try {
-      await call("/api/leads/" + id, "PATCH", body);
-      toast(`${lead.name} moved to ${STATUS[status].label}${body.follow_up_at ? `. Follow-up set for ${niceDate(body.follow_up_at)}.` : ""}`);
+      const r = await call("/api/leads/" + id, "PATCH", body);
+      savedNote(r, `${lead.name} moved to ${STATUS[status].label}${body.follow_up_at ? `. Follow-up set for ${niceDate(body.follow_up_at)}.` : ""}`);
     } catch (err) {
       lead.status = before;
       toast(err.message || "Couldn't move the lead.", true);
@@ -1223,8 +1229,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (!d) return;
     // Cells that start with a formula character get a leading quote so spreadsheets don't run them.
     const cell = (v) => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ["name", "business", "email", "phone", "source", "status", "booked_at", "call_at", "follow_up_at", "follow_up_note", "value_usd", "hours", "notes"];
-    const rows = d.leads.map((l) => [l.name, l.business, l.email, l.phone, l.source, l.status, l.booked_at, l.call_at, l.follow_up_at, l.follow_up_note, (l.value_cents / 100).toFixed(2), l.hours, l.notes].map(cell).join(","));
+    const head = ["name", "business", "email", "phone", "source", "status", "booked_at", "call_at", "paid_at", "follow_up_at", "follow_up_note", "value_usd", "hours", "notes"];
+    const rows = d.leads.map((l) => [l.name, l.business, l.email, l.phone, l.source, l.status, l.booked_at, l.call_at, l.paid_at, l.follow_up_at, l.follow_up_note, (l.value_cents / 100).toFixed(2), l.hours, l.notes].map(cell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv" }));
     Object.assign(document.createElement("a"), { href: url, download: `heurial-leads-${d.today}.csv` }).click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -1335,7 +1341,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function syncInspector() {
     if ($("insp").hidden) return;
     if (state.lead && !state.isNew && state.data) {
-      const fresh = state.data.leads.find((l) => l.id === state.lead.id);
+      const fresh = (state.all || state.data.leads).find((l) => l.id === state.lead.id);
       if (fresh) state.lead = fresh;
     }
     paintInspector(!state.dirty && !state.isNew);
@@ -1364,12 +1370,26 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       f.value.value = lead ? lead.value_cents / 100 || "" : "";
       f.booked_at.value = lead ? lead.booked_at : d.today; f.call_at.value = lead ? lead.call_at : ""; f.notes.value = lead ? lead.notes : "";
       f.follow_up_at.value = lead ? lead.follow_up_at : ""; f.follow_up_note.value = lead ? lead.follow_up_note : "";
+      f.paid_at.value = lead ? lead.paid_at || "" : "";
+      paintPaidField();
       const known = ["Referral", "Personal network", "Cold outreach", "Website", "Social media", "Partner", "Other", ...d.leads.map((l) => l.source)];
       $("sourceList").innerHTML = [...new Set(known)].map((s) => `<option>${esc(s)}</option>`).join("");
       state.dirty = false;
       paintFormState("");
     }
     paintComposer();
+  }
+  /** "Paid on" sits beside the value for paid leads only. A lead that is just becoming paid starts on today. */
+  function paintPaidField() {
+    const f = $("leadForm"), paid = f.status.value === "paid";
+    $("paidField").hidden = !paid;
+    f.value.closest(".field").classList.toggle("wide", !paid);
+    if (paid && !f.paid_at.value && !(state.lead && !state.isNew && state.lead.status === "paid")) f.paid_at.value = state.data.today;
+  }
+  /** What to say after a save. The lead itself saved; a Leads table with no paid_at column can't keep its paid date. */
+  function savedNote(r, text) {
+    const undated = Boolean(r && r.paid_at_saved === false);
+    toast(undated ? `${text.replace(/\.?$/, ".")} The paid date wasn't saved: the Leads table may still need its paid_at column.` : text, undated);
   }
   let savedTimer = 0;
   function paintFormState(error) {
@@ -1514,6 +1534,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       touch();
       // Suggest a follow-up when the stage changes, but only into empty fields.
       if (e.target.name !== "status") return;
+      paintPaidField();
       const plan = FOLLOW_PLAN[e.target.value];
       if (!plan || f.follow_up_at.value) return;
       f.follow_up_at.value = addDays(state.data.today, plan[0]);
@@ -1539,20 +1560,20 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       if (bad) { bad.focus(); return; }
       const editing = state.isNew ? null : state.lead;
       const body = { name, business: f.business.value, email, phone: f.phone.value, source: f.source.value, status: f.status.value, value,
-        booked_at: f.booked_at.value, call_at: f.call_at.value, notes: f.notes.value, follow_up_at: f.follow_up_at.value, follow_up_note: f.follow_up_note.value };
+        booked_at: f.booked_at.value, call_at: f.call_at.value, paid_at: f.paid_at.value, notes: f.notes.value, follow_up_at: f.follow_up_at.value, follow_up_note: f.follow_up_note.value };
       const save = $("saveBtn");
       saving = true; save.disabled = true; save.textContent = "Saving…"; paintFormStateNote("");
       try {
         if (editing) {
-          await call("/api/leads/" + editing.id, "PATCH", body);
+          const r = await call("/api/leads/" + editing.id, "PATCH", body);
           state.dirty = false;
           state.savedAt = Date.now();
-          toast(`Saved ${name}`);
+          savedNote(r, `Saved ${name}`);
           await load();
         } else {
           const r = await call("/api/leads", "POST", body);
           state.dirty = false; state.isNew = false;
-          toast(`Added ${name}`);
+          savedNote(r, `Added ${name}`);
           await load();
           if (r && r.id) await openById(r.id); else closeInspector();
         }
