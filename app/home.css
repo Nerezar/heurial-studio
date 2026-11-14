@@ -411,27 +411,69 @@ button.board-node:active { transform: scale(.985); }
 #demos { border-top: 1px solid var(--line); }
 .demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2vw, 26px); }
 .demo-card { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.demo-card:hover, .demo-card:focus-within { border-color: rgb(145 182 255 / .55); }
+/* The whole card is the link: the text link stretches over it. */
+.demo-card .text-link::after { content: ""; position: absolute; inset: 0; }
 .demo-preview {
-  position: relative;
   display: grid;
-  align-content: center;
-  gap: 10px;
-  min-height: 250px;
-  padding: clamp(52px, 5vw, 60px) clamp(18px, 2.6vw, 30px) clamp(18px, 2.6vw, 30px);
+  grid-template-rows: auto 1fr;
+  min-height: 318px;
   border-bottom: 1px solid var(--line);
-  background: #0f1012;
+  background: radial-gradient(110% 70% at 100% 0%, rgb(52 120 246 / .16), transparent 62%), linear-gradient(180deg, #15181d, #0e1013);
 }
-.demo-tag { position: absolute; top: 16px; right: 16px; }
+.demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-bottom: 1px solid rgb(255 255 255 / .08); font-size: .82rem; }
+.demo-bar > span:first-child { display: inline-flex; align-items: center; gap: 9px; color: var(--white); font-weight: 500; }
+.demo-bar > span:first-child svg { color: var(--signal); }
+.demo-view { display: grid; align-content: center; gap: 16px; padding: clamp(16px, 2.4vw, 26px); }
 .demo-body { display: grid; gap: 10px; align-content: start; padding: clamp(20px, 2.8vw, 32px); }
 .demo-body h3 { font-size: clamp(1.5rem, 2.4vw, 2rem); letter-spacing: -.05em; }
 .demo-body p { max-width: 46ch; color: var(--muted); }
-.mini-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 13px; align-items: center; padding: 10px 14px; border-radius: 6px; background: #181a1d; border: 1px solid var(--line); }
-.mini-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-.mini-row b { display: block; color: var(--white); font-size: .92rem; font-weight: 600; }
-.mini-row small { color: var(--muted); font-size: .8rem; }
-.mini-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* Tracker preview: three figures and a small board. One card moves a column to the right. */
+.mini-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mini-stats p { display: grid; gap: 2px; padding: 10px 12px; border-radius: 8px; background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .08); }
+.mini-stats b { color: var(--white); font-size: clamp(1.15rem, 1.9vw, 1.5rem); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; }
+.mini-stats small { overflow: hidden; color: var(--muted); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; }
+.mini-board { --g: 10px; --card: 48px; position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--g); padding-bottom: calc(var(--card) + 8px); }
+.mini-col { display: grid; gap: 8px; align-content: start; }
+.mini-col > small { height: 20px; overflow: hidden; color: var(--muted); font-size: .74rem; line-height: 20px; white-space: nowrap; text-overflow: ellipsis; }
+.mini-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 8px; align-content: center; align-items: center; height: var(--card); padding: 0 10px; border-radius: 7px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); }
+.mini-card i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.mini-card b, .mini-card span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mini-card b { color: var(--white); font-size: .82rem; font-weight: 600; }
+.mini-card span { grid-column: 2; color: var(--muted); font-size: .72rem; }
+.mini-mover { position: absolute; left: 0; top: calc(20px + 8px + var(--card) + 8px); width: calc((100% - 2 * var(--g)) / 3); transform: translateX(calc(100% + var(--g))); }
+@keyframes mini-move {
+  0%, 22% { transform: none; box-shadow: none; }
+  34% { transform: rotate(-1.5deg) scale(1.05); box-shadow: 0 14px 26px rgb(0 0 0 / .5); border-color: var(--signal); }
+  62% { transform: translateX(calc(100% + var(--g))) rotate(1deg) scale(1.05); box-shadow: 0 14px 26px rgb(0 0 0 / .5); border-color: var(--signal); }
+  72%, 100% { transform: translateX(calc(100% + var(--g))); box-shadow: none; }
+}
+
+/* Assistant preview: a question, a moment of typing, an answer and its source. */
+.mini-chat { gap: 10px; }
 .mini-q { justify-self: end; max-width: 80%; padding: 9px 14px; border-radius: 12px 12px 3px 12px; background: var(--paper); color: var(--ink); font-size: .92rem; }
-.mini-a { max-width: 88%; padding: 11px 14px; border-radius: 12px 12px 12px 3px; background: #181a1d; border: 1px solid var(--line); color: var(--text); font-size: .9rem; }
+.mini-turn { position: relative; }
+.mini-a { max-width: 88%; padding: 11px 14px; border-radius: 12px 12px 12px 3px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); color: var(--text); font-size: .9rem; }
+.mini-dots { position: absolute; top: 0; left: 0; display: inline-flex; gap: 5px; padding: 14px; border-radius: 12px 12px 12px 3px; background: #1a1d22; border: 1px solid rgb(255 255 255 / .1); opacity: 0; }
+.mini-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: mini-blink 1s ease-in-out infinite; }
+.mini-dots i:nth-child(2) { animation-delay: .15s; }
+.mini-dots i:nth-child(3) { animation-delay: .3s; }
+.mini-source { width: fit-content; }
+@keyframes mini-blink { 50% { opacity: .3; transform: translateY(-2px); } }
+@keyframes mini-ask { 0%, 6% { opacity: 0; transform: translateY(8px); } 13%, 100% { opacity: 1; transform: none; } }
+@keyframes mini-think { 0%, 15% { opacity: 0; } 20%, 42% { opacity: 1; } 47%, 100% { opacity: 0; } }
+@keyframes mini-answer { 0%, 45% { opacity: 0; transform: translateY(8px); } 53%, 100% { opacity: 1; transform: none; } }
+@keyframes mini-cite { 0%, 58% { opacity: 0; transform: translateY(6px); } 66%, 100% { opacity: 1; transform: none; } }
+
+/* The previews play once when the card scrolls into view and keep looping while it is hovered or focused.
+   Without the reveal script (or with reduced motion) they simply show their finished state. */
+.demo-card:is(.is-visible, :hover, :focus-within) .mini-mover { animation: mini-move 5s var(--ease-out) .5s 1 backwards; }
+.demo-card:is(.is-visible, :hover, :focus-within) .mini-q { animation: mini-ask 6s ease .5s 1 backwards; }
+.demo-card:is(.is-visible, :hover, :focus-within) .mini-dots { animation: mini-think 6s ease .5s 1 backwards; }
+.demo-card:is(.is-visible, :hover, :focus-within) .mini-a { animation: mini-answer 6s ease .5s 1 backwards; }
+.demo-card:is(.is-visible, :hover, :focus-within) .mini-source { animation: mini-cite 6s ease .5s 1 backwards; }
+.demo-card:is(:hover, :focus-within) :is(.mini-mover, .mini-q, .mini-dots, .mini-a, .mini-source) { animation-iteration-count: infinite; }
 
 @media (max-width: 960px) {
   .hero { min-height: 0; }
@@ -462,6 +504,10 @@ button.board-node:active { transform: scale(.985); }
   .calc-result { min-height: 430px; }
 }
 @media (max-width: 560px) {
+  .mini-board { --g: 8px; }
+  .mini-card { gap: 1px 6px; padding: 0 8px; }
+  .mini-stats { gap: 8px; }
+  .mini-stats p { padding: 9px 10px; }
   /* The Source column is dropped on phones so names and needs fit without being cut off. */
   .flow-row { grid-template-columns: 20px 1.1fr 1.35fr .8fr; padding-inline: 12px; font-size: .8rem; }
   .flow-row span:nth-child(4) { display: none; }
@@ -470,5 +516,6 @@ button.board-node:active { transform: scale(.985); }
 @media (prefers-reduced-motion: reduce) {
   .flow-in, .flow-window, .flow-btn.is-primary, .flow-btn.is-primary::after, .flow-caret::after { animation: none; }
   .board .is-new, .board-flash, .board-approve, .board-ring { animation: none; }
+  .demo-card :is(.mini-mover, .mini-q, .mini-dots, .mini-a, .mini-source, .mini-dots i) { animation: none !important; }
   .price-roll > span { transition: none; }
 }

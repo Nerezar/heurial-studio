@@ -80,6 +80,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
+- `demos-polish` is built on `pricing-packages`, so it now carries all five home-page changes and is the one to
+  release. It restyles "See what's possible": each demo card has a window bar and a small live-looking preview (a
+  tracker board where one card moves a column; a chat that types an answer). They play once on scroll and loop on
+  hover. The whole card is the link. The violet chips are gone (the owner wants no purple anywhere).
 - `pricing-packages`: three packages chosen by the owner on 2026-11-13: Quick fix $295 (one simple automation, a few
   days, 7 days of support), One workflow $495 (the founding offer, unchanged), Two workflows $895 (two connected
   workflows, about two weeks, 30 days of support). Home pricing section (`app/page.tsx`, `#pricing`) shows three

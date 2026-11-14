@@ -212,13 +212,19 @@ export default function Home() {
         <div className="demo-grid">
           <article className="glass lift demo-card">
             <div className="demo-preview" aria-hidden="true">
-              <span className="chip demo-tag" style={tone("amber")}>Sample data</span>
-              <div className="mini-row" style={tone("red")}><i /><span><b>Ben Carter</b><small>3 days overdue · Check on the proposal</small></span></div>
-              <div className="mini-row" style={tone("amber")}><i /><span><b>Elena Petrova</b><small>Due today · Send the revised scope</small></span></div>
-              <div className="mini-chips">
-                <span className="chip" style={tone("amber")}>Call booked</span>
-                <span className="chip" style={tone("signal")}>Proposal sent</span>
-                <span className="chip" style={tone("green")}>Paid</span>
+              <div className="demo-bar"><span><Icon name="grid" size={15} />Follow-up tracker</span><span className="chip" style={tone("amber")}>Sample data</span></div>
+              <div className="demo-view">
+                <div className="mini-stats">
+                  <p><b className="num">12</b><small>Open leads</small></p>
+                  <p><b className="num">3</b><small>Due today</small></p>
+                  <p><b className="num">$4,200</b><small>Won so far</small></p>
+                </div>
+                <div className="mini-board">
+                  <div className="mini-col"><small>New</small><div className="mini-card" style={tone("red")}><i /><b>Ben C.</b><span>Overdue</span></div></div>
+                  <div className="mini-col"><small>Proposal sent</small><div className="mini-card" style={tone("signal")}><i /><b>Maya B.</b><span>Sent Tue</span></div></div>
+                  <div className="mini-col"><small>Won</small><div className="mini-card" style={tone("green")}><i /><b>Tom O.</b><span>Paid</span></div></div>
+                  <div className="mini-card mini-mover" style={tone("amber")}><i /><b>Elena P.</b><span>Due today</span></div>
+                </div>
               </div>
             </div>
             <div className="demo-body">
@@ -229,11 +235,14 @@ export default function Home() {
           </article>
           <article className="glass lift demo-card">
             <div className="demo-preview" aria-hidden="true">
-              <span className="chip demo-tag" style={tone("violet")}>Public guides</span>
-              <p className="mini-q">Is my data safe?</p>
-              <p className="mini-a">You own everything HEURIAL builds, and it lives in your accounts.</p>
-              <div className="mini-chips">
-                <span className="chip" style={tone("violet")}><Icon name="book" size={14} />Your data and ownership</span>
+              <div className="demo-bar"><span><Icon name="chat" size={15} />Knowledge assistant</span><span className="chip" style={tone("signal")}>Public guides</span></div>
+              <div className="demo-view mini-chat">
+                <p className="mini-q">Is my data safe?</p>
+                <div className="mini-turn">
+                  <span className="mini-dots"><i /><i /><i /></span>
+                  <p className="mini-a">You own everything HEURIAL builds, and it lives in your accounts.</p>
+                </div>
+                <span className="chip mini-source" style={tone("signal")}><Icon name="book" size={14} />Your data and ownership</span>
               </div>
             </div>
             <div className="demo-body">
