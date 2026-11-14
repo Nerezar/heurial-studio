@@ -4,7 +4,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Design pass (`refero-direction`, 2026-11-14): merged to main on the owner's "Yes, merge it", not deployed.** A full design pass on the website,
+- **Design pass live 2026-11-14 (website `cf3026f`, branch `refero-direction`):** merged to main and deployed to Slate
+  Production, both on the owner's go-ahead. A full design pass on the website,
   guided by the Refero Styles guides for Linear, Ramp and Intercom (rules now in `CLAUDE.md`). Home: the hero is a
   headline and pitch over the workflow board as one wide window, with three facts under it; "Tasks it fits" is
   folded into the problems rows; the calculator is one panel with the result first and a chart legend; pricing is a
@@ -14,8 +15,13 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Contact, About and Guides lost their glows; the Contact form button is secondary so "Pick a time" is the one
   primary. Prices, package contents and promises are unchanged. Checked in the preview on every page at 1440 and
   375 wide and Home at 900: no sideways scroll, no console errors. Not checked: a real phone, Safari, the intro
-  at full speed (the preview pane throttles timers), the tracker (untouched).
-- The live site's slow first load is the host waking up, not the app: `/` is prerendered static in the build.
+  at full speed (the preview pane throttles timers), the tracker (untouched). **Live check after the deploy:** every
+  public page 200, `/admin` 307, the home page serves the new markup at 1200px wide with the blue primary button and
+  no failed requests. The first request after the deploy took 6.0 s, the rest under 1 s.
+- The live site's slow first load is the host waking up, not the app: `/` is prerendered static in the build. A
+  separate session started on 2026-11-14 to find the cause and a fix; nothing from it is merged yet.
+- The Catalyst CLI prints a warning on every deploy: the Node.js it runs on (v26.0.0) has high-severity security
+  bugs fixed in v26.12.1. The owner has been told. Node has not been upgraded.
 - **Site plan 2026-11-12** (pasted by the owner): launch blockers first (B1-B6), then conversion work. New tracker
   features are frozen until a real inquiry flows through. Branch `tracker-settings` (Settings screen) is built and
   pushed but parked for that reason.
