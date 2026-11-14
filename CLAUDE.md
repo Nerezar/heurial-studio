@@ -56,6 +56,12 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
 - Editorial look. The glass style was rejected as looking AI-made.
 
+## Site design (from the Refero Styles guides for Linear, Ramp and Intercom, 2026-11-14)
+- One accent: the blue is for the primary button and for live states inside demos. Links, headings and labels stay neutral.
+- Flat surfaces separated by hairlines. No glows, drop shadows or decorative gradients (the hero and closing keep one plain floor gradient).
+- Content is 1200px wide at most. Text under headings uses three sizes: `--fs-small`, `--fs-body`, `--fs-lead`.
+- Motion is short and has a job. No full-screen page transitions, no animated prices.
+
 ## Tracker
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
