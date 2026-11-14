@@ -82,6 +82,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   compares a year of the task by hand with the same year with a $495 workflow; the shaded gap is what is kept. The
   hours are restated as work weeks (40 h), value of time, and a multiple of the price. All figures are the same
   arithmetic (70% of the task, 50 weeks); the fine print says the money is the value of time, not cash.
+- `flow-polish`: "Watch one run" restyled (`components/workflow-demo.tsx`, the flow block in `app/home.css`). The
+  step list is now a run log on a rail with times; the window lost the fake traffic-light dots and has an app name,
+  time and a blue corner light; each step shows a little more (tags, a typing caret, a tap ring, row numbers, a week
+  strip). Same story, same timing and controls. On phones the rail runs sideways and the Source column is dropped.
 - `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
   Home was looked at.
 

@@ -3,88 +3,78 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icon";
 
-// An example workflow, played step by step. All names and messages are made up.
+// An example workflow, played step by step. All names, times and messages are made up.
 const STAGES = [
-  { key: "arrive", icon: "mail", label: "A lead writes in", note: "9:42 PM, after you’ve closed for the day." },
-  { key: "draft", icon: "spark", label: "A reply is drafted", note: "Written from your own prices, hours, and service area." },
-  { key: "approve", icon: "check", label: "You approve it", note: "One tap from your phone. Nothing sends without your OK." },
-  { key: "log", icon: "table", label: "It’s logged", note: "A new row in the spreadsheet you already use." },
-  { key: "follow", icon: "bell", label: "A follow-up is set", note: "If they go quiet, you get a reminder." },
+  { key: "arrive", icon: "mail", time: "9:42 PM", app: "Inbox", label: "A lead writes in", note: "After you’ve closed for the day." },
+  { key: "draft", icon: "spark", time: "9:43 PM", app: "Draft reply", label: "A reply is drafted", note: "Written from your own prices, hours, and service area." },
+  { key: "approve", icon: "check", time: "9:47 PM", app: "Waiting for you", label: "You approve it", note: "One tap from your phone. Nothing sends without your OK." },
+  { key: "log", icon: "table", time: "9:47 PM", app: "Leads spreadsheet", label: "It’s logged", note: "A new row in the spreadsheet you already use." },
+  { key: "follow", icon: "bell", time: "Thu 9:00 AM", app: "Reminders", label: "A follow-up is set", note: "If they go quiet, you get a reminder." },
 ] as const;
 
 const STEP_MS = 4200;
+const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
+/** What the open window shows at each step. */
 function Stage({ stage }: { stage: (typeof STAGES)[number]["key"] }) {
-  if (stage === "arrive") return (
-    <div className="flow-window">
-      <div className="flow-bar"><i /><i /><i /><span>Inbox</span></div>
-      <div className="flow-body">
-        <div className="flow-mail flow-in">
-          <span className="flow-avatar">DW</span>
-          <div>
-            <p className="flow-from"><b>Dana Whitfield</b><small>Website form · 9:42 PM</small></p>
-            <p>Hi, do you service tankless water heaters? Ours is leaking and I need someone this week.</p>
-          </div>
-        </div>
-        <p className="flow-chip flow-in" style={{ animationDelay: ".5s" }}><Icon name="target" size={14} /> New lead · came from Instagram</p>
+  if (stage === "arrive") return <>
+    <div className="flow-mail flow-in">
+      <span className="flow-avatar">DW</span>
+      <div>
+        <p className="flow-from"><b>Dana Whitfield</b><small>Website form</small></p>
+        <p>Hi, do you service tankless water heaters? Ours is leaking and I need someone this week.</p>
       </div>
     </div>
-  );
-  if (stage === "draft") return (
-    <div className="flow-window">
-      <div className="flow-bar"><i /><i /><i /><span>Draft reply</span></div>
-      <div className="flow-body flow-draft">
-        <p className="flow-in" style={{ animationDelay: ".15s" }}>Hi Dana, thanks for reaching out. Yes, we service tankless water heaters.</p>
-        <p className="flow-in" style={{ animationDelay: ".9s" }}>We have openings Thursday morning or Friday afternoon. A diagnostic visit is $89, credited toward the repair.</p>
-        <p className="flow-in" style={{ animationDelay: "1.65s" }}>Which works better for you?</p>
-        <p className="flow-chip flow-in" style={{ animationDelay: "2.3s" }}><Icon name="book" size={14} /> Used: your price list and this week’s calendar</p>
+    <div className="flow-chips flow-in" style={{ animationDelay: ".5s" }}>
+      <span className="flow-chip"><Icon name="target" size={14} /> New lead</span>
+      <span className="flow-chip">Came from Instagram</span>
+      <span className="flow-chip">After hours</span>
+    </div>
+  </>;
+  if (stage === "draft") return <>
+    <p className="flow-to flow-in">To <b>Dana Whitfield</b></p>
+    <div className="flow-letter">
+      <p className="flow-in" style={{ animationDelay: ".15s" }}>Hi Dana, thanks for reaching out. Yes, we service tankless water heaters.</p>
+      <p className="flow-in" style={{ animationDelay: ".9s" }}>We have openings Thursday morning or Friday afternoon. A diagnostic visit is $89, credited toward the repair.</p>
+      <p className="flow-in flow-caret" style={{ animationDelay: "1.65s" }}>Which works better for you?</p>
+    </div>
+    <div className="flow-chips flow-in" style={{ animationDelay: "2.3s" }}>
+      <span className="flow-chip"><Icon name="book" size={14} /> Your price list</span>
+      <span className="flow-chip"><Icon name="calendar" size={14} /> This week’s calendar</span>
+    </div>
+  </>;
+  if (stage === "approve") return <>
+    <div className="flow-quote flow-in">
+      <small>Reply to Dana Whitfield</small>
+      <p>“Yes, we service tankless water heaters. We have openings Thursday morning or Friday afternoon…”</p>
+      <div className="flow-actions">
+        <span className="flow-btn">Edit</span>
+        <span className="flow-btn is-primary"><Icon name="check" size={15} /> Approve and send</span>
       </div>
     </div>
-  );
-  if (stage === "approve") return (
-    <div className="flow-window">
-      <div className="flow-bar"><i /><i /><i /><span>Waiting for you</span></div>
-      <div className="flow-body">
-        <div className="flow-quote flow-in">
-          <small>Reply to Dana Whitfield</small>
-          <p>“Yes, we service tankless water heaters. We have openings Thursday morning or Friday afternoon…”</p>
-        </div>
-        <div className="flow-actions flow-in" style={{ animationDelay: ".4s" }}>
-          <span className="flow-btn">Edit</span>
-          <span className="flow-btn is-primary"><Icon name="check" size={15} /> Approve and send</span>
-        </div>
-        <p className="flow-chip is-good flow-in" style={{ animationDelay: "2s" }}><Icon name="check" size={14} /> Sent at 9:47 PM</p>
-      </div>
-    </div>
-  );
+    <p className="flow-chip is-good flow-in" style={{ animationDelay: "2s" }}><Icon name="check" size={14} /> Sent at 9:47 PM</p>
+  </>;
   if (stage === "log") return (
-    <div className="flow-window">
-      <div className="flow-bar"><i /><i /><i /><span>Leads spreadsheet</span></div>
-      <div className="flow-body">
-        <div className="flow-table" role="presentation">
-          <div className="flow-row is-head"><span>Name</span><span>Need</span><span>Source</span><span>Status</span></div>
-          <div className="flow-row"><span>M. Bell</span><span>Drain cleaning</span><span>Referral</span><span>Booked</span></div>
-          <div className="flow-row"><span>T. Okafor</span><span>New faucet</span><span>Search</span><span>Quoted</span></div>
-          <div className="flow-row is-new flow-in" style={{ animationDelay: ".5s" }}><span>D. Whitfield</span><span>Tankless leak</span><span>Instagram</span><span>Replied</span></div>
-        </div>
-      </div>
+    <div className="flow-table flow-in" role="presentation">
+      <div className="flow-row is-head"><span /><span>Name</span><span>Need</span><span>Source</span><span>Status</span></div>
+      <div className="flow-row"><span>12</span><span>M. Bell</span><span>Drain cleaning</span><span>Referral</span><span>Booked</span></div>
+      <div className="flow-row"><span>13</span><span>T. Okafor</span><span>New faucet</span><span>Search</span><span>Quoted</span></div>
+      <div className="flow-row is-new flow-in" style={{ animationDelay: ".6s" }}><span>14</span><span>D. Whitfield</span><span>Tankless leak</span><span>Instagram</span><span>Replied</span></div>
     </div>
   );
-  return (
-    <div className="flow-window">
-      <div className="flow-bar"><i /><i /><i /><span>Reminders</span></div>
-      <div className="flow-body">
-        <div className="flow-reminder flow-in">
-          <span className="flow-bell"><Icon name="bell" size={20} /></span>
-          <div>
-            <p><b>Thursday, 9:00 AM</b></p>
-            <p>Check in with Dana if she hasn’t replied.</p>
-          </div>
-        </div>
-        <p className="flow-chip flow-in" style={{ animationDelay: ".6s" }}><Icon name="check" size={14} /> You did one thing: tap approve</p>
+  return <>
+    <div className="flow-week flow-in">
+      {WEEK.map((day) => <span key={day} className={day === "Thu" ? "is-on" : undefined}>{day}{day === "Thu" && <Icon name="bell" size={14} />}</span>)}
+    </div>
+    <div className="flow-reminder flow-in" style={{ animationDelay: ".35s" }}>
+      <span className="flow-bell"><Icon name="bell" size={20} /></span>
+      <div>
+        <p><b>Thursday, 9:00 AM</b></p>
+        <p>Check in with Dana if she hasn’t replied.</p>
       </div>
     </div>
-  );
+    <p className="flow-chip is-good flow-in" style={{ animationDelay: ".8s" }}><Icon name="check" size={14} /> You did one thing: tap approve</p>
+  </>;
 }
 
 export function WorkflowDemo() {
@@ -120,11 +110,12 @@ export function WorkflowDemo() {
       onMouseLeave={() => setHovered(false)}
     >
       <ol className="flow-steps">
-        {STAGES.map(({ key, icon, label, note }, index) => (
+        {STAGES.map(({ key, icon, time, label, note }, index) => (
           <li key={key} className={index === active ? "is-active" : index < active ? "is-done" : undefined}>
             <button type="button" aria-label={label} aria-current={index === active ? "step" : undefined} onClick={() => { setActive(index); setStopped(true); }}>
               <span className="flow-step-icon"><Icon name={index < active ? "check" : icon} size={17} /></span>
               <span className="flow-step-text"><b>{label}</b><small>{note}</small></span>
+              <span className="flow-step-time">{time}</span>
               <span className="flow-progress" aria-hidden="true"><i key={`${active}-${playing}`} /></span>
             </button>
           </li>
@@ -132,9 +123,17 @@ export function WorkflowDemo() {
       </ol>
       <div className="flow-stage">
         <p className="flow-now"><b>{STAGES[active].label}.</b> {STAGES[active].note}</p>
-        <div className="flow-stage-inner" key={active} aria-hidden="true"><Stage stage={STAGES[active].key} /></div>
+        <div className="flow-stage-inner" key={active} aria-hidden="true">
+          <div className="flow-window">
+            <div className="flow-bar">
+              <span className="flow-bar-app"><Icon name={STAGES[active].icon} size={15} />{STAGES[active].app}</span>
+              <span className="num">{STAGES[active].time}</span>
+            </div>
+            <div className="flow-body"><Stage stage={STAGES[active].key} /></div>
+          </div>
+        </div>
         <div className="flow-foot">
-          <p>Example with made-up data.</p>
+          <p><span className="num">Step {active + 1} of {STAGES.length}.</span> Example with made-up data.</p>
           <button type="button" className="flow-toggle" onClick={() => setStopped((s) => !s)} aria-pressed={stopped}>
             <Icon name={stopped ? "play" : "pause"} size={14} /> {stopped ? "Play" : "Pause"}
           </button>
