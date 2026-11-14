@@ -44,10 +44,16 @@ const demo = (() => {
     value_cents: value * 100, notes: "", inquiry_id: "", ...extra,
   });
   const leads = [
+    // Paid work spread over four months, so the money line on Overview has a real path to follow in every period.
+    mk("Nora Castillo", "Castillo Tax Prep", "Personal network", "paid", 118, 295),
+    mk("Leo Brandt", "Brandt Auto Repair", "Referral", "paid", 96, 495),
+    mk("Priya Nair", "Nair Physio", "Website", "paid", 74, 895),
     mk("Dana Whitfield", "Whitfield Plumbing", "Personal network", "paid", 52, 495),
     mk("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 44, 495),
     mk("Greg Haldane", "Haldane Roofing", "Referral", "paid", 33, 1200, { follow_up_at: day(10), follow_up_note: "Ask for a testimonial" }),
     mk("Aisha Rahman", "Rahman Dental", "Referral", "paid", 27, 1500, { follow_up_at: day(14), follow_up_note: "Ask about a second workflow" }),
+    mk("Theo Marsh", "Marsh Veterinary", "Partner", "paid", 16, 895),
+    mk("Jules Okafor", "Okafor Print Shop", "Instagram", "paid", 5, 495),
     mk("Ben Carter", "Carter Law Office", "Website", "proposal", 21, 1500, { follow_up_at: day(-3), follow_up_note: "Check if he's reviewed the proposal", phone: "(555) 010-0142" }),
     mk("Elena Petrova", "Petrova Bookkeeping", "Partner", "proposal", 13, 1200, { follow_up_at: day(0), follow_up_note: "Send the revised scope", phone: "(555) 010-0177" }),
     mk("Chris Doyle", "Doyle Electric", "Instagram", "held", 9, 0, { follow_up_at: day(2), follow_up_note: "Ask about the booking inbox" }),

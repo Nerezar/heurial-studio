@@ -69,6 +69,30 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Branch `assistant-and-tracker-look`: pushed, not merged, not deployed (2026-11-14)
+Asked for: the real knowledge assistant and the real tracker should look and move like their previews on the home
+page, and the tracker should be simpler, with lines that "follow the path of your money".
+- **Assistant** (`components/assistant.tsx`, `app/interiors.css`): a chat. Questions on the right, answers on the
+  left with a chip linking to the passage used, earlier turns kept, suggested questions asked on tap.
+- **Tracker look** (`public/tracker/tracker.css`): the site's font (Inter Tight) and colours, flat panels, hairline
+  borders, 8-10px corners, paper-coloured main button. Glows and the gradient button are gone. Light mode still works.
+- **Overview** (`tracker.js`): three tiles as in the preview (Open leads, Due today, Won so far), then the money
+  panel: Total earned, what the chosen period added, a green step line that rises on the day of each paid lead, and
+  the list of those payments. Then Needs attention and the reports. Removed: the sparkline, the calls-booked bars
+  under the chart, and the Per hour tile (still in the Earned per hour report).
+- **How the line is built:** `moneyPath()` in the browser, from every paid lead. `load()` now also requests
+  `/api/data?range=all` so the line can start from what was earned before the period. No back-end change:
+  `core.js` and its browser copy are untouched.
+- **Limit:** a lead has no paid date, so a payment sits on the day its call was booked (the panel says so). A true
+  paid date needs a `paid_at` column in the Catalyst `Leads` table, which is console work.
+- **Pipeline:** plain columns; each card has a dot (red late, amber due today, blue upcoming, green paid, grey
+  nothing set), name, business, next step and the Move menu. The stage-mix bar is gone. A card that changes column
+  travels there with a lifted blue edge (after a drop, from where it was let go).
+- **Sample data** (`public/demo/tracker/index.html`): nine paid projects over four months instead of four.
+- Checked in the preview: Overview, Pipeline, Leads, the lead panel, light mode, 375px wide, the framed demo on
+  `/products`, and the `/admin` sign-in screen. tsc, eslint, `next build` and the 19 pipeline tests pass.
+- Not checked: `/admin` after sign-in with real data, a real phone, Safari.
+
 ## Live 2026-11-14: opening animation (`b6a2888`)
 - Merged to main by fast-forward (main had not moved) and deployed to Slate Production on the owner's go-ahead.
   Checked live on www.heurial.studio: the intro shows on first load, ends by itself about 2.0 seconds after first

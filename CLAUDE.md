@@ -60,7 +60,8 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
-- Style is a dense TradingView/Palantir-style workspace, not a banking dashboard.
+- Style matches its preview on the home page: the site's font and colours, flat dark panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
+- Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
 - Setup for Catalyst tables and env vars: `catalyst/TRACKER-SETUP.md`.
 
 ## Checks before calling anything done

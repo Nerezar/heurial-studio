@@ -112,7 +112,7 @@
   // ---------- State ----------
   let cfg = null;
   const state = {
-    data: null, loading: true, error: "", online: false, lastSync: 0,
+    data: null, all: [], loading: true, error: "", online: false, lastSync: 0,
     view: "overview", range: "30", loadedRange: "", ovTab: "conversion",
     query: "", facets: { stage: new Set(), source: new Set(), due: new Set() }, sort: { key: "booked_at", dir: "desc" },
     time: null, timeLoading: false,
@@ -186,7 +186,10 @@
 
   async function load() {
     try {
-      state.data = await call("/api/data?range=" + state.range);
+      // The chosen period, and every lead there has ever been: the money line starts from what was earned before the period.
+      const [data, ever] = await Promise.all([call("/api/data?range=" + state.range), state.range === "all" ? null : call("/api/data?range=all")]);
+      state.data = data;
+      state.all = (ever || data).leads;
       state.loadedRange = state.range;
       state.error = "";
       state.online = true;
@@ -416,37 +419,32 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     return `<span class="delta ${neutral ? "flat" : diff > 0 ? "up" : "down"}" title="${title}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</span>`;
   }
   /**
-   * Paid value and calls across the chosen period, split into days, weeks or 30-day blocks. It is built from the same
-   * leads the Revenue figure adds up, so the chart's total always equals that figure.
+   * The money line: everything paid so far, as a running total across the chosen period. It starts from what had
+   * already been earned before the period and steps up on the day of each paid project. A lead only records the day
+   * its call was booked, so that is the day used. Built from the leads themselves, so the line, the total and the
+   * list of payments under it always agree.
    */
-  function series() {
-    const d = state.data, dated = d.leads.filter((l) => l.booked_at);
-    const first = state.range === "all" ? dated.reduce((a, l) => (l.booked_at < a ? l.booked_at : a), d.today) : addDays(d.today, -Number(state.range));
-    const days = (a, b) => Math.round((at(b) - at(a)) / 864e5);
-    const span = Math.max(0, days(first, d.today));
-    const unit = span <= 14 ? 1 : span <= 120 ? 7 : 30;
-    const out = Array.from({ length: Math.floor(span / unit) + 1 }, (_, i) => ({ week: addDays(first, i * unit), booked: 0, paid: 0, revenue_cents: 0 }));
-    for (const l of dated) {
-      const slot = out[Math.min(out.length - 1, Math.max(0, Math.floor(days(first, l.booked_at) / unit)))];
-      slot.booked++;
-      if (l.status === "paid") { slot.paid++; slot.revenue_cents += l.value_cents; }
+  function moneyPath() {
+    const d = state.data;
+    const paid = (state.all || []).filter((l) => l.status === "paid" && l.booked_at && l.value_cents > 0)
+      .sort((a, b) => a.booked_at.localeCompare(b.booked_at));
+    const first = state.range === "all" ? addDays(paid.length ? paid[0].booked_at : d.today, -2) : addDays(d.today, -Number(state.range));
+    const span = Math.max(1, dayDiff(d.today, first));
+    let total = 0, start = 0;
+    const steps = [];
+    for (const l of paid) {
+      if (l.booked_at < first) start += l.value_cents;
+      else steps.push({ day: Math.max(0, Math.min(span, dayDiff(l.booked_at, first))), total: total + l.value_cents, lead: l });
+      total += l.value_cents;
     }
-    out.unit = unit;
-    return out;
+    return { first, span, start, total, steps };
   }
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
-  function spark(values) {
-    const max = Math.max(1, ...values), n = values.length - 1 || 1;
-    const pts = values.map((v, i) => `${((i / n) * 120).toFixed(1)},${(38 - (v / max) * 34).toFixed(1)}`).join(" ");
-    return `<svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
-      <defs><linearGradient id="spG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sp0"/><stop offset="1" class="sp1"/></linearGradient></defs>
-      <polygon points="0,40 ${pts} 120,40" fill="url(#spG)"/><polyline points="${pts}"/></svg>`;
-  }
   /** Roll the headline figures to their values on first view and whenever they change. */
   const shownStats = {};
   function rollStats() {
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.querySelectorAll(".stat").forEach((card) => {
+    document.querySelectorAll(".stat, .money-head").forEach((card) => {
       const el = card.querySelector(".stat-v"), key = card.querySelector(".stat-l").textContent, text = el.textContent;
       const to = Number(text.replace(/[^0-9.]/g, "")), from = shownStats[key] ?? 0;
       if (!/\d/.test(text)) return;
@@ -462,22 +460,20 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       requestAnimationFrame(step);
     });
   }
-  /** Four headline figures for Overview. */
+  /** Three headline figures for Overview, set out like the tracker's preview on the website. */
   function statCards() {
-    const d = state.data, s = d.summary, p = d.previous, w = series();
-    const perHour = s.hours > 0 ? s.revenue_cents / s.hours : null, prevPerHour = p && p.hours > 0 ? p.revenue_cents / p.hours : null;
+    const d = state.data, s = d.summary, p = d.previous;
     const urgent = urgentCount(d);
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
     const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls")].filter(Boolean).join(" · ");
     const open = d.leads.filter((l) => OPEN.includes(l.status));
     const cards = [
-      ["Needs you", String(urgent), why || "Nothing due", urgent ? "hot" : "calm", ""],
-      ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, "", ""],
-      ["Revenue", money(s.revenue_cents), delta(s.revenue_cents, p && p.revenue_cents, money) || `Booked ${inPeriod()}`, "glow", spark(w.map((x) => x.revenue_cents))],
-      ["Per hour", perHour == null ? "–" : money(perHour), delta(perHour, prevPerHour, money) || `${hrs(s.hours)} logged`, "", ""],
+      ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, ""],
+      ["Due today", String(urgent), why || "Nothing due", urgent ? "hot" : "calm"],
+      ["Won so far", money(s.revenue_cents), delta(s.revenue_cents, p && p.revenue_cents, money) || sentence(rangeText()), ""],
     ];
-    return `<div class="stats">${cards.map(([label, value, sub, cls, sp]) => `<div class="stat ${cls}">
-      <span class="stat-l">${label}</span><b class="stat-v">${esc(value)}</b><span class="stat-s">${sub}</span>${sp}</div>`).join("")}</div>`;
+    return `<div class="stats">${cards.map(([label, value, sub, cls]) => `<div class="stat ${cls}">
+      <b class="stat-v">${esc(value)}</b><span class="stat-l">${label}</span><span class="stat-s">${sub}</span></div>`).join("")}</div>`;
   }
   function renderStatus() {
     const demo = cfg.mode === "demo";
@@ -501,6 +497,10 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     let html = state.error ? `<div class="banner" role="alert"><span>${esc(state.error)}</span><button class="btn sm" type="button" data-action="refresh">Try again</button></div>` : "";
     if (!d) html += state.loading ? `<div class="vw pane">${skeleton()}</div>` : "";
     else html += { overview: viewOverview, pipeline: viewPipeline, leads: viewLeads, time: viewTime, messages: viewMessages, connections: viewConnections }[state.view]();
+    // Where each board card sits now, so one that changes column can travel to its new place.
+    const was = new Map([...view.querySelectorAll(".board .card[data-id]")].map((el) => [el.dataset.id, el.getBoundingClientRect()]));
+    if (flyFrom) was.set(flyFrom.id, flyFrom.box);
+    flyFrom = null;
     view.innerHTML = html;
 
     view.querySelectorAll("[data-keep]").forEach((el) => { if (keep[el.dataset.keep]) el.value = keep[el.dataset.keep]; });
@@ -513,6 +513,16 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       }
     }
     if (d && state.view === "overview") { drawChart(); rollStats(); }
+    if (was.size && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      for (const el of view.querySelectorAll(".board .card[data-id]")) {
+        const a = was.get(el.dataset.id), b = el.getBoundingClientRect();
+        if (!a || Math.abs(a.left - b.left) + Math.abs(a.top - b.top) < 2) continue;
+        const across = Math.abs(a.left - b.left) > 40; // it changed column: lift it on the way over
+        if (across) el.classList.add("is-moving");
+        el.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: "none" }], { duration: across ? 640 : 320, easing: "cubic-bezier(.2, .7, .3, 1)" })
+          .onfinish = () => el.classList.remove("is-moving");
+      }
+    }
   }
 
   // ----- Overview -----
@@ -520,25 +530,41 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const d = state.data, urgent = urgentCount(d);
     const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
     const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
-    const w = series(), total = w.reduce((a, x) => a + x.revenue_cents, 0);
-    const label = `Paid project value over ${state.range === "all" ? "all time" : "the " + rangeText()}, by the date each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
     return `<div class="vw ov">
   ${statCards()}
+  ${moneyPane()}
   <section class="pane ov-queue" aria-labelledby="queueTitle">
     <div class="pane-head"><h2 id="queueTitle">Needs attention</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
     <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
-  </section>
-  <section class="pane ov-chart" aria-labelledby="chartTitle">
-    <div class="pane-head"><h2 id="chartTitle">Paid project value</h2><div class="pane-tools read" id="chartRead"></div></div>
-    <p class="chart-note">${sentence(rangeText())}, by booking date. The total matches Revenue.</p>
-    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through it."></div>
   </section>
   <section class="pane ov-tabs" aria-label="Reports">
     <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
     <div class="pane-body" role="tabpanel">${report}</div>
   </section>
 </div>`;
+  }
+  /** The money panel: the total earned, what the chosen period added, the line, and the payments that make it up. */
+  function moneyPane() {
+    const m = moneyPath(), gain = m.total - m.start, rows = m.steps.slice().reverse();
+    const change = !m.total ? "Nothing has been marked Paid yet"
+      : !gain ? `No payments ${inPeriod()}`
+      : `<b>▲ ${money(gain)}${m.start ? ` (${Math.round((gain / m.start) * 100)}%)` : ""}</b> ${inPeriod()}`;
+    const label = `Total earned ${money(m.total)}. ${gain ? `${money(gain)} from ${plural(m.steps.length, "payment")} ${inPeriod()}` : `No payments ${inPeriod()}`}`;
+    const who = (l) => `${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}`;
+    return `<section class="pane ov-money" aria-labelledby="moneyTitle">
+    <div class="money-head">
+      <div><h2 class="stat-l" id="moneyTitle">Total earned</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
+      <div class="read" id="chartRead"></div>
+    </div>
+    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the payments."></div>
+    <h3 class="sub-head">Payments ${inPeriod()}</h3>
+    ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map((x) => `<li><button class="ledger-row" type="button" data-action="open" data-id="${x.lead.id}" data-fk="pay-${x.lead.id}">
+      <span class="ledger-when">${niceDate(x.lead.booked_at)}</span><span class="ledger-who">${who(x.lead)}</span><b>+${money(x.lead.value_cents)}</b></button></li>`).join("")}</ul>
+      ${rows.length > 6 ? `<p class="foot-note">And ${rows.length - 6} earlier. Every paid project is listed in Leads.</p>` : ""}`
+    : `<p class="foot-note">${m.total ? `No payments ${inPeriod()}.` : "Nothing has been marked Paid yet."} When you move a lead to Paid, its value is added to this line.</p>`}
+    <p class="foot-note">A payment sits on the day its call was booked. The tracker doesn't record a separate paid date.</p>
+  </section>`;
   }
 
   function queueHtml() {
@@ -617,7 +643,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       </tbody><tfoot><tr><td colspan="3">All logged hours, including calls that didn't turn into paid work</td><td class="r">${money(overall)}</td></tr></tfoot></table>`;
   }
 
-  // ----- The chart: cumulative revenue as a step line, with calls per week as bars underneath -----
+  // ----- The chart: the running total of paid work across the period, stepping up at each payment -----
   let geo = null, chartSig = "";
   function niceScale(max, ticks) {
     const raw = max / ticks, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
@@ -627,82 +653,74 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function drawChart() {
     const el = $("chart"), d = state.data;
     if (!el || !d) return;
-    const w = series(), n = w.length;
+    const m = moneyPath();
     // The drawing-in animation plays only when the numbers are new, not on every refresh.
-    const sig = state.range + w.map((x) => x.revenue_cents + "," + x.booked).join();
+    const sig = state.range + m.start + m.steps.map((x) => x.day + ":" + x.total).join();
     const fresh = sig !== chartSig;
     chartSig = sig;
     const W = Math.max(280, Math.round(el.clientWidth)), H = Math.max(180, Math.round(el.clientHeight));
-    const x0 = 12, x1 = W - 58, y0 = 14, y1 = H - 24;
-    const volH = Math.max(26, Math.round((y1 - y0) * .22)), pb = y1 - volH - 16; // pb: bottom of the revenue area
-    const band = (x1 - x0) / n, cx = (i) => x0 + band * (i + .5);
-    let run = 0;
-    const cum = w.map((x) => (run += x.revenue_cents) / 100);
-    const { top, step } = niceScale(Math.max(cum[n - 1], 100), H < 260 ? 3 : 4);
-    const py = (v) => pb - (v / top) * (pb - y0);
-    const maxB = Math.max(1, ...w.map((x) => x.booked));
-    const vy = (c) => y1 - (c / maxB) * volH;
-    const bw = Math.max(4, Math.min(24, band * .44));
+    const x0 = 14, x1 = W - 64, y0 = 16, y1 = H - 28;
+    const { top, step } = niceScale(Math.max(m.total / 100, 100), H < 260 ? 3 : 4);
+    const px = (day) => x0 + (day / m.span) * (x1 - x0), py = (cents) => y1 - (cents / 100 / top) * (y1 - y0);
 
     let grid = "";
     for (let v = 0; v <= top + 1e-6; v += step) {
-      const y = Math.round(py(v)) + .5;
-      grid += `<line class="g-grid" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/><text class="g-axis" x="${x1 + 8}" y="${y + 3.5}">${usd(v)}</text>`;
+      const y = Math.round(py(v * 100)) + .5;
+      grid += `<line class="g-grid" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/><text class="g-axis" x="${x1 + 10}" y="${y + 4}">${usd(v)}</text>`;
     }
-    grid += `<line class="g-grid" x1="${x0}" x2="${x1}" y1="${y1 + .5}" y2="${y1 + .5}"/><text class="g-axis" x="${x1 + 8}" y="${Math.round(vy(maxB)) + 3.5}">${maxB}</text>`;
-    // During week i the running total is cum[i]; it steps up at the start of a week that brought revenue.
-    let line = `M${x0},${py(cum[0]).toFixed(1)}H${(x0 + band).toFixed(1)}`;
-    for (let i = 1; i < n; i++) line += `V${py(cum[i]).toFixed(1)}H${(x0 + band * (i + 1)).toFixed(1)}`;
-    const bars = w.map((x, i) => `<rect class="g-vol" x="${(cx(i) - bw / 2).toFixed(1)}" y="${vy(x.booked).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y1 - vy(x.booked)).toFixed(1)}"/>`
-      + (x.paid ? `<rect class="g-vol paid" x="${(cx(i) - bw / 2).toFixed(1)}" y="${vy(x.paid).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y1 - vy(x.paid)).toFixed(1)}"/>` : "")).join("");
-    const every = band < 44 ? 3 : 2;
-    const xl = w.map((x, i) => (i % every ? "" : `<text class="g-axis" text-anchor="middle" x="${cx(i).toFixed(1)}" y="${H - 7}">${niceDate(x.week)}</text>`)).join("");
-    const endY = py(cum[n - 1]);
+    // Flat until a payment, then straight up by its value: the line is the money, not a smoothed guess.
+    let line = `M${x0},${py(m.start).toFixed(1)}`;
+    for (const x of m.steps) line += `H${px(x.day).toFixed(1)}V${py(x.total).toFixed(1)}`;
+    line += `H${x1}`;
+    const pays = m.steps.map((x) => `<circle class="g-pay" cx="${px(x.day).toFixed(1)}" cy="${py(x.total).toFixed(1)}" r="4"/>`).join("");
+    const dates = [0, 1 / 3, 2 / 3, 1].map((f, i) => `<text class="g-axis" text-anchor="${i === 0 ? "start" : i === 3 ? "end" : "middle"}" x="${px(f * m.span).toFixed(1)}" y="${H - 8}">${i === 3 ? "Today" : niceDate(addDays(m.first, Math.round(f * m.span)))}</text>`).join("");
+    const endY = py(m.total).toFixed(1);
     el.innerHTML = `<svg${fresh ? ` class="fresh"` : ""} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ga0"/><stop offset="1" class="ga1"/></linearGradient></defs>
       ${grid}
-      <text class="g-cap" x="${x0}" y="${(y1 - volH - 5).toFixed(1)}">CALLS BOOKED, PAID IN GREEN</text>
-      ${bars}
-      <path class="g-area" d="${line}V${pb}H${x0}Z"/><path class="g-line" pathLength="1" d="${line}"/>
-      <circle class="g-glow" cx="${x1}" cy="${endY.toFixed(1)}" r="7"/><circle class="g-dot" cx="${x1}" cy="${endY.toFixed(1)}" r="3.5"/>
-      <g class="g-tag"><rect x="${x1 + 4}" y="${(endY - 8).toFixed(1)}" width="52" height="16" rx="2"/><text x="${x1 + 8}" y="${(endY + 3.5).toFixed(1)}">${usd(cum[n - 1])}</text></g>
-      ${xl}
-      <g class="g-x" id="gx" visibility="hidden"><rect class="band" id="gxb" y="${y0}" height="${y1 - y0}" width="${band.toFixed(1)}"/><line id="gxv" y1="${y0}" y2="${y1}"/><line id="gxh" x1="${x0}" x2="${x1}"/>
-        <circle class="g-dot" id="gxd" r="3.5"/><g class="g-tag"><rect id="gxr" x="${x1 + 4}" width="52" height="16" rx="2"/><text id="gxt" x="${x1 + 8}"></text></g></g>
+      <path class="g-area" d="${line}V${y1}H${x0}Z"/><path class="g-line" pathLength="1" d="${line}"/>
+      ${pays}
+      <circle class="g-glow" cx="${x1}" cy="${endY}" r="9"/><circle class="g-dot" cx="${x1}" cy="${endY}" r="4"/>
+      ${dates}
+      <g class="g-x" id="gx" visibility="hidden"><line id="gxv" y1="${y0}" y2="${y1}"/><circle class="g-dot" id="gxd" r="5"/></g>
     </svg>`;
-    geo = { w, n, cum, cx, py, x0, band };
-    hoverWeek(-1);
-    el.onpointermove = (e) => { const r = el.getBoundingClientRect(); hoverWeek(Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - x0) / band)))); };
-    el.onpointerleave = () => hoverWeek(-1);
-    el.onblur = () => hoverWeek(-1);
+    geo = { m, px, py, at: -1 };
+    hoverDay(-1);
+    el.onpointermove = (e) => {
+      const x = e.clientX - el.getBoundingClientRect().left;
+      let day = Math.max(0, Math.min(m.span, Math.round(((x - x0) / (x1 - x0)) * m.span)));
+      for (const pay of m.steps) if (Math.abs(px(pay.day) - x) < 14) day = pay.day; // close to a payment, land on it
+      hoverDay(day);
+    };
+    el.onpointerleave = () => hoverDay(-1);
+    el.onblur = () => hoverDay(-1);
     el.onkeydown = (e) => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const days = [...new Set(m.steps.map((x) => x.day))];
+      if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || !days.length) return;
       e.preventDefault();
-      // The first press lands on the latest week; after that the arrows step through the weeks.
-      hoverWeek(geo.at < 0 ? n - 1 : Math.max(0, Math.min(n - 1, geo.at + (e.key === "ArrowRight" ? 1 : -1))));
+      // The first press lands on the latest payment; after that the arrows step through the payments.
+      const i = days.indexOf(geo.at);
+      hoverDay(days[i < 0 ? days.length - 1 : Math.max(0, Math.min(days.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)))]);
     };
   }
-  /** Move the crosshair to a week, or hide it (-1) and show the 12-week totals. */
-  function hoverWeek(i) {
+  /** Move the crosshair to a day of the period, or hide it (-1) and say what the line covers. */
+  function hoverDay(day) {
     const read = $("chartRead"), gx = $("gx");
     if (!geo || !read || !gx) return;
-    geo.at = i;
-    const { w, cum, cx, py, x0, band } = geo;
-    if (i < 0) {
+    geo.at = day;
+    const { m, px, py } = geo;
+    if (day < 0) {
       gx.setAttribute("visibility", "hidden");
-      read.innerHTML = `<span>Total <b>${usd(cum[cum.length - 1])}</b></span><span>Booked <b>${w.reduce((a, x) => a + x.booked, 0)}</b></span><span>Paid <b>${w.reduce((a, x) => a + x.paid, 0)}</b></span>`;
+      read.innerHTML = `<span>${plural(m.steps.length, "payment")} ${inPeriod()}</span>`;
       return;
     }
-    const x = cx(i).toFixed(1), y = py(cum[i]).toFixed(1);
+    const sofar = m.steps.filter((x) => x.day <= day), total = sofar.length ? sofar[sofar.length - 1].total : m.start;
+    const x = px(day).toFixed(1);
     gx.setAttribute("visibility", "visible");
-    $("gxb").setAttribute("x", (x0 + band * i).toFixed(1));
     $("gxv").setAttribute("x1", x); $("gxv").setAttribute("x2", x);
-    $("gxh").setAttribute("y1", y); $("gxh").setAttribute("y2", y);
-    $("gxd").setAttribute("cx", x); $("gxd").setAttribute("cy", y);
-    $("gxr").setAttribute("y", (py(cum[i]) - 8).toFixed(1));
-    $("gxt").setAttribute("y", (py(cum[i]) + 3.5).toFixed(1));
-    $("gxt").textContent = usd(cum[i]);
-    read.innerHTML = `<span>${w.unit === 1 ? "" : w.unit === 7 ? "Week of " : "30 days from "}${niceDate(w[i].week)}</span><span>Value <b>${money(w[i].revenue_cents)}</b></span><span>Total <b>${usd(cum[i])}</b></span><span>Booked <b>${w[i].booked}</b></span><span>Paid <b>${w[i].paid}</b></span>`;
+    $("gxd").setAttribute("cx", x); $("gxd").setAttribute("cy", py(total).toFixed(1));
+    read.innerHTML = `<span>${niceDate(addDays(m.first, day))} · total <b>${money(total)}</b></span>`
+      + sofar.filter((pay) => pay.day === day).map((pay) => `<span class="plus"><b>+${money(pay.lead.value_cents)}</b> ${esc(pay.lead.name)}</span>`).join("");
   }
 
   // ----- Pipeline -----
@@ -710,34 +728,30 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const d = state.data;
     const by = (st) => d.leads.filter((l) => l.status === st);
     const open = d.leads.filter((l) => OPEN.includes(l.status));
-    const mix = d.leads.length ? `<div class="dist" role="img" aria-label="${esc(ORDER.map((st) => `${STATUS[st].label}: ${by(st).length}`).join(", "))}">
-      ${ORDER.filter((st) => by(st).length).map((st) => `<div class="dist-seg" style="--c:var(${STATUS[st].c});flex:${by(st).length}" title="${STATUS[st].label}: ${by(st).length}">${STATUS[st].short}<b>${by(st).length}</b></div>`).join("")}</div>` : "";
     const lanes = ORDER.map((st) => {
       const leads = by(st), total = leads.reduce((a, l) => a + l.value_cents, 0);
-      return `<section class="lane" data-status="${st}" style="--c:var(${STATUS[st].c})" aria-label="${STATUS[st].label}, ${plural(leads.length, "lead")}">
+      return `<section class="lane" data-status="${st}" aria-label="${STATUS[st].label}, ${plural(leads.length, "lead")}">
         <div class="lane-head"><h2>${STATUS[st].label}</h2><span class="count">${leads.length}</span>${total ? `<span class="sum">${money(total)}</span>` : ""}</div>
         <div class="lane-list">${leads.length ? leads.map(cardHtml).join("") : `<div class="lane-empty">No leads at this stage</div>`}</div>
       </section>`;
     }).join("");
     return `<div class="vw pl">
-      <section class="pane" aria-labelledby="mixTitle">
-        <div class="pane-head"><h2 id="mixTitle">Stage mix</h2><span class="pane-meta">${plural(d.leads.length, "lead")} booked ${inPeriod()} · ${open.length} open · ${money(open.reduce((a, l) => a + l.value_cents, 0))} quoted on open leads</span>
-          <span class="pane-tools pane-meta">Drag a card, or use its Move menu</span></div>
-        ${mix ? `<div class="pl-mix">${mix}</div>` : ""}
-      </section>
+      <p class="pl-note">${plural(d.leads.length, "lead")} booked ${inPeriod()} · ${open.length} open · ${money(open.reduce((a, l) => a + l.value_cents, 0))} in play. Drag a card to another column, or use its Move menu.</p>
       <div class="board" data-scroll="board">${lanes}</div>
     </div>`;
   }
+  /** One lead on the board: a dot for how urgent it is, the name, the business, and what happens next. */
   function cardHtml(l) {
-    const next = l.follow_up_at ? `<span>${esc(l.follow_up_note || "Follow up")}</span>${dueTag(l.follow_up_at)}` : `<span>No follow-up set</span><span></span>`;
-    return `<article class="card ${state.lead && state.lead.id === l.id ? "is-selected" : ""}${state.touched === l.id ? " is-touched" : ""}" data-id="${l.id}">
-      <div class="card-top"><button class="card-name" type="button" data-action="open" data-id="${l.id}" data-fk="card-${l.id}">${esc(l.name)}</button>${l.value_cents ? `<span class="num">${money(l.value_cents)}</span>` : ""}</div>
+    const x = l.follow_up_at ? due(l.follow_up_at) : null;
+    const c = x && x.cls === "late" ? "--down" : x && x.cls === "today" ? "--warn" : l.status === "paid" ? "--up" : x ? "--accent" : "--mute";
+    const next = x ? `${x.long}${l.follow_up_note ? " · " + esc(l.follow_up_note) : ""}` : l.status === "paid" ? "Paid" : "No follow-up set";
+    return `<article class="card ${state.lead && state.lead.id === l.id ? "is-selected" : ""}${state.touched === l.id ? " is-touched" : ""}" data-id="${l.id}" style="--c:var(${c})" title="Source: ${esc(l.source)} · booked ${niceDate(l.booked_at)}">
+      <div class="card-top"><i class="card-dot"></i><button class="card-name" type="button" data-action="open" data-id="${l.id}" data-fk="card-${l.id}">${esc(l.name)}</button>${l.value_cents ? `<span class="num">${money(l.value_cents)}</span>` : ""}</div>
       <div class="card-biz">${esc(l.business || "No business name")}</div>
-      <div class="card-next">${next}</div>
-      <div class="card-foot"><span title="Source: ${esc(l.source)} · booked ${niceDate(l.booked_at)}">${esc(l.source)} · ${niceDate(l.booked_at)}</span>
-        <select class="in" data-change="move" data-id="${l.id}" data-fk="move-${l.id}" aria-label="Move ${esc(l.name)} to another stage">
-          ${ORDER.map((st) => `<option value="${st}" ${st === l.status ? "selected" : ""}>${st === l.status ? "Move…" : STATUS[st].label}</option>`).join("")}
-        </select></div>
+      <div class="card-next ${x ? x.cls : ""}">${next}</div>
+      <select class="in" data-change="move" data-id="${l.id}" data-fk="move-${l.id}" aria-label="Move ${esc(l.name)} to another stage">
+        ${ORDER.map((st) => `<option value="${st}" ${st === l.status ? "selected" : ""}>${st === l.status ? "Move…" : STATUS[st].label}</option>`).join("")}
+      </select>
     </article>`;
   }
 
@@ -1218,7 +1232,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
 
   // ---------- Pipeline drag and drop (mouse, trackpad and touch; press and hold on phones) ----------
-  let drag = null, suppressClick = false;
+  let drag = null, suppressClick = false, flyFrom = null; // flyFrom: where a dropped card was let go, so it travels on from there
   function bindDrag(view) {
     view.addEventListener("pointerdown", (e) => {
       const card = e.target.closest(".board .card");
@@ -1252,6 +1266,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     window.addEventListener("pointerup", (e) => {
       if (!drag || e.pointerId !== drag.pid) return;
       const { active, lane, id } = drag;
+      if (active && lane && drag.ghost) flyFrom = { id, box: drag.ghost.getBoundingClientRect() };
       cancelDrag();
       if (!active) return;
       suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);

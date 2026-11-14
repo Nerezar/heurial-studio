@@ -29,7 +29,7 @@ export function Assistant() {
   async function ask(text: string) {
     const asked = text.trim();
     if (busy || asked.length < 3) return;
-    const id = Date.now();
+    const id = turns.length; // turns are only ever added, and one at a time, so its place in the list names it
     setBusy(true);
     setQuestion("");
     setTurns((all) => [...all, { id, question: asked }]);
