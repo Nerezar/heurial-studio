@@ -69,6 +69,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Pushed, not merged (2026-11-13)
+- `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
+  Home was looked at.
+- `hero-board`: interactive hero visual `components/flow-board.tsx` replaces the abstract canvas (`system-field.tsx`
+  is kept, unused, so switching back is a two-line change in `app/page.tsx`). Three tasks on the left, the workflow in
+  the middle, four tools on the right; replies wait for an Approve tap (the demo taps by itself after 3.8 s).
+  On phones it sits below the hero buttons. Checked in the preview at 375, 1024 and 1366 px; reduced motion and a
+  real phone are unchecked.
+
 ## Merged to main at `88c7400`: calmer tracker design, not deployed
 - The user found the tracker too dense and asked for a calmer, roomier look with colour, glow and gradients
   (reference shots: dark dashboards with big figures and rounded cards). Restyled `public/tracker/tracker.css`

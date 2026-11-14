@@ -1,8 +1,8 @@
+import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
-import { SystemField } from "@/components/system-field";
 import { WorkflowDemo } from "@/components/workflow-demo";
 import { tone } from "@/lib/style";
 import "./home.css";
@@ -70,8 +70,8 @@ export default function Home() {
             <li><Icon name="check" size={15} />You own everything</li>
           </ul>
         </div>
-        <div className="hero-visual" aria-hidden="true">
-          <SystemField />
+        <div className="hero-visual is-board">
+          <FlowBoard />
         </div>
       </div>
       <div className="wrap hero-tools">
