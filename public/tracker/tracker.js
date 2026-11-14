@@ -27,7 +27,7 @@
   };
   // When a lead reaches one of these stages and has no follow-up, suggest one.
   const FOLLOW_PLAN = { held: [3, "Send a follow-up after the call"], proposal: [3, "Check in on the proposal"], paid: [14, "Ask for a testimonial"] };
-  const RANGES = [["7", "7D", "last 7 days"], ["30", "30D", "last 30 days"], ["90", "90D", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "All", "all time"]];
+  const RANGES = [["7", "Week", "last 7 days"], ["30", "Month", "last 30 days"], ["90", "3 months", "last 90 days"], ["365", "Year", "last 12 months"], ["all", "All", "all time"]];
   const VIEWS = {
     overview: ["Overview", "overview"], pipeline: ["Pipeline", "pipeline"], leads: ["Leads", "leads"], time: ["Time", "time"],
     messages: ["Messages", "messages"], connections: ["Connections", "plug"],
@@ -395,16 +395,36 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (Math.abs(diff) < 1e-9) return `<span class="delta flat" title="${title}">0</span>`;
     return `<span class="delta ${neutral ? "flat" : diff > 0 ? "up" : "down"}" title="${title}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</span>`;
   }
+  /**
+   * Paid value and calls across the chosen period, split into days, weeks or 30-day blocks. It is built from the same
+   * leads the Revenue figure adds up, so the chart's total always equals that figure.
+   */
+  function series() {
+    const d = state.data, dated = d.leads.filter((l) => l.booked_at);
+    const first = state.range === "all" ? dated.reduce((a, l) => (l.booked_at < a ? l.booked_at : a), d.today) : addDays(d.today, -Number(state.range));
+    const days = (a, b) => Math.round((at(b) - at(a)) / 864e5);
+    const span = Math.max(0, days(first, d.today));
+    const unit = span <= 14 ? 1 : span <= 120 ? 7 : 30;
+    const out = Array.from({ length: Math.floor(span / unit) + 1 }, (_, i) => ({ week: addDays(first, i * unit), booked: 0, paid: 0, revenue_cents: 0 }));
+    for (const l of dated) {
+      const slot = out[Math.min(out.length - 1, Math.max(0, Math.floor(days(first, l.booked_at) / unit)))];
+      slot.booked++;
+      if (l.status === "paid") { slot.paid++; slot.revenue_cents += l.value_cents; }
+    }
+    out.unit = unit;
+    return out;
+  }
+  const sentence = (text) => text[0].toUpperCase() + text.slice(1);
   function spark(values) {
     const max = Math.max(1, ...values), n = values.length - 1 || 1;
     const pts = values.map((v, i) => `${((i / n) * 120).toFixed(1)},${(38 - (v / max) * 34).toFixed(1)}`).join(" ");
-    return `<svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true"><title>Last 12 weeks</title>
+    return `<svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
       <defs><linearGradient id="spG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sp0"/><stop offset="1" class="sp1"/></linearGradient></defs>
       <polygon points="0,40 ${pts} 120,40" fill="url(#spG)"/><polyline points="${pts}"/></svg>`;
   }
   /** Four headline figures for Overview. */
   function statCards() {
-    const d = state.data, s = d.summary, p = d.previous, w = d.weekly;
+    const d = state.data, s = d.summary, p = d.previous, w = series();
     const perHour = s.hours > 0 ? s.revenue_cents / s.hours : null, prevPerHour = p && p.hours > 0 ? p.revenue_cents / p.hours : null;
     const urgent = urgentCount(d);
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
@@ -460,8 +480,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const d = state.data, urgent = urgentCount(d);
     const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
     const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
-    const w = d.weekly, total = w.reduce((a, x) => a + x.revenue_cents, 0);
-    const label = `Paid project value over the last 12 weeks, by the week each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
+    const w = series(), total = w.reduce((a, x) => a + x.revenue_cents, 0);
+    const label = `Paid project value over ${state.range === "all" ? "all time" : "the " + rangeText()}, by the date each call was booked: ${money(total)} from ${plural(w.reduce((a, x) => a + x.paid, 0), "paid project")} out of ${plural(w.reduce((a, x) => a + x.booked, 0), "call")} booked`;
     return `<div class="vw ov">
   ${statCards()}
   <section class="pane ov-queue" aria-labelledby="queueTitle">
@@ -471,8 +491,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   </section>
   <section class="pane ov-chart" aria-labelledby="chartTitle">
     <div class="pane-head"><h2 id="chartTitle">Paid project value</h2><div class="pane-tools read" id="chartRead"></div></div>
-    <p class="chart-note">Last 12 weeks, by the week the call was booked.</p>
-    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to read each week."></div>
+    <p class="chart-note">${sentence(rangeText())}, by booking date. The total matches Revenue.</p>
+    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through it."></div>
   </section>
   <section class="pane ov-tabs" aria-label="Reports">
     <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
@@ -558,7 +578,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
 
   // ----- The chart: cumulative revenue as a step line, with calls per week as bars underneath -----
-  let geo = null;
+  let geo = null, chartSig = "";
   function niceScale(max, ticks) {
     const raw = max / ticks, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
     const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
@@ -567,7 +587,11 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function drawChart() {
     const el = $("chart"), d = state.data;
     if (!el || !d) return;
-    const w = d.weekly, n = w.length;
+    const w = series(), n = w.length;
+    // The drawing-in animation plays only when the numbers are new, not on every refresh.
+    const sig = state.range + w.map((x) => x.revenue_cents + "," + x.booked).join();
+    const fresh = sig !== chartSig;
+    chartSig = sig;
     const W = Math.max(280, Math.round(el.clientWidth)), H = Math.max(180, Math.round(el.clientHeight));
     const x0 = 12, x1 = W - 58, y0 = 14, y1 = H - 24;
     const volH = Math.max(26, Math.round((y1 - y0) * .22)), pb = y1 - volH - 16; // pb: bottom of the revenue area
@@ -594,12 +618,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const every = band < 44 ? 3 : 2;
     const xl = w.map((x, i) => (i % every ? "" : `<text class="g-axis" text-anchor="middle" x="${cx(i).toFixed(1)}" y="${H - 7}">${niceDate(x.week)}</text>`)).join("");
     const endY = py(cum[n - 1]);
-    el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    el.innerHTML = `<svg${fresh ? ` class="fresh"` : ""} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ga0"/><stop offset="1" class="ga1"/></linearGradient></defs>
       ${grid}
       <text class="g-cap" x="${x0}" y="${(y1 - volH - 5).toFixed(1)}">CALLS BOOKED, PAID IN GREEN</text>
       ${bars}
-      <path class="g-area" d="${line}V${pb}H${x0}Z"/><path class="g-line" d="${line}"/>
+      <path class="g-area" d="${line}V${pb}H${x0}Z"/><path class="g-line" pathLength="1" d="${line}"/>
       <circle class="g-glow" cx="${x1}" cy="${endY.toFixed(1)}" r="7"/><circle class="g-dot" cx="${x1}" cy="${endY.toFixed(1)}" r="3.5"/>
       <g class="g-tag"><rect x="${x1 + 4}" y="${(endY - 8).toFixed(1)}" width="52" height="16" rx="2"/><text x="${x1 + 8}" y="${(endY + 3.5).toFixed(1)}">${usd(cum[n - 1])}</text></g>
       ${xl}
@@ -638,7 +662,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("gxr").setAttribute("y", (py(cum[i]) - 8).toFixed(1));
     $("gxt").setAttribute("y", (py(cum[i]) + 3.5).toFixed(1));
     $("gxt").textContent = usd(cum[i]);
-    read.innerHTML = `<span>Wk of ${niceDate(w[i].week)}</span><span>Value <b>${money(w[i].revenue_cents)}</b></span><span>Total <b>${usd(cum[i])}</b></span><span>Booked <b>${w[i].booked}</b></span><span>Paid <b>${w[i].paid}</b></span>`;
+    read.innerHTML = `<span>${w.unit === 1 ? "" : w.unit === 7 ? "Week of " : "30 days from "}${niceDate(w[i].week)}</span><span>Value <b>${money(w[i].revenue_cents)}</b></span><span>Total <b>${usd(cum[i])}</b></span><span>Booked <b>${w[i].booked}</b></span><span>Paid <b>${w[i].paid}</b></span>`;
   }
 
   // ----- Pipeline -----
@@ -918,12 +942,17 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   // ---------- Actions ----------
   function setView(next) {
     if (!VIEWS[next]) return;
-    state.view = next;
-    store("hp-view", next);
-    render();
-    $("view").scrollTop = 0;
-    if (getComputedStyle(document.body).overflow !== "hidden") window.scrollTo(0, 0);
-    if (next === "time") ensureTime();
+    const swap = () => {
+      state.view = next;
+      store("hp-view", next);
+      render();
+      $("view").scrollTop = 0;
+      if (getComputedStyle(document.body).overflow !== "hidden") window.scrollTo(0, 0);
+      if (next === "time") ensureTime();
+    };
+    // Where the browser can, the old section lifts away and the new one rises in (styled in tracker.css).
+    if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(swap);
+    else swap();
   }
   function setRange(range) {
     if (range === state.range) return;
