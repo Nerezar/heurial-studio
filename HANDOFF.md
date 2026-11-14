@@ -78,6 +78,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
 
 ## Pushed, not merged (2026-11-13)
+- `calc-impact`: home page calculator reworked. New "People who do it" slider (1-10, default 1). The chart now
+  compares a year of the task by hand with the same year with a $495 workflow; the shaded gap is what is kept. The
+  hours are restated as work weeks (40 h), value of time, and a multiple of the price. All figures are the same
+  arithmetic (70% of the task, 50 weeks); the fine print says the money is the value of time, not cash.
 - `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
   Home was looked at.
 
