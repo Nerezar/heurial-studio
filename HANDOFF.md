@@ -70,17 +70,24 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
 ## Branch `intro-animation`: pushed, not merged, not deployed (2026-11-14)
-- Opening animation on the home page only: the tiger lands, breathes fire, and the page burns through from where
-  the fire lands. About two seconds. `components/intro.tsx`, styles at the end of `app/home.css`, one line in
-  `app/page.tsx`.
+- Opening animation on the home page only, about two seconds: the tiger lands and breathes blue pixel fire. The fire
+  flies into the page's own words and buttons, burns there as pixels, cools into code characters, and leaves the real
+  page. `components/intro.tsx`, styles at the end of `app/home.css`, one line in `app/page.tsx`.
+- The owner rejected the first version (soft, realistic orange fire that spread as a ring): "too hard to look real".
+  Asked for pixelated and code-like, blue, and for the fire to end up in the text and buttons instead of flying off.
+- How it knows where the text is: at the moment the fire starts it redraws the visible text, letter by letter where
+  the browser placed it, plus `.button`, `button` and the header logo, onto a small hidden canvas and marks the grid
+  squares that have ink (`contentMap`). Nothing in the page needs marking up for this.
 - Shows once per browser tab (sessionStorage `heurial-intro`), never under reduced motion, never on a page change
   back to home. Any tap, key or scroll skips it. To see it again: open the site in a new tab.
 - It is hidden by default and an inline script shows it during page load, so with scripts off the page is just the
-  page. If the script that runs it never arrives, CSS fades it out after 4 seconds.
+  page. If the script that runs it never arrives, CSS fades it out after 4 seconds. A cap ends it at 2.6 seconds of
+  animation whatever happens.
 - The emblem path is copied into `intro.tsx` (split into body and mouth flame). If `public/brand/emblem.svg` ever
   changes, update `BODY`, `WISP` and `MOUTH` there.
-- Checked in the preview at phone and desktop sizes: 60 frames a second, no console errors, skip, reload, page
-  change and the CSS fallback all behave. Not checked: a real phone, Safari, reduced-motion mode.
+- Checked in the preview at 1440x900, 583x744 and 375x812: about 2.0 seconds from first paint, 60 frames a second,
+  no console errors; skip, reload, page change and the CSS fallback all behave. Not checked: a real phone, Safari,
+  reduced-motion mode.
 
 ## Live 2026-11-13: interactive hero (`dcd870f`)
 - Merged to main and deployed to Slate Production. `components/flow-board.tsx` replaces the abstract canvas in the

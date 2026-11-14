@@ -13,70 +13,134 @@ const MOUTH = { x: 334, y: 95 };
 const SHOW = `(function(s){try{if(sessionStorage.getItem("heurial-intro")||matchMedia("(prefers-reduced-motion: reduce)").matches)return;sessionStorage.setItem("heurial-intro","1");s.parentElement.previousElementSibling.hidden=false}catch(e){}})(document.currentScript)`;
 
 // Seconds after the tiger has landed.
-const IGNITE = .25;
-const BURN = .8;
-const BURN_TIME = .7;
-const JET_END = 1.15;
+const IGNITE = .25; // the fire starts
+const JET_END = .75; // the tiger stops breathing
+const HOLD = .24; // how long a square of text or button burns before it becomes the real thing
 
-const FIRE = { core: "255, 238, 205", body: "255, 132, 36", edge: "214, 52, 14" };
+const VEIL = "#0b0c0e"; // the page background (--bg)
+// The fire is drawn on a grid in the site's blue: solid pixels where it is hottest, code characters as it cools.
+const SHADES = ["#f1f6ff", "#a9c8ff", "#3478f6", "#2257c4", "#163a80"];
+const LEVELS = [2.2, 1.1, .4, .17, .06]; // the heat a square needs for each shade
+const PIXELS = 3; // the first three shades are solid pixels, the rest are characters
+const GLYPHS = "{}[]<>/=;:+*01#$";
 
-type Ember = { x: number; y: number; vx: number; vy: number; age: number; life: number; size: number; drag: number; lift: number; sway: number; wob: number; hot: number; spark: boolean };
+type Ember = { vx: number; vy: number; age: number; life: number; size: number; to: number };
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const span = (t: number, from: number, to: number) => clamp((t - from) / (to - from));
 const ease = (x: number) => 1 - (1 - x) ** 3;
 const rand = (from: number, to: number) => from + Math.random() * (to - from);
 
-/** A soft round glow in one colour. Flames are many of these added on top of each other. */
-function glow(rgb: string) {
-  const sprite = document.createElement("canvas");
-  sprite.width = sprite.height = 64;
-  const g = sprite.getContext("2d");
-  if (!g) return sprite;
-  const fill = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  fill.addColorStop(0, `rgba(${rgb}, 1)`);
-  fill.addColorStop(.4, `rgba(${rgb}, .42)`);
-  fill.addColorStop(1, `rgba(${rgb}, 0)`);
-  g.fillStyle = fill;
-  g.fillRect(0, 0, 64, 64);
-  return sprite;
+/**
+ * Which grid squares the page's own words and buttons cover. The page is already laid out under the veil, so its
+ * text is redrawn here, letter by letter where the browser put it, and each square is checked for ink.
+ */
+function contentMap(cols: number, rows: number, c: number) {
+  const S = 3; // samples across one square
+  const found = new Uint8Array(cols * rows);
+  const sheet = document.createElement("canvas");
+  sheet.width = cols * S;
+  sheet.height = rows * S;
+  const g = sheet.getContext("2d", { willReadFrequently: true });
+  if (!g) return found;
+  g.scale(S / c, S / c);
+  g.textBaseline = "bottom";
+  const seen = (box: DOMRect) => box.width > 0 && box.bottom > 0 && box.top < rows * c && box.right > 0 && box.left < cols * c;
+
+  for (const el of document.querySelectorAll("header .button, main .button, main button, header img")) {
+    const box = el.getBoundingClientRect();
+    if (seen(box) && !el.closest(".intro")) g.fillRect(box.left, box.top, box.width, box.height);
+  }
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const el = node.parentElement;
+    const text = node.nodeValue ?? "";
+    if (!el || !text.trim() || el.closest(".intro, .sr-only, .skip-link, .reveal:not(.is-visible), script, style")) continue;
+    range.selectNodeContents(node);
+    if (!seen(range.getBoundingClientRect())) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || style.opacity === "0") continue;
+    g.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      if (code <= 32 || (code >= 0xd800 && code <= 0xdfff)) continue;
+      range.setStart(node, i);
+      range.setEnd(node, i + 1);
+      const box = range.getBoundingClientRect();
+      if (seen(box)) g.fillText(style.textTransform === "uppercase" ? text[i].toUpperCase() : text[i], box.left, box.bottom);
+    }
+  }
+
+  const ink = g.getImageData(0, 0, sheet.width, sheet.height).data;
+  for (let j = 0, n = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++, n++) {
+      let sum = 0;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sum += ink[((j * S + y) * sheet.width + i * S + x) * 4 + 3];
+      if (sum > S * S * 255 * .07) found[n] = 1; // small text is faint at this size, so a little ink is enough
+    }
+  }
+  return found;
 }
 
 /** Plays the intro once and hides it. Returns the clean-up. */
 function play(root: HTMLDivElement) {
-  const canvas = root.querySelector("canvas");
+  // Two layers with the tiger between them: the dark veil underneath, the fire on top.
+  const [under, over] = root.querySelectorAll("canvas");
   const tiger = root.querySelector<SVGSVGElement>(".intro-tiger");
-  const heat = root.querySelector<SVGElement>(".intro-heat");
+  const lit = root.querySelector<SVGElement>(".intro-heat");
   const wisp = root.querySelector<SVGElement>(".intro-wisp");
-  const ctx = canvas?.getContext("2d");
+  const veil = under?.getContext("2d");
+  const ctx = over?.getContext("2d");
   // Too late (the stylesheet already faded it out) or no canvas: just get out of the way.
-  if (!canvas || !ctx || !tiger || !heat || !wisp || getComputedStyle(root).visibility === "hidden") {
+  if (!veil || !ctx || !tiger || !lit || !wisp || getComputedStyle(root).visibility === "hidden") {
     root.hidden = true;
     return;
   }
-  root.classList.add("is-live");
 
   const W = window.innerWidth;
   const H = window.innerHeight;
-  canvas.width = W;
-  canvas.height = H;
+  // Sharp on ordinary screens, but never more than about six million pixels a layer on very large ones.
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(6e6 / (W * H))));
+  // One grid square in screen pixels. A whole number, so cleared squares leave no hairlines between them.
+  const cell = Math.round(Math.min(Math.max(Math.min(W, H) / 64, 9), 15) * dpr);
+  const c = cell / dpr;
+  const cols = Math.ceil(W / c);
+  const rows = Math.ceil(H / c);
+  const gap = Math.round(dpr);
+  for (const layer of [under, over]) {
+    layer.width = cols * cell;
+    layer.height = rows * cell;
+    layer.style.width = `${cols * c}px`;
+    layer.style.height = `${rows * c}px`;
+  }
+  veil.fillStyle = VEIL;
+  veil.fillRect(0, 0, under.width, under.height);
+  // From here the canvas itself is the dark veil, and the stylesheet's own fade-out is switched off.
+  root.classList.add("is-live");
+  ctx.font = `600 ${Math.round(cell * .92)}px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
   const k = Math.min(W, H * 1.6) / 1200; // one scale for speeds and sizes, so a phone and a desktop look alike
-  const core = glow(FIRE.core);
-  const body = glow(FIRE.body);
-  const edge = glow(FIRE.edge);
+  const heat = new Float32Array(cols * rows);
+  const open = new Uint8Array(cols * rows); // squares where the veil is gone and the page shows
+  const at = new Float32Array(cols * rows).fill(Infinity); // when the fire reaches each square
+  const grain = Float32Array.from({ length: cols * rows }, Math.random);
   const entrance = tiger.getAnimations()[0];
   const embers: Ember[] = [];
 
   let raf = 0;
   let last = performance.now();
   let t = 0;
-  let jetOwed = 0;
-  let ringOwed = 0;
+  let owed = 0;
+  let sent = 0;
+  let rush = 1; // drops once the jet is over, so the last of the dark clears quickly however empty the page is
   let fade = 1;
   let skipping = false;
   let mouth: { x: number; y: number } | null = null;
-  let centre = { x: 0, y: 0 };
-  let reach = 0;
+  let content = new Uint8Array(0);
+  let targets: number[] = [];
 
   const skip = () => { skipping = true; };
   const skipOn = ["pointerdown", "keydown", "wheel", "touchmove"] as const;
@@ -94,10 +158,22 @@ function play(root: HTMLDivElement) {
     if (window.innerWidth !== W) finish();
   }
 
-  const dot = (sprite: HTMLCanvasElement, x: number, y: number, size: number, alpha: number) => {
-    if (alpha < .01) return;
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(sprite, x - size / 2, y - size / 2, size, size);
+  /** Adds the heat of one ember to the squares under it. */
+  const warm = (x: number, y: number, radius: number, amount: number) => {
+    const cx = x / c;
+    const cy = y / c;
+    const size = Math.max(radius / c, .8);
+    for (let j = Math.max(0, Math.floor(cy - size)); j <= Math.min(rows - 1, Math.floor(cy + size)); j++) {
+      for (let i = Math.max(0, Math.floor(cx - size)); i <= Math.min(cols - 1, Math.floor(cx + size)); i++) {
+        const d = Math.hypot(i + .5 - cx, j + .5 - cy) / size;
+        if (d < 1) heat[j * cols + i] += amount * (1 - d * d);
+      }
+    }
+  };
+  /** The fire passes from a burning square to the one beside it: quickly along words and buttons, slower across empty page. */
+  const spread = (from: number, to: number) => {
+    const when = at[from] + (content[to] ? .012 + grain[to] * .018 : .03 + grain[to] * .045) * rush;
+    if (when < at[to]) at[to] = when;
   };
 
   const step = (dt: number) => {
@@ -110,10 +186,11 @@ function play(root: HTMLDivElement) {
     if (!mouth) {
       const box = tiger.getBoundingClientRect();
       mouth = { x: box.left + (MOUTH.x + 5) / 407 * box.width, y: box.top + (MOUTH.y + 5) / 269 * box.height };
-      centre = { x: mouth.x + 200 * k, y: mouth.y - 10 * k };
-      reach = Math.hypot(Math.max(centre.x, W - centre.x), Math.max(centre.y, H - centre.y)) + 120;
-      root.style.setProperty("--x", `${centre.x}px`);
-      root.style.setProperty("--y", `${centre.y}px`);
+      content = contentMap(cols, rows, c);
+      for (let n = 0; n < content.length; n++) if (content[n]) targets.push(n);
+      // Nothing found to aim at: aim at the middle, and the fire still spreads out from there.
+      if (!targets.length) targets = [Math.floor(rows / 2) * cols + Math.floor(cols / 2)];
+      targets.sort(() => Math.random() - .5);
     }
     t += dt;
 
@@ -122,95 +199,74 @@ function play(root: HTMLDivElement) {
     const dx = (-10 * back + 16 * ease(span(t, IGNITE, IGNITE + .12))) * Math.max(k, .5);
     const power = span(t, IGNITE, IGNITE + .15) * (1 - span(t, JET_END - .2, JET_END));
     tiger.style.transform = `translateX(${dx}px)`;
-    tiger.style.opacity = String(1 - span(t, BURN + .1, BURN + .4));
-    heat.style.opacity = String(power);
-    wisp.style.fill = `color-mix(in srgb, #ffdfae ${back * 100}%, #c5ced6)`;
+    tiger.style.opacity = String(1 - span(t, JET_END, JET_END + .3));
+    lit.style.opacity = String(power);
+    wisp.style.fill = `color-mix(in srgb, ${SHADES[1]} ${back * 100}%, #c5ced6)`;
     wisp.style.opacity = String(1 - span(t, IGNITE, IGNITE + .12));
 
-    // The jet from the mouth.
-    jetOwed += power * 560 * dt;
-    for (; jetOwed >= 1; jetOwed--) {
-      const spark = Math.random() < .1;
-      const angle = -.05 + (Math.random() + Math.random() - 1) * (spark ? .42 : .24);
-      const speed = rand(1100, 2100) * k * (spark ? 1.25 : 1);
-      embers.push({
-        x: mouth.x + dx, y: mouth.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-        age: 0, life: spark ? rand(.5, 1) : rand(.36, .78), size: spark ? rand(3, 6) : rand(26, 58) * k,
-        drag: spark ? 1.6 : 3.2, lift: spark ? 700 * k : -520 * k, sway: 2600 * k, wob: rand(0, 6.3), hot: .9, spark,
-      });
+    // The jet: each ember leaves the mouth as fire, then bends towards one square of the page's text or buttons.
+    const drag = 3.2;
+    owed += power * 560 * dt;
+    for (; owed >= 1; owed--) {
+      const to = targets[sent++ % targets.length]; // every square of text gets its own ember before any gets two
+      const angle = -.05 + (Math.random() + Math.random() - 1) * .26;
+      const speed = rand(1100, 2100) * k;
+      const far = Math.hypot((to % cols + .5) * c - mouth.x, (Math.floor(to / cols) + .5) * c - mouth.y);
+      embers.push({ vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: rand(.3, .42) + far / Math.hypot(W, H) * .35, size: rand(14, 30) * Math.max(k, .6), to });
     }
-
-    // The burn: a ring of fire spreads from where the jet lands, and the page shows through behind it.
-    const p = span(t, BURN, BURN + BURN_TIME);
-    const r = reach * p ** 2.4;
-    root.style.setProperty("--r", `${r}px`);
-    if (p >= 1) root.style.pointerEvents = "none";
-    if (p > 0 && p < 1) {
-      const outward = reach * 2.4 * p ** 1.4 / BURN_TIME; // how fast the edge is moving right now
-      const size = Math.min(W, H);
-      for (ringOwed += 700 * dt * Math.min(1, .15 + r / (size * .4)); ringOwed >= 1; ringOwed--) {
-        // Only where the ring is on screen; a few tries, then give up on this one.
-        for (let tries = 0; tries < 6; tries++) {
-          const a = rand(0, Math.PI * 2);
-          const at = r + rand(-20, 30);
-          const x = centre.x + Math.cos(a) * at;
-          const y = centre.y + Math.sin(a) * at;
-          if (x < -60 || x > W + 60 || y < -60 || y > H + 60) continue;
-          const spark = Math.random() < .08;
-          const speed = outward * rand(.8, 1.15);
-          embers.push({
-            x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, age: 0, life: rand(.2, .42),
-            size: spark ? rand(3, 6) : rand(.07, .15) * size, drag: .6, lift: -300 * k, sway: 1800 * k, wob: rand(0, 6.3), hot: .2, spark,
-          });
-          break;
-        }
-      }
-    }
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = "lighter";
-    // Light thrown by the jet, and the heat just ahead of the burning edge.
-    dot(body, mouth.x + dx + 90 * k, mouth.y, 620 * k, .26 * power);
-    if (p > 0 && p < 1) {
-      const from = Math.max(r - 50, 0);
-      const warm = ctx.createRadialGradient(centre.x, centre.y, from, centre.x, centre.y, from + 50 + 190 * Math.max(k, .5));
-      warm.addColorStop(0, `rgba(${FIRE.body}, 0)`);
-      warm.addColorStop(.2, `rgba(${FIRE.body}, .5)`);
-      warm.addColorStop(1, `rgba(${FIRE.edge}, 0)`);
-      ctx.globalAlpha = 1 - p ** 3;
-      ctx.fillStyle = warm;
-      ctx.fillRect(0, 0, W, H);
-    }
-    for (let i = embers.length - 1; i >= 0; i--) {
-      const e = embers[i];
+    heat.fill(0);
+    for (let n = embers.length - 1; n >= 0; n--) {
+      const e = embers[n];
       e.age += dt;
       if (e.age >= e.life) {
-        embers[i] = embers[embers.length - 1];
+        if (at[e.to] > t) at[e.to] = t; // landed: this square catches
+        embers[n] = embers[embers.length - 1];
         embers.pop();
         continue;
       }
       const f = e.age / e.life;
-      const slow = Math.exp(-e.drag * dt);
-      e.vx *= slow;
-      e.vy = e.vy * slow + (e.lift + Math.sin(e.age * 13 + e.wob) * e.sway * (e.spark ? .2 : 1)) * dt;
-      e.x += e.vx * dt;
-      e.y += e.vy * dt;
-      if (e.spark) {
-        dot(core, e.x, e.y, e.size, 1 - f);
-        continue;
-      }
-      // Stretched along its direction of travel, so fast fire reads as tongues of flame and not as dots.
-      const speed = Math.hypot(e.vx, e.vy) || 1;
-      const long = 1 + Math.min(speed / (700 * k), 1.5);
-      ctx.setTransform(e.vx / speed * long, e.vy / speed * long, -e.vy / speed, e.vx / speed, e.x, e.y);
-      const size = e.size * (.55 + 1.5 * f);
-      dot(edge, 0, 0, size * 1.25, .5 * (1 - f) ** 1.3);
-      dot(body, 0, 0, size, .7 * (1 - f) ** 2);
-      dot(core, 0, 0, size * .5, e.hot * clamp(1 - f * 2.4) ** 2);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const glide = (1 - Math.exp(-drag * e.age)) / drag; // how far the first burst has carried it
+      const turn = span(f, .2, 1) ** 2 * (3 - 2 * span(f, .2, 1)); // 0 while it is still a jet, 1 when it lands
+      const x = mouth.x + e.vx * glide;
+      const y = mouth.y + e.vy * glide;
+      warm(x + ((e.to % cols + .5) * c - x) * turn, y + ((Math.floor(e.to / cols) + .5) * c - y) * turn, e.size * (.3 + .7 * span(f, 0, .18)) * (1 - .45 * f), .55 - .15 * f);
     }
 
-    if ((p >= 1 && !embers.length) || t > 3) finish();
+    // The grid: fire spreads from where embers land, burns as pixels, cools into code, then leaves the real page.
+    rush = 1 - .85 * span(t, .95, 1.3);
+    let left = 0;
+    for (let j = 0, n = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++, n++) {
+        if (open[n]) continue;
+        left++;
+        if (at[n] > t) continue;
+        if (i > 0) spread(n, n - 1);
+        if (i < cols - 1) spread(n, n + 1);
+        if (j > 0) spread(n, n - cols);
+        if (j < rows - 1) spread(n, n + cols);
+        const burnt = (t - at[n]) / (content[n] ? HOLD : .11);
+        if (burnt >= 1) {
+          open[n] = 1;
+          veil.clearRect(i * cell, j * cell, cell, cell);
+        } else heat[n] += content[n] ? 2.6 * (1 - burnt) ** 1.5 + .1 : .3 * (1 - burnt);
+      }
+    }
+    if (!left) root.style.pointerEvents = "none";
+
+    ctx.clearRect(0, 0, over.width, over.height);
+    for (let j = 0, n = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++, n++) {
+        const h = heat[n];
+        if (h < LEVELS[LEVELS.length - 1]) continue;
+        let level = 0;
+        while (h < LEVELS[level]) level++;
+        ctx.fillStyle = SHADES[level];
+        if (level < PIXELS) ctx.fillRect(i * cell + gap, j * cell + gap, cell - gap * 2, cell - gap * 2);
+        else ctx.fillText(GLYPHS[(n * 7 + Math.floor(t * 12 + grain[n] * 12)) % GLYPHS.length], (i + .5) * cell, (j + .5) * cell);
+      }
+    }
+
+    if ((!left && !embers.length) || t > 2.6) finish();
   };
 
   const frame = (now: number) => {
@@ -226,7 +282,10 @@ function play(root: HTMLDivElement) {
   return stop;
 }
 
-/** The opening: the tiger lands, breathes fire, and the home page burns through. Any tap, key or scroll skips it. */
+/**
+ * The opening: the tiger lands and breathes blue pixel fire, which flies into the home page's own words and buttons
+ * and turns into them. Any tap, key or scroll skips it.
+ */
 export function Intro() {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -238,13 +297,14 @@ export function Intro() {
     {/* Hidden unless the script below shows it. That script only runs when the browser reads it in the page itself,
         not when React draws home again after a page change, so coming back to home never replays the intro. */}
     <div ref={root} className="intro" hidden aria-hidden="true" suppressHydrationWarning>
-      <div className="intro-veil" />
+      {/* The dark veil. Until the script takes over, its background colour alone is the veil. */}
+      <canvas className="intro-veil" />
       <svg className="intro-tiger" viewBox="-5 -5 407 269">
         <defs>
           <radialGradient id="intro-heat" gradientUnits="userSpaceOnUse" cx={MOUTH.x} cy={MOUTH.y} r="200">
-            <stop offset="0" stopColor="#ffe0b0" />
-            <stop offset=".3" stopColor="#ff8a2a" stopOpacity=".8" />
-            <stop offset="1" stopColor="#ff5a10" stopOpacity="0" />
+            <stop offset="0" stopColor="#e6f0ff" />
+            <stop offset=".3" stopColor="#5a96ff" stopOpacity=".8" />
+            <stop offset="1" stopColor="#3478f6" stopOpacity="0" />
           </radialGradient>
         </defs>
         <path id="intro-body" fillRule="evenodd" d={BODY} />
