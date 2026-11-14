@@ -10,14 +10,6 @@ import { BOOKING_URL } from "@/lib/site";
 import { tone } from "@/lib/style";
 import "./home.css";
 
-const tools = [
-  { icon: "mail", label: "Email" },
-  { icon: "table", label: "Spreadsheets" },
-  { icon: "form", label: "Forms" },
-  { icon: "calendar", label: "Calendar" },
-  { icon: "users", label: "CRM" },
-];
-
 const problems = [
   { title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
   { title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
@@ -88,7 +80,7 @@ export default function Home() {
           <p className="hero-lede">I build small AI-powered workflows that take repetitive work off your plate: following up with leads, answering the same questions, moving information between tools. All inside the tools you already use.</p>
           <div className="hero-actions">
             <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
-            <a href="#example" className="button secondary">Watch an example <Icon name="arrow" size={17} /></a>
+            <a href="#example" className="text-link">Watch an example <Icon name="arrow" size={17} /></a>
           </div>
           <ul className="hero-facts">
             <li><Icon name="check" size={15} />Start from $49</li>
@@ -99,12 +91,6 @@ export default function Home() {
         <div className="hero-visual is-board">
           <FlowBoard />
         </div>
-      </div>
-      <div className="wrap hero-tools">
-        <p>Built around the tools you already use</p>
-        <ul>
-          {tools.map(({ icon, label }) => <li key={label}><Icon name={icon} size={16} />{label}</li>)}
-        </ul>
       </div>
     </section>
 
@@ -173,14 +159,6 @@ export default function Home() {
           <h2 id="offer-title">Pick the size of the job.</h2>
           <p>Three fixed prices, each for a clear piece of work. Half to start, half at handoff.</p>
         </header>
-        <div className="plan-strip">
-          <div>
-            <h3>Not sure yet? Start with a $49 workflow plan.</h3>
-            <p>Tell me one task you repeat. I’ll send you a one-page plan: the steps, the tools, what it would cost to run, and whether it’s worth automating at all. Keep it and build it yourself, or have me build it and the $49 comes off the price.</p>
-          </div>
-          <p className="plan-price"><span className="price-num num">$49</span><span>One task, one plan</span></p>
-          <ButtonLink href="/contact?plan=1">Get a plan</ButtonLink>
-        </div>
         <div className="price-grid">
           {packages.map(({ name, price, time, tag, note, example, items }) => (
             <article className={`glass price-card${tag ? " is-glow is-featured" : ""}`} key={name}>
@@ -199,17 +177,28 @@ export default function Home() {
             </article>
           ))}
         </div>
-        <div className="fit-card">
+        <div className="plan-strip">
           <div>
-            <h3>Tasks it fits</h3>
-            <p>The best first workflow is one small task you repeat all the time. For example:</p>
+            <h3>Not sure yet? Start with a $49 workflow plan.</h3>
+            <p>Tell me one task you repeat. I’ll send you a one-page plan: the steps, the tools, what it would cost to run, and whether it’s worth automating at all. Keep it and build it yourself, or have me build it and the $49 comes off the price.</p>
           </div>
-          <div>
-            <ul className="fit-list">
-              {fits.map((label) => <li key={label}>{label}</li>)}
-            </ul>
-            <p className="fit-foot">Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
-          </div>
+          <p className="plan-price"><span className="price-num num">$49</span><span>One task, one plan</span></p>
+          <ButtonLink href="/contact?plan=1">Get a plan</ButtonLink>
+        </div>
+      </div>
+    </section>
+
+    <section className="section is-paper" aria-labelledby="fits-title">
+      <div className="wrap split">
+        <header className="section-head">
+          <h2 id="fits-title">Tasks it fits.</h2>
+          <p>The best first workflow is one small task you repeat all the time. For example:</p>
+        </header>
+        <div>
+          <ul className="fit-list">
+            {fits.map((label) => <li key={label}>{label}</li>)}
+          </ul>
+          <p className="fit-foot">Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
         </div>
       </div>
     </section>

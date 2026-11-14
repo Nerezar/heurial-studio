@@ -40,12 +40,12 @@
 .demo-frame-bar a:hover { border-color: var(--signal); color: var(--signal); }
 .demo-frame-body { position: relative; height: min(80vh, 840px); min-height: 560px; }
 .demo-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: #0a0d12; }
-.demo-caption { margin-top: 14px; color: var(--faint); font-size: .86rem; }
+.demo-caption { margin-top: 14px; color: var(--faint); font-size: var(--fs-small); }
 
 .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); }
 .guide-card { display: grid; gap: 10px; align-content: start; padding-top: 20px; border-top: 1px solid var(--white); }
 .guide-card h3 { font-size: clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing: -.05em; }
-.guide-label { color: var(--muted); font-size: .74rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; }
+.guide-label { color: var(--muted); font-size: var(--fs-small); font-weight: 500; letter-spacing: .09em; text-transform: uppercase; }
 .guide-card > p:last-child { color: var(--muted); }
 
 /* ---------- About ---------- */
