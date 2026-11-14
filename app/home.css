@@ -474,7 +474,9 @@ button.board-node:active { transform: scale(.985); }
 }
 /* ---------- Intro: the tiger breathes pixel fire that turns into the page (components/intro.tsx) ----------
    Hidden unless its inline script shows it. If the script that runs it never arrives, it fades out by itself. */
-.intro { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; animation: intro-give-up .4s 4s forwards; }
+/* Tall enough for a phone with its browser bars tucked away (100lvh, or 100vh where that is not known), so no strip of the page shows under the veil.
+   The padding keeps the tiger centred in the part that is visible while the bars are showing. */
+.intro { position: fixed; top: 0; left: 0; box-sizing: border-box; width: 100%; min-height: 100vh; height: 100lvh; padding-bottom: calc(100lvh - 100svh); z-index: 100; display: grid; place-items: center; overflow: hidden; animation: intro-give-up .4s 4s forwards; }
 .intro[hidden] { display: none; }
 .intro.is-live { animation: none; }
 /* Two canvases with the tiger between them: the dark veil below, the fire above. Until the script starts drawing,

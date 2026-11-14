@@ -99,7 +99,7 @@ function play(root: HTMLDivElement) {
   }
 
   const W = window.innerWidth;
-  const H = window.innerHeight;
+  const H = root.offsetHeight; // the overlay's own height: taller than the window on a phone whose browser bars are showing
   // Sharp on ordinary screens, but never more than about six million pixels a layer on very large ones.
   const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(6e6 / (W * H))));
   // One grid square in screen pixels. A whole number, so cleared squares leave no hairlines between them.
