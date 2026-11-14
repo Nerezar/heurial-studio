@@ -131,9 +131,29 @@
   const services = () => (state.data && state.data.services) || null;
 
   /** All API calls go through here, so an expired session always leads back to sign-in. */
+  // The lead that was just changed keeps a highlight for a moment, so the eye finds it after the list redraws.
+  let touchTimer = 0;
+  function touch(id) {
+    state.touched = String(id);
+    clearTimeout(touchTimer);
+    touchTimer = setTimeout(() => { state.touched = null; }, 2600);
+  }
+  /** Let a finished item slide away before its list redraws. */
+  function leave(el) {
+    const row = el && el.closest(".q-row");
+    if (!row || matchMedia("(prefers-reduced-motion: reduce)").matches) return Promise.resolve();
+    row.classList.add("is-leaving");
+    return new Promise((done) => setTimeout(done, 260));
+  }
+
   async function call(path, method, body) {
     try {
-      return await cfg.api(path, method || "GET", body);
+      const result = await cfg.api(path, method || "GET", body);
+      if (method && method !== "GET") {
+        const changed = (/^\/api\/leads\/([^/]+)$/.exec(path) || [])[1] || (result && path.endsWith("/convert") && result.leadId) || (result && path === "/api/leads" && result.id);
+        if (changed) touch(changed);
+      }
+      return result;
     } catch (err) {
       if (err && err.status === 401 && cfg.auth) showSignIn();
       throw err;
@@ -422,6 +442,26 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       <defs><linearGradient id="spG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sp0"/><stop offset="1" class="sp1"/></linearGradient></defs>
       <polygon points="0,40 ${pts} 120,40" fill="url(#spG)"/><polyline points="${pts}"/></svg>`;
   }
+  /** Roll the headline figures to their values on first view and whenever they change. */
+  const shownStats = {};
+  function rollStats() {
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelectorAll(".stat").forEach((card) => {
+      const el = card.querySelector(".stat-v"), key = card.querySelector(".stat-l").textContent, text = el.textContent;
+      const to = Number(text.replace(/[^0-9.]/g, "")), from = shownStats[key] ?? 0;
+      if (!/\d/.test(text)) return;
+      shownStats[key] = to;
+      if (still || from === to) return;
+      const prefix = text.startsWith("$") ? "$" : "", t0 = performance.now();
+      const step = (now) => {
+        if (!el.isConnected) return;
+        const p = Math.min(1, (now - t0) / 700);
+        el.textContent = p === 1 ? text : prefix + Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))).toLocaleString("en-US");
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
   /** Four headline figures for Overview. */
   function statCards() {
     const d = state.data, s = d.summary, p = d.previous, w = series();
@@ -472,7 +512,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (el.tagName === "INPUT" && el.type === "search") el.setSelectionRange(el.value.length, el.value.length);
       }
     }
-    if (d && state.view === "overview") drawChart();
+    if (d && state.view === "overview") { drawChart(); rollStats(); }
   }
 
   // ----- Overview -----
@@ -690,7 +730,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   function cardHtml(l) {
     const next = l.follow_up_at ? `<span>${esc(l.follow_up_note || "Follow up")}</span>${dueTag(l.follow_up_at)}` : `<span>No follow-up set</span><span></span>`;
-    return `<article class="card ${state.lead && state.lead.id === l.id ? "is-selected" : ""}" data-id="${l.id}">
+    return `<article class="card ${state.lead && state.lead.id === l.id ? "is-selected" : ""}${state.touched === l.id ? " is-touched" : ""}" data-id="${l.id}">
       <div class="card-top"><button class="card-name" type="button" data-action="open" data-id="${l.id}" data-fk="card-${l.id}">${esc(l.name)}</button>${l.value_cents ? `<span class="num">${money(l.value_cents)}</span>` : ""}</div>
       <div class="card-biz">${esc(l.business || "No business name")}</div>
       <div class="card-next">${next}</div>
@@ -741,7 +781,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     else body = `<table class="tbl" id="leadTable">
       <thead><tr>${COLUMNS.map(([key, label, align, opt]) => `<th class="sortable ${align} ${opt}" scope="col" ${state.sort.key === key ? `aria-sort="${state.sort.dir === "asc" ? "ascending" : "descending"}"` : ""}>
         <button class="sort" type="button" data-action="sort" data-key="${key}" data-fk="sort-${key}">${label}</button></th>`).join("")}</tr></thead>
-      <tbody>${rows.map((l) => `<tr data-action="open" data-id="${l.id}" class="${state.lead && state.lead.id === l.id ? "is-selected" : ""}">
+      <tbody>${rows.map((l) => `<tr data-action="open" data-id="${l.id}" class="${state.lead && state.lead.id === l.id ? "is-selected" : ""}${state.touched === l.id ? " is-touched" : ""}">
         <td><button class="who" type="button" data-action="open" data-id="${l.id}" data-fk="row-${l.id}">${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}</button></td>
         <td>${tag(l.status)}</td><td class="col-opt">${esc(l.source)}</td><td class="n">${niceDate(l.booked_at)}</td><td class="n col-opt">${niceDate(l.call_at)}</td>
         <td>${l.follow_up_at ? dueTag(l.follow_up_at) : `<span class="faint">–</span>`}</td><td class="col-opt"><div class="trunc muted">${esc(l.follow_up_note || "–")}</div></td>
@@ -1061,6 +1101,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         const item = d.inbox.find((i) => i.id === id);
         const r = await call(`/api/inbox/${id}/convert`, "POST");
         toast(`Added ${item ? item.name : "the lead"} to the pipeline. Next: reply to schedule the call.`);
+        await leave(button);
         await load();
         if (r.leadId) openById(r.leadId);
       });
@@ -1068,19 +1109,21 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         const item = d.inbox.find((i) => i.id === id);
         const ok = await confirmBox({ title: "Dismiss this inquiry?", text: `The inquiry from ${item ? item.name : "this person"} leaves your list. ${cfg.mode === "demo" ? "This is sample data, so nothing real changes." : "It stays stored in Catalyst."}`, action: "Dismiss" });
         if (!ok) return;
-        return act(button, async () => { await call(`/api/inbox/${id}/dismiss`, "POST"); toast("Inquiry dismissed"); await load(); });
+        return act(button, async () => { await call(`/api/inbox/${id}/dismiss`, "POST"); toast("Inquiry dismissed"); await leave(button); await load(); });
       }
       case "stale": return act(button, async () => {
         const body = { status: el.dataset.status }, row = d.stale.find((s) => s.id === id);
         if (body.status === "held" && !(row && row.follow_up_at)) { body.follow_up_at = addDays(d.today, FOLLOW_PLAN.held[0]); body.follow_up_note = FOLLOW_PLAN.held[1]; }
         await call("/api/leads/" + id, "PATCH", body);
         toast(body.follow_up_at ? `Marked as held. Follow-up set for ${niceDate(body.follow_up_at)}.` : `Marked as ${STATUS[body.status].label.toLowerCase()}`);
+        await leave(button);
         await load();
       });
       case "fu": return act(button, async () => {
         const next = el.dataset.days === "done" ? "" : addDays(d.today, Number(el.dataset.days));
         await call("/api/leads/" + id, "PATCH", { follow_up_at: next, ...(next ? {} : { follow_up_note: "" }) });
         toast(next ? `Follow-up moved to ${niceDate(next)}` : "Follow-up done");
+        await leave(button);
         await load();
       });
       case "time-del": {
@@ -1313,9 +1356,15 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     }
     paintComposer();
   }
+  let savedTimer = 0;
   function paintFormState(error) {
     $("delBtn").hidden = state.isNew || !state.lead;
-    $("saveBtn").textContent = state.isNew ? "Add lead" : "Save changes";
+    // Right after a save the button turns green and says Saved, so there is no doubt it went through.
+    const saved = !state.isNew && !state.dirty && Date.now() - (state.savedAt || 0) < 1800;
+    $("saveBtn").textContent = state.isNew ? "Add lead" : saved ? "Saved" : "Save changes";
+    $("saveBtn").classList.toggle("is-saved", saved);
+    clearTimeout(savedTimer);
+    if (saved) savedTimer = setTimeout(() => { if (!$("insp").hidden) paintFormState(""); }, 1850);
     $("saveBtn").disabled = !state.isNew && !state.dirty;
     const note = $("leadNote");
     note.textContent = error || (state.dirty && !state.isNew ? "Unsaved changes" : "");
@@ -1482,6 +1531,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (editing) {
           await call("/api/leads/" + editing.id, "PATCH", body);
           state.dirty = false;
+          state.savedAt = Date.now();
           toast(`Saved ${name}`);
           await load();
         } else {

@@ -124,7 +124,7 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 
 /* The tools wrap onto a second row when the lead panel is open, instead of squeezing over the title. */
 .top { grid-area: top; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-width: 0; padding: 26px 32px 18px; }
-.top-id { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; min-width: 0; margin-right: auto; }
+.top-id { display: flex; flex: 1 1 180px; align-items: center; gap: 12px; min-width: 0; margin-right: auto; }
 .top-id > div { min-width: 0; }
 .top-id .mark.word { display: none; }
 .top-id h1 { font-size: 27px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; }
@@ -577,6 +577,19 @@ body::before { content: ""; position: fixed; z-index: -1; left: 10%; top: -34vh;
 @keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(16px); } }
 @supports (view-transition-name: none) { .vw { animation: none; } }
+
+/* The lead you just changed: its card pops into place, its row glows for a moment. */
+.card.is-touched { animation: touched-card 1.5s var(--ease) both; }
+.tbl tbody tr.is-touched td { animation: touched-row 1.9s ease-out both; }
+@keyframes touched-card { 0% { transform: scale(.93); box-shadow: 0 0 0 2px var(--accent), 0 0 34px -6px var(--accent); } 40% { transform: scale(1.025); box-shadow: 0 0 0 2px var(--accent), 0 0 34px -6px var(--accent); } 100% { transform: none; } }
+@keyframes touched-row { 0%, 40% { background: var(--accent-soft); } }
+/* A finished item slides away before the list closes up. */
+.q-row.is-leaving { animation: q-leave .26s ease-in both; }
+@keyframes q-leave { to { opacity: 0; transform: translateX(28px); } }
+/* Saved: the button turns green and ticks. */
+.btn.is-saved, .btn.is-saved:disabled { opacity: 1; border-color: transparent; background: var(--up); color: #04130c; box-shadow: none; animation: saved-pop .45s var(--ease); }
+.btn.is-saved::before { content: "✓"; font-weight: 700; }
+@keyframes saved-pop { 0% { transform: scale(.94); } 60% { transform: scale(1.04); } }
 
 /* The chart draws itself when its numbers change. */
 .chart svg.fresh .g-line { stroke-dasharray: 1; animation: g-draw 1.2s var(--ease) both; }
