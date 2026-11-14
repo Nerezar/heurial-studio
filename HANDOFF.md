@@ -78,6 +78,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
 
 ## Pushed, not merged (2026-11-13)
+- `steps-polish`: home "One annoying task, handled." steps restyled (`app/page.tsx`, the Steps block in
+  `app/home.css`). A rail with three dots, large 01-03 numerals, a time tag per step and a "You get" line (wording
+  taken from the services page). The rail draws with scrolling where the browser supports scroll-driven animation
+  and is shown complete elsewhere. On phones the rail runs down the left; the section is about 350 px taller there.
 - `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
   Home was looked at.
 
