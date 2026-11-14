@@ -70,8 +70,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
 ## Branch `paid-date`: pushed, not merged, not deployed (2026-11-14)
-Built on `assistant-and-tracker-look`, so it carries that branch too and is the one to release. Asked for: the money
-line should put each payment on the day it was paid, not the day its call was booked.
+Built on the money view that went live at `1bd524b`. Main (`8eff53c`) is merged in, so this branch fast-forwards.
+Asked for: the money line should put each payment on the day it was paid, not the day its call was booked.
 - **New lead field `paid_at`** (`YYYY-MM-DD`, optional) in `core.js` and its browser copy (in sync). The rule lives in
   one function, `withPaidDate`: moving a lead to Paid stamps today unless a date is given; while it is Paid the date
   can be changed or emptied; **leaving Paid clears it**, and paying again stamps the day you do it. So a card dragged
@@ -115,7 +115,20 @@ line should put each payment on the day it was paid, not the day its call was bo
 - Not checked: `/admin` signed in (the local dev setup has no sign-in values now), the real Catalyst refusal (the
   code does not depend on its wording), a real phone, Safari, light mode for the new field.
 
-## Branch `assistant-and-tracker-look`: pushed, not merged, not deployed (2026-11-14)
+## Live 2026-11-14: assistant chat and tracker money view (`1bd524b`)
+- Merged to main by fast-forward (main had not moved) and deployed to Slate Production on the owner's go-ahead.
+- Checked live on www.heurial.studio: every public page returns 200 and `/admin` still redirects; the assistant on
+  `/resources` answered "What does it cost?" with its source chip; the tracker demo loads the new files (fingerprint
+  `0ec69d7818`) and shows the three tiles, Total earned and the payment steps; no console errors.
+- Not checked: `/admin` after sign-in. It now makes a second request (`/api/data?range=all`) on every refresh, the
+  same request the All button has always made.
+- **Deploying while another session uses the dev folder:** a second session (branch `paid-date`, adding a paid
+  date to leads) had `~/heurial-dev/heurial-design` checked out on its own branch, and a deploy builds whatever is in
+  the folder. So this release was built from a clean copy: `git worktree add --detach ~/heurial-dev/heurial-release
+  <sha>`, `cp -cR node_modules` into it, copy `.catalyst/`, `.catalystrc` and `catalyst.json` (all untracked), deploy
+  from there, then remove the copy. Check `git status` and the branch before any deploy.
+
+### What that release changed
 Asked for: the real knowledge assistant and the real tracker should look and move like their previews on the home
 page, and the tracker should be simpler, with lines that "follow the path of your money".
 - **Assistant** (`components/assistant.tsx`, `app/interiors.css`): a chat. Questions on the right, answers on the
@@ -127,9 +140,9 @@ page, and the tracker should be simpler, with lines that "follow the path of you
   the list of those payments. Then Needs attention and the reports. Removed: the sparkline, the calls-booked bars
   under the chart, and the Per hour tile (still in the Earned per hour report).
 - **How the line is built:** `moneyPath()` in the browser, from every paid lead. `load()` now also requests
-  `/api/data?range=all` so the line can start from what was earned before the period. No back-end change on this
-  branch: `core.js` and its browser copy are untouched here.
-- **Limit, answered on `paid-date` (above):** on this branch a lead has no paid date, so a payment sits on the day
+  `/api/data?range=all` so the line can start from what was earned before the period. No back-end change in this
+  release: `core.js` and its browser copy were untouched.
+- **Limit, answered on `paid-date` (above):** in this release a lead has no paid date, so a payment sits on the day
   its call was booked and the panel says so.
 - **Pipeline:** plain columns; each card has a dot (red late, amber due today, blue upcoming, green paid, grey
   nothing set), name, business, next step and the Move menu. The stage-mix bar is gone. A card that changes column
