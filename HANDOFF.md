@@ -80,6 +80,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 ## Pushed, not merged (2026-11-13)
 - `home-polish` (`649723f`) combines `calc-impact`, `flow-polish` and `steps-polish`. `pricing-packages` is built on
   top of it, so it carries all four changes and is the one to release.
+- `tracker-ease` (`f018e72`) is built on `questions-page` and adds an ease-of-use pass on the tracker
+  (`public/tracker/`, so it changes the real /admin too, not just the demo). The owner asked for a full redo for
+  older users; this is the targeted version. Text is about 2 px larger everywhere; buttons and fields are 40-46 px
+  tall; period buttons say Week / Month / 3 months / Year / All; the Overview chart covers the chosen period and is
+  built from the same leads as the Revenue figure (they used to disagree: 30 days vs a fixed 12 weeks); the chart
+  draws in when its numbers change; sections change with a view transition; a slow faint blue light drifts behind
+  the page; the Overview panels no longer overlap. The lead you just changed is highlighted after a save, move or
+  drag; the Save button turns green and says Saved for about two seconds; finished items in Needs attention slide
+  away; the four headline figures roll to their values. `core.js` is untouched and the lead form itself (fields,
+  steps to save) is unchanged. Release `questions-page` on its own if the tracker changes should wait.
 - `questions-page` is built on `services-polish`, so it carries everything below and is the one to release. The
   owner found the three steps shown twice (home section and the How it works page) and chose to turn the page into
   **Questions**: `/services` now holds only the FAQ, grown from 4 to 11 questions (every answer restates something
