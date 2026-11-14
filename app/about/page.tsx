@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Icon } from "@/components/icon";
 import { ButtonLink, Chip, Closing, PageIntro } from "@/components/shell";
-import { tone } from "@/lib/style";
 import "../interiors.css";
 
 export const metadata: Metadata = {
@@ -11,10 +10,10 @@ export const metadata: Metadata = {
 };
 
 const principles = [
-  { icon: "search", color: "signal", title: "Start with how it works today.", body: "Before I build anything, I map the task: who does it, which tools it touches, and where it slows down." },
-  { icon: "check", color: "green", title: "Prove it on real work.", body: "I test on real examples from your business, including the awkward ones, and add a human check wherever a mistake would matter." },
-  { icon: "book", color: "cyan", title: "Leave you in control.", body: "You get a plain-English guide, so you know how it works, what to check, and how to change it later." },
-] as const;
+  { icon: "search", title: "Start with how it works today.", body: "Before I build anything, I map the task: who does it, which tools it touches, and where it slows down." },
+  { icon: "check", title: "Prove it on real work.", body: "I test on real examples from your business, including the awkward ones, and add a human check wherever a mistake would matter." },
+  { icon: "book", title: "Leave you in control.", body: "You get a plain-English guide, so you know how it works, what to check, and how to change it later." },
+];
 
 export default function About() {
   return (
@@ -35,8 +34,8 @@ export default function About() {
               <h2 id="about-method">How I work</h2>
             </header>
             <div className="note-list">
-              {principles.map(({ icon, color, title, body }) => (
-                <article className="note" key={title} style={tone(color)}>
+              {principles.map(({ icon, title, body }) => (
+                <article className="note" key={title}>
                   <span className="icon-tile"><Icon name={icon} size={20} /></span>
                   <div><h3>{title}</h3><p>{body}</p></div>
                 </article>

@@ -4,7 +4,7 @@ import { BOOKING_URL } from "@/lib/site";
 import { tone } from "@/lib/style";
 import { Icon } from "./icon";
 import { Navigation } from "./navigation";
-import { MotionLink } from "./route-transition";
+import Link from "next/link";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
@@ -22,7 +22,7 @@ export function ButtonLink({ href, children, secondary = false }: { href: string
   const className = `button ${secondary ? "secondary" : "primary"}`;
   // Another site (the booking calendar) opens in a new tab, as it does from the Contact page.
   if (href.startsWith("http")) return <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}<Icon name="arrow" size={17} /></a>;
-  return <MotionLink className={className} href={href}>{children}<Icon name="arrow" size={17} /></MotionLink>;
+  return <Link className={className} href={href}>{children}<Icon name="arrow" size={17} /></Link>;
 }
 
 /** Small label that sits above a heading. */
@@ -33,7 +33,7 @@ export function Chip({ children, color }: { children: ReactNode; color?: Tone })
 export function Header() {
   return <header className="site-header">
     <div className="wrap header-inner">
-      <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></MotionLink>
+      <Link href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></Link>
       <Navigation links={primaryLinks} />
       <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></a>
     </div>
@@ -44,12 +44,12 @@ export function Footer() {
   return <footer className="site-footer">
     <div className="wrap footer-grid">
       <div className="footer-identity">
-        <MotionLink href="/" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} /></MotionLink>
+        <Link href="/" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} /></Link>
         <p>Make work flow better.</p>
         <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>
       </div>
       <nav aria-label="Footer navigation">
-        {links.slice(1).map(({ href, label }) => <MotionLink key={href} href={href}>{label}<Icon name="diagonal" size={13} /></MotionLink>)}
+        {links.slice(1).map(({ href, label }) => <Link key={href} href={href}>{label}<Icon name="diagonal" size={13} /></Link>)}
       </nav>
     </div>
     <div className="wrap footer-end"><span>© {new Date().getFullYear()} HEURIAL Studio</span><a href="#top">Back to top <Icon name="up" size={14} /></a></div>

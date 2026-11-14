@@ -49,7 +49,7 @@ export function Assistant() {
     setBusy(false);
   }
 
-  return <section className="assistant glass is-glow" aria-labelledby="assistant-title">
+  return <section className="assistant glass" aria-labelledby="assistant-title">
     <div className="chat-bar"><h2 id="assistant-title"><Icon name="chat" size={16} />Knowledge assistant</h2><span className="chip">Public guides</span></div>
     <div className="chat-thread" ref={thread} role="log" aria-live="polite" aria-label="Conversation">
       <p className="chat-a">Ask about pricing, your data, or how a project starts.</p>

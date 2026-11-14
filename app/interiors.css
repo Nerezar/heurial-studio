@@ -37,14 +37,14 @@
 .demo-frame-bar p { flex: 1; min-width: 0; overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
 .demo-frame-bar small { color: var(--faint); font-size: inherit; }
 .demo-frame-bar a { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding-inline: 12px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--text); font-size: .8rem; white-space: nowrap; }
-.demo-frame-bar a:hover { border-color: var(--signal); color: var(--signal); }
+.demo-frame-bar a:hover { border-color: var(--white); color: var(--white); }
 .demo-frame-body { position: relative; height: min(80vh, 840px); min-height: 560px; }
 .demo-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: #0a0d12; }
 .demo-caption { margin-top: 14px; color: var(--faint); font-size: var(--fs-small); }
 
 .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); }
 .guide-card { display: grid; gap: 10px; align-content: start; padding-top: 20px; border-top: 1px solid var(--white); }
-.guide-card h3 { font-size: clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing: -.05em; }
+.guide-card h3 { font-size: clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing: -.035em; }
 .guide-label { color: var(--muted); font-size: var(--fs-small); font-weight: 500; letter-spacing: .09em; text-transform: uppercase; }
 .guide-card > p:last-child { color: var(--muted); }
 
@@ -59,30 +59,21 @@
   background:
     linear-gradient(rgb(255 255 255 / .045) 1px, transparent 1px) 0 0 / 12.5% 12.5%,
     linear-gradient(90deg, rgb(255 255 255 / .045) 1px, transparent 1px) 0 0 / 12.5% 12.5%,
-    radial-gradient(ellipse at 85% 10%, #223657 0%, #111a2a 50%, #0d1015 90%);
+    var(--well);
 }
 .identity-plate img { width: 100%; filter: brightness(0) invert(.93); }
 .about-principles .section-head { margin-bottom: clamp(20px, 3vw, 34px); }
 .note-list { display: grid; }
 .strip { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 24px; padding-top: clamp(26px, 4vw, 48px); border-top: 1px solid var(--line); }
 .strip > div { display: grid; gap: 14px; justify-items: start; }
-.strip h2 { font-size: clamp(2rem, 4vw, 3.6rem); }
+.strip h2 { font-size: clamp(2rem, 3.8vw, 3.25rem); }
 .strip p:not(.label) { max-width: 48ch; color: var(--muted); }
 
 /* ---------- Contact ---------- */
 .contact-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(14px, 2vw, 26px); align-items: stretch; }
-/* Both cards are small windows: a title bar, then the content, with a blue light in one corner. */
-.contact-card {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 14px;
-  border-color: rgb(255 255 255 / .12);
-  background: radial-gradient(110% 60% at 100% 0%, rgb(52 120 246 / .16), transparent 62%), linear-gradient(180deg, #15181d, #0e1013);
-  box-shadow: 0 40px 70px -40px rgb(0 0 0 / .8), inset 0 1px 0 rgb(255 255 255 / .05);
-}
-.contact-book { border-top-color: #56719a; background: radial-gradient(120% 70% at 100% 0%, rgb(52 120 246 / .26), transparent 64%), linear-gradient(180deg, #15181d, #0e1013); }
-.contact-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 13px clamp(18px, 2.4vw, 28px); border-bottom: 1px solid rgb(255 255 255 / .08); color: var(--muted); font-size: .82rem; }
+/* Both cards are small windows: a title bar, then the content. */
+.contact-card { display: flex; flex-direction: column; overflow: hidden; }
+.contact-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 13px clamp(18px, 2.4vw, 28px); border-bottom: 1px solid var(--line); color: var(--muted); font-size: var(--fs-small); }
 .contact-bar > span:first-child { display: inline-flex; align-items: center; gap: 9px; color: var(--white); font-weight: 500; }
 .contact-bar > span:first-child svg { color: var(--signal); }
 .contact-card-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 24px; padding: clamp(22px, 3vw, 36px); }
@@ -102,11 +93,11 @@
 .contact-steps li::before { content: ""; position: absolute; left: 0; top: 6px; width: 11px; height: 11px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 4px rgb(145 182 255 / .16); }
 .contact-steps li:not(:last-child)::after { content: ""; position: absolute; left: 5px; top: 24px; bottom: -16px; width: 1px; background: var(--line-strong); }
 .contact-steps b { color: var(--white); font-weight: 600; }
-.contact-steps span { color: var(--muted); font-size: .93rem; }
-.contact-book .button { min-height: 54px; padding-inline: 22px; font-size: 1rem; box-shadow: 0 12px 30px -14px rgb(145 182 255 / .7); }
+.contact-steps span { color: var(--muted); }
+.contact-book .button { min-height: 54px; padding-inline: 22px; }
 .contact-form .panel { flex: 1; }
 .contact-form h2 { font-size: 1.45rem; letter-spacing: -.03em; }
-.contact-form :is(input, select, textarea) { border-radius: 8px; border-color: rgb(255 255 255 / .18); background: rgb(0 0 0 / .35); transition: border-color .2s ease, box-shadow .2s ease; }
+.contact-form :is(input, select, textarea) { border-radius: 6px; border-color: var(--line-strong); transition: border-color .2s ease, box-shadow .2s ease; }
 .contact-form :is(input, select, textarea):focus { border-color: var(--signal); box-shadow: 0 0 0 3px rgb(145 182 255 / .2); }
 .contact-thanks .icon-tile { animation: contact-pop .5s var(--ease-out) both; }
 @keyframes contact-pop { from { opacity: 0; transform: scale(.5); } 70% { transform: scale(1.15); } }
@@ -121,8 +112,8 @@
 .contact-thanks .form-note { margin-bottom: 18px; overflow-wrap: anywhere; }
 
 /* ---------- Guides: the assistant (the same chat as its preview on the home page) and its sources ---------- */
-.assistant { display: grid; overflow: hidden; background: radial-gradient(110% 70% at 100% 0%, rgb(52 120 246 / .16), transparent 62%), linear-gradient(180deg, #15181d, #0e1013); }
-.chat-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px clamp(18px, 3vw, 28px); border-bottom: 1px solid rgb(255 255 255 / .08); }
+.assistant { display: grid; overflow: hidden; }
+.chat-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px clamp(18px, 3vw, 28px); border-bottom: 1px solid var(--line); }
 .chat-bar h2 { display: inline-flex; align-items: center; gap: 10px; color: var(--white); font-size: 1rem; font-weight: 500; letter-spacing: 0; line-height: 1.3; }
 .chat-bar h2 svg { flex: none; color: var(--signal); }
 .chat-thread { display: grid; align-content: start; gap: 12px; min-height: 280px; max-height: min(62vh, 560px); overflow-y: auto; padding: clamp(18px, 3vw, 28px); }
@@ -148,12 +139,12 @@
   border: 1px solid var(--line-strong);
   background: transparent;
   color: var(--text);
-  font-size: .86rem;
+  font-size: var(--fs-small);
   transition: border-color .2s ease, color .2s ease;
 }
-.suggestions button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
+.suggestions button:hover:not(:disabled) { border-color: var(--white); color: var(--white); }
 .suggestions button:disabled { opacity: .5; }
-.chat-ask.panel { display: flex; gap: 10px; padding: 14px clamp(18px, 3vw, 28px); border-top: 1px solid rgb(255 255 255 / .08); }
+.chat-ask.panel { display: flex; gap: 10px; padding: 14px clamp(18px, 3vw, 28px); border-top: 1px solid var(--line); }
 .chat-ask input { flex: 1; min-width: 0; }
 .chat-ask .button { flex: none; }
 .assistant > .form-note { padding: 0 clamp(18px, 3vw, 28px) 16px; }

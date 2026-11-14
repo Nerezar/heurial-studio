@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#0b0c0e", colorScheme: "dark" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body id="top">
+  return <html lang="en" data-scroll-behavior="smooth"><body id="top">
     <RouteMotion>
       <AttributionCapture />
       <a className="skip-link" href="#main">Skip to content</a>

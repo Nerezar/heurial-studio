@@ -256,7 +256,7 @@ export function FlowBoard() {
   return (
     <div className="board" ref={root} role="group" aria-label="Interactive example: send a task through a workflow">
       <div className="board-top">
-        <p>Tap a task to send it through.</p>
+        <p><Icon name="workflow" size={15} />Tap a task to send it through.</p>
         <button type="button" className="board-toggle" onClick={() => setPaused((p) => !p)} aria-pressed={paused}>
           <Icon name={paused ? "play" : "pause"} size={14} /> {paused ? "Play" : "Pause"}
         </button>
@@ -290,7 +290,6 @@ export function FlowBoard() {
         </ul>
 
         <div className={`board-hub${busy ? " is-busy" : ""}`}>
-          <span className="board-glow" />
           <div className="board-core" ref={core}>
             <svg className="board-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="49" /></svg>
             <Image src="/brand/emblem.svg" alt="" width={407} height={269} />

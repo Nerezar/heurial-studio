@@ -45,7 +45,7 @@ export function ContactForm({ plan = false }: { plan?: boolean }) {
   }
 
   if (sent) {
-    return <div className="glass is-glow panel contact-thanks" role="status">
+    return <div className="glass panel contact-thanks" role="status">
       <div className="panel-head"><span className="icon-tile"><Icon name="check" size={20} /></span><h2 ref={thanks} tabIndex={-1}>Thanks, I got your message</h2></div>
       {plan && <p>For a workflow plan, I’ll reply with a payment link. Once it’s paid, I’ll send your plan within three working days.</p>}
       <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> about your free 20-minute call. If you’d rather not wait, pick a time now.</p>
@@ -77,7 +77,7 @@ export function ContactForm({ plan = false }: { plan?: boolean }) {
       </select></label>
     </div>
     <div hidden><label>Leave this blank<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
-    <button className="button primary" type="submit" disabled={busy}>{busy ? "Sending…" : "Send message"}<Icon name="arrow" size={17} /></button>
+    <button className="button secondary" type="submit" disabled={busy}>{busy ? "Sending…" : "Send message"}<Icon name="arrow" size={17} /></button>
     <p role="alert" className="form-status form-error">{error}</p>
     <p className="form-note" id="inquiry-note">Your message is saved for me to review, along with how you found this site (for example, the link you clicked). Leave out sensitive information.</p>
     </div>

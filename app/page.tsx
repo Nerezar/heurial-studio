@@ -1,8 +1,7 @@
-import type { CSSProperties } from "react";
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
 import { Intro } from "@/components/intro";
-import { MotionLink } from "@/components/route-transition";
+import Link from "next/link";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
 import { WorkflowDemo } from "@/components/workflow-demo";
@@ -10,11 +9,19 @@ import { BOOKING_URL } from "@/lib/site";
 import { tone } from "@/lib/style";
 import "./home.css";
 
+// Each line restates something promised further down the page. Change both places together.
+const facts = [
+  { title: "From $49", body: "A one-page plan for one task." },
+  { title: "About one week", body: "One workflow, from kickoff to handoff." },
+  { title: "You own everything", body: "It lives in your accounts, not mine." },
+];
+
+// Each problem is paired with the kind of task a workflow takes over. The Questions page lists the same tasks.
 const problems = [
-  { title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy." },
-  { title: "Same questions, every day.", body: "You type the same answers to customers over and over." },
-  { title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them." },
-  { title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them." },
+  { title: "Leads go quiet.", body: "Inquiries come in, but follow-up slips when you’re busy.", fix: "Reply to new inquiries, log them, and nudge the leads who went quiet." },
+  { title: "Same questions, every day.", body: "You type the same answers to customers over and over.", fix: "Answer common questions from your own documents." },
+  { title: "Copy, paste, repeat.", body: "Information lives in five tools and you’re the glue between them.", fix: "Send a weekly report that pulls your numbers together." },
+  { title: "Notes everywhere.", body: "Docs, emails, and files are hard to find when you need them.", fix: "Turn meeting notes into a to-do list." },
 ];
 
 const steps = [
@@ -39,14 +46,6 @@ const packages = [
   { name: "Two workflows", price: 895, time: "About two weeks", tag: "", note: "Two workflows that work together.", example: "Inquiry follow-up, plus a weekly report of where your leads came from and what they earned.", items: ["Two connected workflows", "Setup inside your own tools", "A plain-English guide", "A handoff call", "30 days of support"] },
 ];
 
-const fits = [
-  "Reply to new inquiries and log them",
-  "Nudge leads who went quiet",
-  "Answer common questions from your own documents",
-  "Turn meeting notes into a to-do list",
-  "Send a weekly report that pulls your numbers together",
-];
-
 const promises = [
   { title: "You own everything I build.", body: "It lives in your accounts, not mine." },
   { title: "I never ask for your passwords.", body: "You invite me as a user instead." },
@@ -54,44 +53,29 @@ const promises = [
   { title: "Straight answers.", body: "If I’m not the right fit, I’ll say so." },
 ];
 
-const REEL = [...Array(20).keys()].map((n) => n % 10);
-
-/** A price whose digits roll into place like a counter when the card scrolls into view. */
-function Price({ value }: { value: number }) {
-  return <p className="price num">
-    <span className="sr-only">${value}</span>
-    <span aria-hidden="true">$</span>
-    {String(value).split("").map((digit, index) => (
-      <span className="price-roll" aria-hidden="true" key={index} style={{ "--d": digit, "--i": index } as CSSProperties}>
-        <span>{REEL.map((n, at) => <i key={at}>{n}</i>)}</span>
-      </span>
-    ))}
-  </p>;
-}
-
 export default function Home() {
   return <>
     <Intro />
     <section className="hero is-navy" aria-labelledby="hero-title">
-      <div className="wrap hero-inner">
-        <div className="hero-copy">
+      <div className="wrap hero-head">
+        <div className="hero-title">
           <Chip>AI workflows for small businesses</Chip>
           <h1 id="hero-title">Make work <span className="accent">flow better.</span></h1>
+        </div>
+        <div className="hero-copy">
           <p className="hero-lede">I build small AI-powered workflows that take repetitive work off your plate: following up with leads, answering the same questions, moving information between tools. All inside the tools you already use.</p>
           <div className="hero-actions">
             <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
             <a href="#example" className="text-link">Watch an example <Icon name="arrow" size={17} /></a>
           </div>
-          <ul className="hero-facts">
-            <li><Icon name="check" size={15} />Start from $49</li>
-            <li><Icon name="check" size={15} />About one week</li>
-            <li><Icon name="check" size={15} />You own everything</li>
-          </ul>
-        </div>
-        <div className="hero-visual is-board">
-          <FlowBoard />
         </div>
       </div>
+      <div className="wrap hero-visual">
+        <FlowBoard />
+      </div>
+      <dl className="wrap hero-facts">
+        {facts.map(({ title, body }) => <div key={title}><dt>{title}</dt><dd>{body}</dd></div>)}
+      </dl>
     </section>
 
     <section className="section is-paper" aria-labelledby="problems-title">
@@ -99,17 +83,25 @@ export default function Home() {
         <header className="section-head">
           <Chip>Sound familiar?</Chip>
           <h2 id="problems-title">The busywork adds up.</h2>
-          <p>A few minutes here, a few there. By Friday it’s hours you didn’t spend on the work that pays.</p>
+          <p>A few minutes here, a few there. By Friday it’s hours you didn’t spend on the work that pays. The best first workflow is one small task you repeat all the time.</p>
         </header>
         <ul className="rows">
-          {problems.map(({ title, body }) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}
+          {problems.map(({ title, body, fix }) => (
+            <li key={title}>
+              <h3>{title}</h3>
+              <div>
+                <p>{body}</p>
+                <p className="row-fix"><Icon name="arrow" size={16} />{fix}</p>
+              </div>
+            </li>
+          ))}
         </ul>
       </div>
     </section>
 
     <section className="section" id="example" aria-labelledby="flow-title">
       <div className="wrap">
-        <header className="section-head">
+        <header className="section-head is-split">
           <Chip>What I build</Chip>
           <h2 id="flow-title">Watch one run.</h2>
           <p>Here’s a typical workflow for a home-service business. A late-night inquiry gets a reply, a record, and a follow-up, and you only tap once.</p>
@@ -120,7 +112,7 @@ export default function Home() {
 
     <section className="section is-paper" id="how-it-works" aria-labelledby="steps-title">
       <div className="wrap">
-        <header className="section-head">
+        <header className="section-head is-split">
           <Chip>How it works</Chip>
           <h2 id="steps-title">One annoying task, handled.</h2>
           <p>We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff.</p>
@@ -137,13 +129,13 @@ export default function Home() {
             </li>
           ))}
         </ol>
-        <p className="steps-more"><MotionLink href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></MotionLink></p>
+        <p className="steps-more"><Link href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></Link></p>
       </div>
     </section>
 
     <section className="section" id="calculator" aria-labelledby="calc-title">
       <div className="wrap">
-        <header className="section-head">
+        <header className="section-head is-split">
           <Chip>Quick math</Chip>
           <h2 id="calc-title">What is that task costing you?</h2>
           <p>Pick one task you repeat every week. Move the sliders to see what it adds up to over a year.</p>
@@ -152,60 +144,54 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section offer" id="pricing" aria-labelledby="offer-title">
+    <section className="section is-paper" id="pricing" aria-labelledby="offer-title">
       <div className="wrap">
-        <header className="section-head">
+        <header className="section-head is-split">
           <Chip>Pricing</Chip>
           <h2 id="offer-title">Pick the size of the job.</h2>
           <p>Three fixed prices, each for a clear piece of work. Half to start, half at handoff.</p>
         </header>
-        <div className="price-grid">
+        <ul className="rates">
           {packages.map(({ name, price, time, tag, note, example, items }) => (
-            <article className={`glass price-card${tag ? " is-glow is-featured" : ""}`} key={name}>
-              <header className="price-head">
+            <li className="rate" key={name}>
+              <div className="rate-name">
                 <h3>{name}</h3>
-                {tag && <span className="chip" style={tone("signal")}><i aria-hidden="true" />{tag}</span>}
-              </header>
-              <Price value={price} />
-              <p className="price-note">{note}</p>
-              <p className="price-example"><b>For example:</b> {example}</p>
-              <p className="step-time"><Icon name="clock" size={14} />{time}</p>
-              <ul className="check-list">
-                {items.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}
-              </ul>
-              <ButtonLink href={BOOKING_URL} secondary={!tag}>Book a free 20-min call</ButtonLink>
-            </article>
+                <p className="step-time"><Icon name="clock" size={14} />{time}</p>
+                {tag && <span className="chip"><i aria-hidden="true" />{tag}</span>}
+              </div>
+              <p className="rate-price num">${price}</p>
+              <div className="rate-body">
+                <p className="rate-note">{note}</p>
+                <p className="rate-example"><b>For example:</b> {example}</p>
+                <ul className="check-list rate-items">
+                  {items.map((item) => <li key={item}><Icon name="check" size={18} />{item}</li>)}
+                </ul>
+              </div>
+            </li>
           ))}
-        </div>
-        <div className="plan-strip">
-          <div>
-            <h3>Not sure yet? Start with a $49 workflow plan.</h3>
-            <p>Tell me one task you repeat. I’ll send you a one-page plan: the steps, the tools, what it would cost to run, and whether it’s worth automating at all. Keep it and build it yourself, or have me build it and the $49 comes off the price.</p>
-          </div>
-          <p className="plan-price"><span className="price-num num">$49</span><span>One task, one plan</span></p>
-          <ButtonLink href="/contact?plan=1">Get a plan</ButtonLink>
-        </div>
-      </div>
-    </section>
-
-    <section className="section is-paper" aria-labelledby="fits-title">
-      <div className="wrap split">
-        <header className="section-head">
-          <h2 id="fits-title">Tasks it fits.</h2>
-          <p>The best first workflow is one small task you repeat all the time. For example:</p>
-        </header>
-        <div>
-          <ul className="fit-list">
-            {fits.map((label) => <li key={label}>{label}</li>)}
-          </ul>
-          <p className="fit-foot">Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
+          <li className="rate">
+            <div className="rate-name">
+              <h3>Workflow plan</h3>
+              <p className="step-time">Not sure yet? Start here.</p>
+            </div>
+            <p className="rate-price num">$49</p>
+            <div className="rate-body">
+              <p className="rate-note">One task, one plan.</p>
+              <p className="rate-example">Tell me one task you repeat. I’ll send you a one-page plan: the steps, the tools, what it would cost to run, and whether it’s worth automating at all. Keep it and build it yourself, or have me build it and the $49 comes off the price.</p>
+              <ButtonLink href="/contact?plan=1" secondary>Get a plan</ButtonLink>
+            </div>
+          </li>
+        </ul>
+        <div className="rate-cta">
+          <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
+          <p>Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
         </div>
       </div>
     </section>
 
     <section className="section" id="demos" aria-labelledby="demos-title">
       <div className="wrap">
-        <header className="section-head">
+        <header className="section-head is-split">
           <Chip>Demos</Chip>
           <h2 id="demos-title">See what’s possible.</h2>
           <p>These are working demos with sample data. They’re not live client systems.</p>
@@ -231,7 +217,7 @@ export default function Home() {
             <div className="demo-body">
               <h3>Follow-up tracker</h3>
               <p>The tool I use to keep every inquiry and follow-up from slipping. Move cards, check reminders, and preview the daily email.</p>
-              <MotionLink href="/products" className="text-link">Try the tracker demo <Icon name="diagonal" size={16} /></MotionLink>
+              <Link href="/products" className="text-link">Try the tracker demo <Icon name="diagonal" size={16} /></Link>
             </div>
           </article>
           <article className="glass lift demo-card">
@@ -249,7 +235,7 @@ export default function Home() {
             <div className="demo-body">
               <h3>Knowledge assistant</h3>
               <p>An assistant that answers questions from a set of documents and links to its sources. Try it on my own guides.</p>
-              <MotionLink href="/resources" className="text-link">Try the assistant <Icon name="diagonal" size={16} /></MotionLink>
+              <Link href="/resources" className="text-link">Try the assistant <Icon name="diagonal" size={16} /></Link>
             </div>
           </article>
         </div>

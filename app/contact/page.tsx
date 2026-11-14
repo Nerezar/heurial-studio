@@ -50,7 +50,7 @@ export default async function Contact({ searchParams }: { searchParams: Promise<
             </div>
           </aside>
           {formReady ? <ContactForm plan={plan} /> : (
-            <div className="glass is-glow panel">
+            <div className="glass panel">
               <div className="panel-head"><span className="icon-tile"><Icon name="mail" size={20} /></span><h2>Book a free call</h2></div>
               <p>Email <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a> with the task you’d like help with, and I’ll reply to set up a time.</p>
             </div>

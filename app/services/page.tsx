@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Faq } from "@/components/faq";
-import { MotionLink } from "@/components/route-transition";
+import Link from "next/link";
 import { Chip, Closing, PageIntro } from "@/components/shell";
 import "../interiors.css";
 
@@ -81,7 +81,7 @@ export default function Questions() {
           <header className="section-head">
             <Chip>Questions</Chip>
             <h2 id="faq-title">Common questions</h2>
-            <p>Don’t see yours? <MotionLink href="/contact" className="text-link">Ask me directly</MotionLink>.</p>
+            <p>Don’t see yours? <Link href="/contact" className="text-link">Ask me directly</Link>.</p>
           </header>
           <Faq questions={questions} />
         </div>
