@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const principles = [
   { icon: "search", color: "signal", title: "Start with how it works today.", body: "Before I build anything, I map the task: who does it, which tools it touches, and where it slows down." },
   { icon: "check", color: "green", title: "Prove it on real work.", body: "I test on real examples from your business, including the awkward ones, and add a human check wherever a mistake would matter." },
-  { icon: "book", color: "violet", title: "Leave you in control.", body: "You get a plain-English guide, so you know how it works, what to check, and how to change it later." },
+  { icon: "book", color: "cyan", title: "Leave you in control.", body: "You get a plain-English guide, so you know how it works, what to check, and how to change it later." },
 ] as const;
 
 export default function About() {
