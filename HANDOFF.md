@@ -69,6 +69,18 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Live 2026-11-14: $49 workflow plan and package examples (`2342fec`)
+
+Website only. Pricing section has a $49 "workflow plan" strip above the three packages (one task, a one-page plan, the
+$49 comes off any package), and each package has a "For example" line. Hero fact reads "Start from $49". "Get a plan"
+goes to `/contact?plan=1`, which pre-fills the message; the thank-you note says a payment link follows and the plan
+arrives within three working days of payment (wording approved by the owner). The assistant's pricing passage
+includes the plan.
+
+**Open:** there is no payment link yet. The owner must create one (Stripe, Square or similar) and send it by hand
+when a plan request arrives. The business plan spreadsheet is at `~/heurial-dev/plan/HEURIAL-plan.xlsx` (outside
+the repo).
+
 ## Live 2026-11-14: intro skipped on phones and tablets (`c33b4d8`)
 
 Website only. The `100lvh` height fix below did **not** remove the strip at the bottom on the owner's iPhone, and there
