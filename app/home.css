@@ -145,77 +145,89 @@ button.board-node:active { transform: scale(.985); }
 .hero-tools li { display: inline-flex; align-items: center; gap: 8px; color: #c4cad4; }
 
 /* ---------- "Watch one run" workflow demo ---------- */
-.flow { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(18px, 3vw, 44px); align-items: stretch; }
-.flow-steps { list-style: none; margin: 0; padding: 0; display: grid; align-content: start; border-bottom: 1px solid var(--line); }
-.flow-steps li { border-top: 1px solid var(--line); }
+.flow { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); gap: clamp(22px, 4vw, 64px); align-items: center; }
+
+/* Steps read as a run log: each one is a point on a rail, and the rail fills in as the run moves on. */
+.flow-steps { list-style: none; margin: 0; padding: 0; display: grid; }
 .flow-steps button {
   position: relative;
   width: 100%;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-  padding: 15px 4px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 0 0 26px;
   border: 0;
   background: transparent;
   color: inherit;
   text-align: left;
-  overflow: hidden;
 }
+.flow-steps li:last-child button { padding-bottom: 0; }
 .flow-step-icon {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   color: var(--muted);
-  border: 1px solid var(--line);
-  transition: background-color .3s ease, color .3s ease, border-color .3s ease;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease;
 }
-.flow-steps button:hover .flow-step-icon { border-color: var(--line-strong); color: var(--white); }
-.flow-steps .is-active .flow-step-icon { background: var(--paper); color: var(--ink); border-color: transparent; }
-.flow-steps .is-done .flow-step-icon { color: var(--green); }
-.flow-step-text b { display: block; color: var(--muted); font-size: 1.05rem; font-weight: 400; letter-spacing: -.02em; transition: color .3s ease; }
+.flow-steps button:hover .flow-step-icon { border-color: var(--signal); color: var(--white); }
+.flow-steps .is-done .flow-step-icon { color: var(--signal); background: #101622; border-color: rgb(145 182 255 / .5); }
+.flow-steps .is-active .flow-step-icon { color: #fff; background: var(--blue); border-color: transparent; box-shadow: 0 0 0 5px rgb(52 120 246 / .18), 0 0 26px rgb(52 120 246 / .45); }
+.flow-step-text { padding-top: 8px; }
+.flow-step-text b { display: block; color: var(--muted); font-size: 1.08rem; font-weight: 400; letter-spacing: -.02em; transition: color .3s ease; }
 .flow-steps button:hover .flow-step-text b, .flow-steps .is-active .flow-step-text b { color: var(--white); }
+.flow-steps .is-done .flow-step-text b { color: var(--text); }
 .flow-step-text small {
   display: block;
   overflow: hidden;
   max-height: 0;
   color: var(--muted);
-  font-size: .86rem;
+  font-size: .88rem;
   line-height: 1.45;
   transition: max-height .45s var(--ease-out), margin-top .45s var(--ease-out);
 }
 .flow-steps .is-active .flow-step-text small { max-height: 4.5em; margin-top: 3px; }
-.flow-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; }
-.flow-progress i { display: block; width: 0; height: 100%; background: var(--signal); }
-.flow.is-playing .is-active .flow-progress i { animation: flow-progress var(--flow-ms) linear forwards; }
+.flow-step-time { padding-top: 11px; color: var(--faint); font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .3s ease; }
+.flow-steps .is-active .flow-step-time { color: var(--accent-ink); }
+.flow-progress { position: absolute; left: 19px; top: 40px; bottom: 0; width: 2px; background: var(--line); }
+.flow-steps li:last-child .flow-progress { display: none; }
+.flow-progress i { display: block; width: 100%; height: 0; background: var(--signal); }
+.flow-steps .is-done .flow-progress i { height: 100%; }
+.flow.is-playing .is-active .flow-progress i { animation: flow-progress-y var(--flow-ms) linear forwards; }
+@keyframes flow-progress-y { to { height: 100%; } }
 @keyframes flow-progress { to { width: 100%; } }
 
-.flow-stage { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.flow-stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .flow-stage-inner { flex: 1; display: grid; }
 .flow-now { display: none; min-height: 2.9em; color: var(--muted); font-size: .92rem; line-height: 1.45; }
 .flow-now b { color: var(--white); font-weight: 500; }
 .flow-window {
   display: flex;
   flex-direction: column;
-  min-height: 350px;
+  min-height: 372px;
   overflow: hidden;
-  border-radius: var(--radius);
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid rgb(255 255 255 / .12);
+  background: radial-gradient(110% 70% at 100% 0%, rgb(52 120 246 / .16), transparent 62%), linear-gradient(180deg, #15181d, #0e1013);
+  box-shadow: 0 40px 70px -40px rgb(0 0 0 / .8), inset 0 1px 0 rgb(255 255 255 / .05);
   animation: flow-window .45s var(--ease-out) both;
 }
-.flow-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: #181a1d; }
-.flow-bar i { width: 8px; height: 8px; border-radius: 50%; background: #3a3d41; }
-.flow-bar span { margin-left: 8px; color: var(--muted); font-size: .8rem; }
-.flow-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: clamp(16px, 2.6vw, 28px); }
+.flow-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid rgb(255 255 255 / .08); color: var(--muted); font-size: .82rem; }
+.flow-bar-app { display: inline-flex; align-items: center; gap: 9px; color: var(--white); font-weight: 500; }
+.flow-bar-app svg { color: var(--signal); }
+.flow-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: clamp(18px, 2.8vw, 30px); }
 .flow-in { animation: flow-in .5s var(--ease-out) both; }
 @keyframes flow-in { from { opacity: 0; transform: translateY(10px); } }
 @keyframes flow-window { from { opacity: 0; } }
 
 .flow-mail, .flow-reminder { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; }
-.flow-mail, .flow-reminder, .flow-quote { padding: 15px; border-radius: 6px; background: #181a1d; border: 1px solid var(--line); }
+.flow-mail, .flow-reminder, .flow-quote { padding: 16px; border-radius: 10px; background: rgb(255 255 255 / .04); border: 1px solid rgb(255 255 255 / .09); }
 .flow-avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #2a3a55; color: #d4e2ff; font-size: .78rem; font-weight: 600; }
 .flow-from { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 4px; color: var(--white); }
 .flow-from b { font-weight: 600; }
@@ -223,14 +235,15 @@ button.board-node:active { transform: scale(.985); }
 .flow-mail p:last-child, .flow-reminder p, .flow-quote p { color: var(--text); line-height: 1.5; }
 .flow-quote p { margin-top: 6px; }
 .flow-reminder p b { color: var(--white); font-weight: 600; }
-.flow-bell { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 6px; color: var(--amber); border: 1px solid #4a4130; }
+.flow-bell { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; color: var(--amber); border: 1px solid #4a4130; }
+.flow-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .flow-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   width: fit-content;
-  padding: 4px 9px;
-  border-radius: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
   color: #c8d8f5;
   font-size: .79rem;
   line-height: 1.3;
@@ -238,23 +251,34 @@ button.board-node:active { transform: scale(.985); }
   border: 1px solid rgb(145 182 255 / .28);
 }
 .flow-chip.is-good { color: #c3ecd3; background: rgb(127 214 164 / .08); border-color: rgb(127 214 164 / .3); }
-.flow-draft p:not(.flow-chip) { padding-left: 13px; border-left: 2px solid var(--line-strong); color: var(--white); line-height: 1.55; }
-.flow-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.flow-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--text); font-size: .87rem; font-weight: 500; }
+.flow-to { padding-bottom: 12px; border-bottom: 1px solid rgb(255 255 255 / .08); color: var(--muted); font-size: .84rem; }
+.flow-to b { margin-left: 6px; color: var(--white); font-weight: 500; }
+.flow-letter { display: grid; gap: 12px; color: var(--white); line-height: 1.55; }
+.flow-caret::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 3px; vertical-align: -3px; background: var(--signal); animation: flow-blink 1s steps(2) infinite; }
+@keyframes flow-blink { to { opacity: 0; } }
+.flow-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.flow-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--text); font-size: .87rem; font-weight: 500; }
 .flow-btn.is-primary { border-color: transparent; background: var(--paper); color: var(--ink); animation: flow-tap .9s 1s var(--ease-out) both; }
+/* The ring is the tap landing on the button. */
+.flow-btn.is-primary::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; border: 2px solid var(--signal); opacity: 0; animation: flow-ring .9s 1.15s ease-out both; }
 @keyframes flow-tap { 40% { transform: scale(.96); } }
-.flow-table { overflow: hidden; border-radius: 6px; border: 1px solid var(--line); font-size: .84rem; }
-.flow-row { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr .9fr; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--text); }
+@keyframes flow-ring { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(1.14, 1.5); } }
+.flow-table { overflow: hidden; border-radius: 10px; border: 1px solid rgb(255 255 255 / .09); font-size: .84rem; }
+.flow-row { display: grid; grid-template-columns: 22px 1.1fr 1.2fr 1fr .9fr; gap: 8px; padding: 11px 14px; border-top: 1px solid rgb(255 255 255 / .07); color: var(--text); }
 .flow-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.flow-row.is-head { border-top: 0; background: #181a1d; color: var(--muted); font-size: .76rem; }
-.flow-row.is-new { color: var(--white); background: rgb(145 182 255 / .08); box-shadow: inset 2px 0 0 var(--signal); }
+.flow-row span:first-child { color: var(--faint); font-variant-numeric: tabular-nums; }
+.flow-row.is-head { border-top: 0; background: rgb(255 255 255 / .04); color: var(--muted); font-size: .76rem; }
+.flow-row.is-new { color: var(--white); background: rgb(52 120 246 / .14); box-shadow: inset 2px 0 0 var(--signal); }
+.flow-week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.flow-week span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 56px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .09); color: var(--muted); font-size: .8rem; }
+.flow-week .is-on { border-color: rgb(232 193 112 / .5); background: rgb(232 193 112 / .08); color: var(--amber); }
 .flow-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--faint); font-size: .8rem; }
 .flow-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 0 14px;
   border-radius: 6px;
   border: 1px solid var(--line-strong);
   background: transparent;
@@ -375,18 +399,25 @@ button.board-node:active { transform: scale(.985); }
 }
 @media (max-width: 860px) {
   .flow, .calc, .offer-stage, .demo-grid, .steps { grid-template-columns: 1fr; }
-  .flow-steps { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; border-bottom: 0; }
-  .flow-steps li { border-top: 0; }
-  .flow-steps button { grid-template-columns: 1fr; justify-items: center; padding: 6px 4px 10px; border-bottom: 1px solid var(--line); }
-  .flow-step-text { display: none; }
+  .flow-steps { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .flow-steps button, .flow-steps li:last-child button { grid-template-columns: 1fr; justify-items: center; padding: 3px 0; }
+  .flow-step-text, .flow-step-time { display: none; }
+  /* The rail turns sideways and runs between the icons. */
+  .flow-progress { left: calc(50% + 20px); right: calc(-50% + 20px); top: 22px; bottom: auto; width: auto; height: 2px; }
+  .flow-progress i { width: 0; height: 100%; }
+  .flow-steps .is-done .flow-progress i { width: 100%; }
+  .flow.is-playing .is-active .flow-progress i { animation-name: flow-progress; }
   .flow-now { display: block; }
-  .flow-window { min-height: 310px; }
+  .flow-window { min-height: 356px; }
   .calc-result { min-height: 430px; }
 }
 @media (max-width: 560px) {
+  /* The Source column is dropped on phones so names and needs fit without being cut off. */
+  .flow-row { grid-template-columns: 20px 1.1fr 1.35fr .8fr; padding-inline: 12px; font-size: .8rem; }
+  .flow-row span:nth-child(4) { display: none; }
   .hero-actions .button { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flow-in, .flow-window, .flow-btn.is-primary { animation: none; }
+  .flow-in, .flow-window, .flow-btn.is-primary, .flow-btn.is-primary::after, .flow-caret::after { animation: none; }
   .board .is-new, .board-flash, .board-approve, .board-ring { animation: none; }
 }

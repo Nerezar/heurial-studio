@@ -78,6 +78,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Unchecked: reduced motion, a real phone, and a contact-form send after this deploy (no keys changed).
 
 ## Pushed, not merged (2026-11-13)
+- `flow-polish`: "Watch one run" restyled (`components/workflow-demo.tsx`, the flow block in `app/home.css`). The
+  step list is now a run log on a rail with times; the window lost the fake traffic-light dots and has an app name,
+  time and a blue corner light; each step shows a little more (tags, a typing caret, a tap ring, row numbers, a week
+  strip). Same story, same timing and controls. On phones the rail runs sideways and the Source column is dropped.
 - `site-font` (`10e116b`): site text in Inter Tight (owner's pick), digits fall back to Helvetica. Only the top of
   Home was looked at.
 
