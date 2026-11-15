@@ -87,7 +87,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Tiger emblem removed (branch `remove-emblem`, 2026-11-15)
+## Live 2026-11-15: tiger emblem removed (`63ec686`, merged and deployed on the owner's go-ahead)
 
 The owner found The Gnar Company (thegnar.com, a Boston AI and software consultancy) using a fire-breathing tiger
 logo very close to ours and asked to remove all emblems. The brand is now the HEURIAL wordmark alone.
