@@ -21,7 +21,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 - The live site's slow first load is the host waking up, not the app: `/` is prerendered static in the build. A
   separate session started on 2026-11-14 to find the cause and a fix; nothing from it is merged yet.
 - The Catalyst CLI prints a warning on every deploy: the Node.js it runs on (v26.0.0) has high-severity security
-  bugs fixed in v26.12.1. The owner has been told. Node has not been upgraded.
+  bugs fixed in v26.12.1. **Upgraded 2026-11-15:** Homebrew Node is now v26.13.1; the CLI (1.29.1) runs and the
+  pipeline tests pass. An old v22.14.0 at `/usr/local/bin/node` comes later on PATH and is unused.
 - **Site plan 2026-11-12** (pasted by the owner): launch blockers first (B1-B6), then conversion work. New tracker
   features are frozen until a real inquiry flows through. Branch `tracker-settings` (Settings screen) is built and
   pushed but parked for that reason.
@@ -35,9 +36,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   every inquiry emails hello@heurial.studio (reply-to = visitor); the owner confirmed a live test arrived. The same
   deployment updated `pipeline` in Production and added the `PushSubscriptions` table, the `daily` job pool and the
   `daily_email` schedule (cron `0 7 * * *`, America/Chicago, runs `daily-digest`), switched on. First morning email
-  due 2026-11-14 7:00; check it arrived.
-- About 12 labelled test inquiries ("TEST ...", example.com addresses) from 2026-11-12/13 are in Production
-  `Inquiries` for the owner to dismiss or delete.
+  due 2026-11-14 7:00; the owner confirmed on 2026-11-15 that it arrives.
+- **Test inquiries deleted 2026-11-15** (owner's go-ahead): all 18 Production `Inquiries` rows named "TEST ..." were
+  removed by ROWID in the ZCQL console. Left: 6 rows (Brianna Belton, three "HEURIAL ... Test", and "Oliver" and
+  "Uriyah Moore", both dismissed). The 4 test **leads** in `Leads` were kept; the tracker still loads (inbox 0, 5 leads).
 - **B5 done 2026-11-13:** both keys rotated. `INQUIRY_KEY` on `inquiries` + `INQUIRY_FUNCTION_KEY` on the site
   (form tested, 201). `PIPELINE_KEY` on `pipeline` and `daily-digest` (Production) + `PIPELINE_FUNCTION_KEY` on the
   site; all three saved values checked by SHA-256 fingerprint. Direct call to `pipeline/data`: new key 200, old key
@@ -61,7 +63,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   that day; what changed it is unknown. Both corrected by fingerprint and the site redeployed. Slate swaps any 503
   from the app for its own "origin server unavailable" page, so a fast 503 on the form means the site refused
   (wrong key or address), not that the server is down. After any key change, send a real test through the form.
-- Two more labelled test rows from this ("TEST Confirmation", "TEST Live Form") are in Production `Inquiries`.
+- Two more labelled test rows from this ("TEST Confirmation", "TEST Live Form"); deleted 2026-11-15.
 - **C2 booking link live 2026-11-13** (website and `main` at `9ae952c`): Zoho Bookings (owner's account, trial of
   the paid plan ends about 2026-11-28; what it drops to is unchecked). Event type "Free 20-min call", 20 min,
   Google Meet. Hours Mon-Fri 2:50-6:00 pm, Sat-Sun 9:00 am-6:00 pm, America/Chicago (slots show on the quarter
