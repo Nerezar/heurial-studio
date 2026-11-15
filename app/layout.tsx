@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     images: [shareImage],
   },
   icons: {
-    icon: "/brand/icon.svg",
-    apple: { url: "/brand/touch-icon.png", sizes: "180x180" },
+    icon: "/brand/mark-icon.png",
+    apple: { url: "/brand/mark-touch.png", sizes: "180x180" },
   },
 };
 

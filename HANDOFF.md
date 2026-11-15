@@ -87,6 +87,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Ribbon H mark (branch `new-logo`, 2026-11-15)
+
+The owner supplied a flat white "H" whose crossbar is a ribbon (two slanted posts, the band twisting between them),
+made from their own glossy chrome version. It replaces the plain "H" from the release below wherever a mark is
+used: browser tab (`brand/mark-icon.png`), phone (`brand/mark-touch.png`), tracker app and notification icons
+(`admin/icons/mark-*.png`), and the hero board hub (`brand/mark.png`, transparent, in the brand grey). The header,
+footer, About plate and share image keep the wordmark. All PNGs are made from the owner's 1254px artwork with
+`sharp` (brightness becomes transparency); there is no vector version. The owner was told to run a reverse image
+search on the mark before relying on it.
+
 ## Live 2026-11-15: tiger emblem removed (`63ec686`, merged and deployed on the owner's go-ahead)
 
 The owner found The Gnar Company (thegnar.com, a Boston AI and software consultancy) using a fire-breathing tiger

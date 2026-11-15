@@ -292,7 +292,7 @@ export function FlowBoard() {
         <div className={`board-hub${busy ? " is-busy" : ""}`}>
           <div className="board-core" ref={core}>
             <svg className="board-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="49" /></svg>
-            <Image src="/brand/h-mark.svg" alt="" width={128} height={136} loading="eager" />
+            <Image src="/brand/mark.png" alt="" width={512} height={512} loading="eager" />
           </div>
           <p className={`board-verb${busy ? " is-new" : ""}`} key={busy ? verb : "idle"}>{busy ? verb : "My workflow"}</p>
         </div>
