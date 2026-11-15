@@ -95,8 +95,16 @@ goes to `/contact?plan=1`, which pre-fills the message; the thank-you note says 
 arrives within three working days of payment (wording approved by the owner). The assistant's pricing passage
 includes the plan.
 
-**Open:** there is no payment link yet. The owner must create one (Stripe, Square or similar) and send it by hand
-when a plan request arrives. The business plan spreadsheet is at `~/heurial-dev/plan/HEURIAL-plan.xlsx` (outside
+**Payment links (2026-11-15, Stripe account "Heurial", made in the dashboard):** $49 workflow plan
+`https://buy.stripe.com/5kQ3cufIt73DddW8EM8AE00`; deposits (half up front) Quick fix $147.50
+`https://buy.stripe.com/eVqaEW1RD1Jj0racV28AE01`, One workflow $247.50
+`https://buy.stripe.com/4gMcN40Nzew51vedZ68AE02`, Two workflows $447.50
+`https://buy.stripe.com/7sYaEW53P5Zz4HqbQY8AE03`. Second halves are sent as Stripe invoices by hand. Each link
+collects email and name; tax category Consulting Services; "Collect tax automatically" is on (owner to check with an
+accountant). Stripe was still reviewing the account (2-3 days) when they were made. **Branch `plan-payment-link`
+(not merged, not deployed):** after a plan request the thank-you panel shows a primary **Pay $49** button
+(`PLAN_PAYMENT_URL` in `lib/site.ts`, the visitor's email pre-filled with `?prefilled_email=`); "Pick a time" becomes
+secondary there. The confirmation email (`inquiries` function) does not include the link yet. The business plan spreadsheet is at `~/heurial-dev/plan/HEURIAL-plan.xlsx` (outside
 the repo).
 
 ## Live 2026-11-14: intro skipped on phones and tablets (`c33b4d8`)

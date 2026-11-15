@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { HEARD_OPTIONS } from "@/lib/attribution";
-import { BOOKING_URL } from "@/lib/site";
+import { BOOKING_URL, PLAN_PAYMENT_URL } from "@/lib/site";
 import { readVisitSource } from "./attribution";
 import { Icon } from "./icon";
 
@@ -47,7 +47,7 @@ export function ContactForm({ plan = false }: { plan?: boolean }) {
   if (sent) {
     return <div className="glass panel contact-thanks" role="status">
       <div className="panel-head"><span className="icon-tile"><Icon name="check" size={20} /></span><h2 ref={thanks} tabIndex={-1}>Thanks, I got your message</h2></div>
-      {plan && <p>For a workflow plan, I’ll reply with a payment link. Once it’s paid, I’ll send your plan within three working days.</p>}
+      {plan && <p>To start your workflow plan, pay the $49 now. I’ll send your plan within three working days of payment.</p>}
       <p>It’s saved, and I’ll read it myself. I’ll reply to <strong>{sent.email}</strong> about your free 20-minute call. If you’d rather not wait, pick a time now.</p>
       <ul className="check-list">
         {sent.acknowledged && <li><Icon name="check" size={18} />I’ve sent a confirmation to that address. If you don’t see it, check your spam folder.</li>}
@@ -56,7 +56,8 @@ export function ContactForm({ plan = false }: { plan?: boolean }) {
       </ul>
       <p className="form-note">Reference: {sent.id}</p>
       <div className="contact-thanks-actions">
-        <a className="button primary" href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
+        {plan && <a className="button primary" href={`${PLAN_PAYMENT_URL}?prefilled_email=${encodeURIComponent(sent.email)}`} target="_blank" rel="noopener noreferrer">Pay $49<Icon name="arrow" size={17} /></a>}
+        <a className={`button ${plan ? "secondary" : "primary"}`} href={BOOKING_URL} target="_blank" rel="noopener noreferrer"><Icon name="calendar" size={17} />Pick a time</a>
         <button className="button secondary" type="button" onClick={() => setSent(undefined)}>Send another message</button>
       </div>
     </div>;

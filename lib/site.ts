@@ -4,6 +4,9 @@ export const CANONICAL_ORIGIN = "https://www.heurial.studio";
 /** Where visitors pick a time for the free 20-minute call (Zoho Bookings, a Google Meet video call). */
 export const BOOKING_URL = "https://heurial.zohobookings.com/4948260000000038065";
 
+/** Stripe payment link for the $49 workflow plan. */
+export const PLAN_PAYMENT_URL = "https://buy.stripe.com/5kQ3cufIt73DddW8EM8AE00";
+
 export function siteOrigin() {
   const configured = process.env.SITE_URL?.trim();
   return configured && /^https?:\/\//.test(configured) ? new URL(configured).origin : CANONICAL_ORIGIN;
