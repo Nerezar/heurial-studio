@@ -235,7 +235,7 @@
 <div class="app" id="app">
   ${demo ? `<div class="demo-bar" role="note">Sample data. Nothing here is saved or sent, and a refresh starts over.</div>` : ""}
   <nav class="rail" aria-label="Sections">
-    <div class="rail-mark" aria-hidden="true"><i class="mark emblem"></i><i class="mark word"></i></div>
+    <div class="rail-mark" aria-hidden="true"><i class="mark word"></i></div>
     <div class="rail-nav">${["overview", "pipeline", "leads", "time", "messages"].map(railBtn).join("")}</div>
     <div class="rail-foot">
       ${railBtn("connections")}
@@ -369,7 +369,7 @@
 
 ${cfg.auth ? `<div class="signin" id="signin" hidden>
   <form class="signin-card" id="signinForm">
-    <div class="signin-brand" role="img" aria-label="HEURIAL"><i class="mark emblem"></i><i class="mark word"></i></div>
+    <div class="signin-brand" role="img" aria-label="HEURIAL"><i class="mark word"></i></div>
     <h1>Sign in to the tracker</h1>
     <label class="field"><span>Password</span><input id="pw" type="password" autocomplete="current-password" required maxlength="200" aria-describedby="signinErr"></label>
     <p class="field-err" id="signinErr" role="alert"></p>

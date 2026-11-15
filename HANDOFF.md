@@ -87,6 +87,26 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Tiger emblem removed (branch `remove-emblem`, 2026-11-15)
+
+The owner found The Gnar Company (thegnar.com, a Boston AI and software consultancy) using a fire-breathing tiger
+logo very close to ours and asked to remove all emblems. The brand is now the HEURIAL wordmark alone.
+- Header and footer: `wordmark.svg` (the header used `signature.svg`, wordmark plus tiger). About page plate: the
+  wordmark. Hero board hub: `h-mark.svg`, the "H" from the wordmark.
+- Browser tab, phone and app icons: a plain "H" on near-black (`brand/icon.svg`, `brand/touch-icon.png`,
+  `admin/icons/h-192.png`, `h-512.png`, `h-maskable-512.png`; also the notification icon in `admin-sw.js`). New file
+  names because Slate caches `public/` files for a year.
+- Share image: `brand/share-card-2.jpg`, the old card with the tiger painted out.
+- Tracker: the emblem beside the wordmark is gone (sign-in and side rail).
+- **The opening animation is gone** (`components/intro.tsx` and its styles): it was the tiger breathing fire. It is
+  in git history if a new emblem ever wants an intro.
+- Deleted: `emblem.svg`, `01-Tiger-Emblem.svg`, `03-Primary-Horizontal.svg`, `signature.svg`,
+  `apple-touch-icon.png`, `share-card.jpg`, the old admin icons.
+- Checked: tsc, eslint, `next build`; Home at 1366 and 375 wide, About, the tracker demo; no broken images, no
+  sideways scroll. Not checked: `/admin` signed in, an installed phone app (it keeps its old icon until reinstalled),
+  how link previews look on LinkedIn or iMessage (they cache old images).
+- Not legal advice was given; a trademark search for the name HEURIAL (tmsearch.uspto.gov) is still to do.
+
 ## Live 2026-11-14: $49 workflow plan and package examples (`2342fec`)
 
 Website only. Pricing section has a $49 "workflow plan" strip above the three packages (one task, a one-page plan, the

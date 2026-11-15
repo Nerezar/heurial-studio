@@ -33,7 +33,7 @@ export function Chip({ children, color }: { children: ReactNode; color?: Tone })
 export function Header() {
   return <header className="site-header">
     <div className="wrap header-inner">
-      <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/signature.svg" alt="" width={1520} height={359} priority /></MotionLink>
+      <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} priority /></MotionLink>
       <Navigation links={primaryLinks} />
       <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></a>
     </div>

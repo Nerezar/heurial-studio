@@ -1,6 +1,5 @@
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
-import { Intro } from "@/components/intro";
 import { MotionLink } from "@/components/route-transition";
 import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
@@ -55,7 +54,6 @@ const promises = [
 
 export default function Home() {
   return <>
-    <Intro />
     <section className="hero is-navy" aria-labelledby="hero-title">
       <div className="wrap hero-head">
         <div className="hero-title">

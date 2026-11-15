@@ -104,10 +104,8 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 .rail-mark { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 22px; }
 /* HEURIAL marks: the brand SVGs used as masks, so they take the brand colour in either theme. */
 .mark { display: block; flex: none; background: var(--brand); -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; }
-.mark.emblem { --src: url("/brand/emblem.svg"); width: 36px; height: 24px; }
 .mark.word { --src: url("/brand/wordmark.svg"); width: 92px; height: 20px; }
 .signin-brand { display: grid; justify-items: start; gap: 10px; }
-.signin-brand .mark.emblem { width: 84px; height: 56px; }
 .signin-brand .mark.word { width: 150px; height: 32px; margin-left: -7px; }
 .rail-nav, .rail-foot { display: grid; gap: 4px; }
 .rail-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); }

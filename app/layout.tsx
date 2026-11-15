@@ -9,7 +9,7 @@ import "./shell.css";
 const shareTitle = "HEURIAL Studio";
 const shareDescription = "Take repetitive work off your plate. HEURIAL builds small AI-powered workflows, like lead follow-up and FAQ assistants, around the tools you already use.";
 const shareImage = {
-  url: "/brand/share-card.jpg",
+  url: "/brand/share-card-2.jpg",
   width: 1200,
   height: 630,
   alt: "HEURIAL Studio. Make work flow better.",
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     images: [shareImage],
   },
   icons: {
-    icon: "/brand/emblem.svg",
-    apple: { url: "/brand/apple-touch-icon.png", sizes: "180x180" },
+    icon: "/brand/icon.svg",
+    apple: { url: "/brand/touch-icon.png", sizes: "180x180" },
   },
 };
 

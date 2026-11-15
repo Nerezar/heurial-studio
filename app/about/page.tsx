@@ -26,7 +26,7 @@ export default function About() {
       <section className="section is-tight" aria-labelledby="about-method">
         <div className="wrap about-grid">
           <figure className="glass identity-plate">
-            <Image src="/brand/emblem.svg" alt="HEURIAL’s tiger emblem" width={407} height={269} />
+            <Image src="/brand/wordmark.svg" alt="HEURIAL" width={1520} height={323} />
           </figure>
           <div className="about-principles">
             <header className="section-head">

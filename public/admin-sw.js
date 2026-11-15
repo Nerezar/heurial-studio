@@ -11,8 +11,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || "Something new in the tracker.",
     tag: data.tag || undefined,
-    icon: "/admin/icons/icon-192.png",
-    badge: "/admin/icons/icon-192.png",
+    icon: "/admin/icons/h-192.png",
+    badge: "/admin/icons/h-192.png",
     data: { url: typeof data.url === "string" && data.url.startsWith("/admin") ? data.url : "/admin" },
   }));
 });
