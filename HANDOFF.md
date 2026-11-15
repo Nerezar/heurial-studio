@@ -87,7 +87,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Ribbon H mark (branch `new-logo`, 2026-11-15)
+## Live 2026-11-15: ribbon H mark (`7b6217f`, merged and deployed on the owner's go-ahead)
 
 The owner supplied a flat white "H" whose crossbar is a ribbon (two slanted posts, the band twisting between them),
 made from their own glossy chrome version. It replaces the plain "H" from the release below wherever a mark is
