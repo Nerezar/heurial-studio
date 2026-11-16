@@ -89,7 +89,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
-## Shorter, direct home page (branch `direct-home`, 2026-11-16)
+## Live 2026-11-16: shorter, direct home page (`58ad95d`, merged and deployed on the owner's go-ahead)
 
 The owner asked to remove anything unnecessary, drop the "AI" wording and be direct. Home is now five sections:
 hero, the problems rows, the three steps, the four promises, pricing, then the closing. Removed from Home: "Watch
