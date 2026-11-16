@@ -7,7 +7,7 @@ import "./globals.css";
 import "./shell.css";
 
 const shareTitle = "HEURIAL Studio";
-const shareDescription = "Take repetitive work off your plate. HEURIAL builds small AI-powered workflows, like lead follow-up and FAQ assistants, around the tools you already use.";
+const shareDescription = "Take repetitive work off your plate. HEURIAL sets up small workflows, like lead follow-up and answers to common questions, in the tools you already use.";
 const shareImage = {
   url: "/brand/share-card-2.jpg",
   width: 1200,
@@ -17,7 +17,7 @@ const shareImage = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  title: { default: "HEURIAL Studio | Simple AI workflows for small businesses", template: "%s | HEURIAL Studio" },
+  title: { default: "HEURIAL Studio | Simple workflows for small businesses", template: "%s | HEURIAL Studio" },
   description: shareDescription,
   openGraph: {
     type: "website",

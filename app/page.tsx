@@ -1,11 +1,8 @@
 import { FlowBoard } from "@/components/flow-board";
 import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
-import { SavingsCalculator } from "@/components/savings-calculator";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
-import { WorkflowDemo } from "@/components/workflow-demo";
 import { BOOKING_URL } from "@/lib/site";
-import { tone } from "@/lib/style";
 import "./home.css";
 
 // Each line restates something promised further down the page. Change both places together.
@@ -57,14 +54,14 @@ export default function Home() {
     <section className="hero is-navy" aria-labelledby="hero-title">
       <div className="wrap hero-head">
         <div className="hero-title">
-          <Chip>AI workflows for small businesses</Chip>
+          <Chip>For small businesses</Chip>
           <h1 id="hero-title">Make work <span className="accent">flow better.</span></h1>
         </div>
         <div className="hero-copy">
-          <p className="hero-lede">I build small AI-powered workflows that take repetitive work off your plate: following up with leads, answering the same questions, moving information between tools. All inside the tools you already use.</p>
+          <p className="hero-lede">I take one repetitive task off your plate: following up with leads, answering the same questions, moving information between tools. Fixed price, inside the tools you already use.</p>
           <div className="hero-actions">
             <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
-            <a href="#example" className="text-link">Watch an example <Icon name="arrow" size={17} /></a>
+            <a href="#pricing" className="text-link">See prices <Icon name="arrow" size={17} /></a>
           </div>
         </div>
       </div>
@@ -76,7 +73,7 @@ export default function Home() {
       </dl>
     </section>
 
-    <section className="section is-paper" aria-labelledby="problems-title">
+    <section className="section" aria-labelledby="problems-title">
       <div className="wrap split">
         <header className="section-head">
           <Chip>Sound familiar?</Chip>
@@ -94,17 +91,6 @@ export default function Home() {
             </li>
           ))}
         </ul>
-      </div>
-    </section>
-
-    <section className="section" id="example" aria-labelledby="flow-title">
-      <div className="wrap">
-        <header className="section-head is-split">
-          <Chip>What I build</Chip>
-          <h2 id="flow-title">Watch one run.</h2>
-          <p>Here’s a typical workflow for a home-service business. A late-night inquiry gets a reply, a record, and a follow-up, and you only tap once.</p>
-        </header>
-        <WorkflowDemo />
       </div>
     </section>
 
@@ -131,14 +117,16 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section" id="calculator" aria-labelledby="calc-title">
-      <div className="wrap">
-        <header className="section-head is-split">
-          <Chip>Quick math</Chip>
-          <h2 id="calc-title">What is that task costing you?</h2>
-          <p>Pick one task you repeat every week. Move the sliders to see what it adds up to over a year.</p>
+    <section className="section" aria-labelledby="trust-title">
+      <div className="wrap split">
+        <header className="section-head">
+          <Chip>Honest promises</Chip>
+          <h2 id="trust-title">Your business stays yours.</h2>
+          <p>The same four rules on every project.</p>
         </header>
-        <SavingsCalculator />
+        <ul className="rows">
+          {promises.map(({ title, body }) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}
+        </ul>
       </div>
     </section>
 
@@ -184,72 +172,6 @@ export default function Home() {
           <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
           <p>Some tools charge their own small monthly fees. I’ll tell you about those before we start, and they’re billed to your account.</p>
         </div>
-      </div>
-    </section>
-
-    <section className="section" id="demos" aria-labelledby="demos-title">
-      <div className="wrap">
-        <header className="section-head is-split">
-          <Chip>Demos</Chip>
-          <h2 id="demos-title">See what’s possible.</h2>
-          <p>These are working demos with sample data. They’re not live client systems.</p>
-        </header>
-        <div className="demo-grid">
-          <article className="glass lift demo-card">
-            <div className="demo-preview" aria-hidden="true">
-              <div className="demo-bar"><span><Icon name="grid" size={15} />Follow-up tracker</span><span className="chip" style={tone("amber")}>Sample data</span></div>
-              <div className="demo-view">
-                <div className="mini-stats">
-                  <p><b className="num">12</b><small>Open leads</small></p>
-                  <p><b className="num">3</b><small>Due today</small></p>
-                  <p><b className="num">$4,200</b><small>Won so far</small></p>
-                </div>
-                <div className="mini-board">
-                  <div className="mini-col"><small>New</small><div className="mini-card" style={tone("red")}><i /><b>Ben C.</b><span>Overdue</span></div></div>
-                  <div className="mini-col"><small>Proposal sent</small><div className="mini-card" style={tone("signal")}><i /><b>Maya B.</b><span>Sent Tue</span></div></div>
-                  <div className="mini-col"><small>Won</small><div className="mini-card" style={tone("green")}><i /><b>Tom O.</b><span>Paid</span></div></div>
-                  <div className="mini-card mini-mover" style={tone("amber")}><i /><b>Elena P.</b><span>Due today</span></div>
-                </div>
-              </div>
-            </div>
-            <div className="demo-body">
-              <h3>Follow-up tracker</h3>
-              <p>The tool I use to keep every inquiry and follow-up from slipping. Move cards, check reminders, and preview the daily email.</p>
-              <MotionLink href="/products" className="text-link">Try the tracker demo <Icon name="diagonal" size={16} /></MotionLink>
-            </div>
-          </article>
-          <article className="glass lift demo-card">
-            <div className="demo-preview" aria-hidden="true">
-              <div className="demo-bar"><span><Icon name="chat" size={15} />Knowledge assistant</span><span className="chip" style={tone("signal")}>Public guides</span></div>
-              <div className="demo-view mini-chat">
-                <p className="mini-q">Is my data safe?</p>
-                <div className="mini-turn">
-                  <span className="mini-dots"><i /><i /><i /></span>
-                  <p className="mini-a">You own everything HEURIAL builds, and it lives in your accounts.</p>
-                </div>
-                <span className="chip mini-source" style={tone("signal")}><Icon name="book" size={14} />Your data and ownership</span>
-              </div>
-            </div>
-            <div className="demo-body">
-              <h3>Knowledge assistant</h3>
-              <p>An assistant that answers questions from a set of documents and links to its sources. Try it on my own guides.</p>
-              <MotionLink href="/resources" className="text-link">Try the assistant <Icon name="diagonal" size={16} /></MotionLink>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section className="section is-paper" aria-labelledby="trust-title">
-      <div className="wrap split">
-        <header className="section-head">
-          <Chip>Honest promises</Chip>
-          <h2 id="trust-title">Your business stays yours.</h2>
-          <p>The same four rules on every project.</p>
-        </header>
-        <ul className="rows">
-          {promises.map(({ title, body }) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}
-        </ul>
       </div>
     </section>
 

@@ -6,7 +6,7 @@ import "../interiors.css";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "HEURIAL Studio is a small AI workflow studio founded by Uriyah Moore. Practical tools, built around how you already work.",
+  description: "HEURIAL Studio is a small workflow studio founded by Uriyah Moore. Practical tools, built around how you already work.",
 };
 
 const principles = [
@@ -20,8 +20,8 @@ export default function About() {
     <>
       <PageIntro
         label="About"
-        title="AI built around how you work."
-        description="I’m Uriyah Moore, founder of HEURIAL Studio. I help small businesses use AI in practical ways: less busywork, fewer dropped balls, and tools people actually use."
+        title="Built around how you work."
+        description="I’m Uriyah Moore, founder of HEURIAL Studio. I help small businesses get repetitive work off their plate: less busywork, fewer dropped balls, and tools people actually use."
       />
       <section className="section is-tight" aria-labelledby="about-method">
         <div className="wrap about-grid">

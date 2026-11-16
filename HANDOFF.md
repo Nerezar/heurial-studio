@@ -89,6 +89,18 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Production is read-only: the table and settings reach it only by promotion.
 - Not set anywhere yet: Anthropic key (optional, costs money), Twilio values, inbound mail provider.
 
+## Shorter, direct home page (branch `direct-home`, 2026-11-16)
+
+The owner asked to remove anything unnecessary, drop the "AI" wording and be direct. Home is now five sections:
+hero, the problems rows, the three steps, the four promises, pricing, then the closing. Removed from Home: "Watch
+one run" (`components/workflow-demo.tsx`, deleted), the savings calculator (`components/savings-calculator.tsx`,
+deleted) and the "See what's possible" demo cards (the Demos and Guides pages are still in the menu). The promises
+moved above pricing so the paper and dark bands still alternate; the problems section is dark now. "AI" is gone from
+the hero, page titles, share text, About and the assistant's first passage. It stays in one place on purpose: the
+promise to say which AI services touch a client's data (Home, Questions, the assistant). Their styles in
+`app/home.css` are left in place, unused. Positioning under discussion with the owner: roofing companies, starting
+with their father's company; the copy is not changed for that yet.
+
 ## Live 2026-11-15: ribbon H mark (`7b6217f`, merged and deployed on the owner's go-ahead)
 
 The owner supplied a flat white "H" whose crossbar is a ribbon (two slanted posts, the band twisting between them),
