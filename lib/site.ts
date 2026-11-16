@@ -4,6 +4,12 @@ export const CANONICAL_ORIGIN = "https://www.heurial.studio";
 /** Where visitors pick a time for the free 20-minute call (Zoho Bookings, a Google Meet video call). */
 export const BOOKING_URL = "https://heurial.zohobookings.com/4948260000000038065";
 
+/** HEURIAL's social profiles, shown in the footer and listed in the site's structured data. */
+export const SOCIAL_LINKS = [
+  { label: "Instagram", href: "https://www.instagram.com/heurial.studio/" },
+  { label: "TikTok", href: "https://www.tiktok.com/@heurial.studio" },
+];
+
 /** Stripe payment link for the $49 workflow plan. */
 export const PLAN_PAYMENT_URL = "https://buy.stripe.com/5kQ3cufIt73DddW8EM8AE00";
 

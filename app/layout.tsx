@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AttributionCapture } from "@/components/attribution";
 import { RouteMotion } from "@/components/route-transition";
 import { Footer, Header } from "@/components/shell";
-import { siteOrigin } from "@/lib/site";
+import { CANONICAL_ORIGIN, SOCIAL_LINKS, siteOrigin } from "@/lib/site";
 import "./globals.css";
 import "./shell.css";
 
@@ -38,10 +38,21 @@ export const metadata: Metadata = {
   },
 };
 
+// Tells search engines these profiles belong to the site.
+const organization = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: shareTitle,
+  url: CANONICAL_ORIGIN,
+  logo: `${CANONICAL_ORIGIN}/brand/mark.png`,
+  sameAs: SOCIAL_LINKS.map((link) => link.href),
+};
+
 export const viewport: Viewport = { themeColor: "#0b0c0e", colorScheme: "dark" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en" data-scroll-behavior="smooth"><body id="top">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
     <RouteMotion>
       <AttributionCapture />
       <a className="skip-link" href="#main">Skip to content</a>

@@ -110,6 +110,7 @@ html[data-scrolled] .site-header {
 .footer-identity { display: grid; gap: 12px; justify-items: start; }
 .footer-identity img { width: 176px; height: auto; }
 .footer-identity p { color: var(--muted); }
+.footer-social { display: flex; flex-wrap: wrap; gap: 16px; }
 .site-footer nav { display: grid; border-bottom: 1px solid var(--line); }
 .site-footer nav a {
   display: flex;

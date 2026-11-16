@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { BOOKING_URL } from "@/lib/site";
+import { BOOKING_URL, SOCIAL_LINKS } from "@/lib/site";
 import { tone } from "@/lib/style";
 import { Icon } from "./icon";
 import { Navigation } from "./navigation";
@@ -47,6 +47,7 @@ export function Footer() {
         <MotionLink href="/" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} /></MotionLink>
         <p>Make work flow better.</p>
         <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>
+        <p className="footer-social">{SOCIAL_LINKS.map(({ label, href }) => <a key={href} className="text-link" href={href} target="_blank" rel="noopener noreferrer">{label}</a>)}</p>
       </div>
       <nav aria-label="Footer navigation">
         {links.slice(1).map(({ href, label }) => <MotionLink key={href} href={href}>{label}<Icon name="diagonal" size={13} /></MotionLink>)}
