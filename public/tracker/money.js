@@ -18,7 +18,8 @@
    * period (`earned`) and in the period just before it (`before`), and whether any entry is a deposit or withdrawal.
    */
   function series(entries, { today, days }) {
-    const list = entries.filter((e) => e.date && e.cents > 0).sort((a, b) => a.date.localeCompare(b.date));
+    // An entry dated after today hasn't happened yet: it joins the balance on its day, not before.
+    const list = entries.filter((e) => e.date && e.date <= today && e.cents > 0).sort((a, b) => a.date.localeCompare(b.date));
     const first = days ? addDays(today, -days) : addDays(list.length ? list[0].date : today, -2);
     const prior = days ? addDays(first, -days) : "";
     const span = Math.max(1, dayDiff(today, first));

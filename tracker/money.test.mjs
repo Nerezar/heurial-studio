@@ -37,3 +37,16 @@ test("no entries gives an empty, flat period", () => {
   const m = series([], { today: "2026-03-31", days: 7 });
   assert.deepEqual([m.start, m.total, m.earned, m.steps.length, m.span], [0, 0, 0, 0, 7]);
 });
+
+test("an entry dated after today is left out until its day comes", () => {
+  const withFuture = [...entries, { date: "2026-04-05", cents: 70000, kind: "earning", label: "Not yet paid" }, { date: "2026-04-02", cents: 5000, kind: "withdrawal", label: "Planned" }];
+  const now = series(withFuture, { today: "2026-03-31", days: 30 });
+  assert.deepEqual([now.total, now.earned, now.steps.length], [209500, 49500, 3]);
+  const later = series(withFuture, { today: "2026-04-05", days: 30 });
+  assert.equal(later.total, 209500 - 5000 + 70000);
+});
+
+test("a period with no starting balance starts from zero and keeps exact cents", () => {
+  const m = series([{ date: "2026-03-30", cents: 4550, kind: "withdrawal", label: "Software" }, { date: "2026-03-29", cents: 10025, kind: "earning", label: "Client" }], { today: "2026-03-31", days: 7 });
+  assert.deepEqual([m.start, m.total, m.earned], [0, 5475, 10025]);
+});

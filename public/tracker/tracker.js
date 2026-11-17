@@ -77,7 +77,8 @@
   // ---------- Formatting ----------
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const money = (cents) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  // Whole dollars read cleanly; an amount with cents shows them, so nothing is rounded away.
+  const money = (cents) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Math.round(cents) % 100 ? 2 : 0, maximumFractionDigits: 2 });
   const usd = (dollars) => "$" + Math.round(dollars).toLocaleString("en-US");
   const pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
   const hrs = (h) => (Math.round(h * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -480,7 +481,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const d = state.data, m = moneyPath(), won = m.earned;
     const urgent = urgentCount(d);
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
-    const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls")].filter(Boolean).join(" · ");
+    const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls"), dueTasks(d).length && plural(dueTasks(d).length, "task")].filter(Boolean).join(" · ");
     const open = d.leads.filter((l) => OPEN.includes(l.status));
     const cards = [
       ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, ""],
@@ -616,6 +617,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const tabs = [["all", "All"], ["earning", "Income"], ["withdrawal", "Expenses"], ["deposit", "Transfers"]];
     const KIND = { earning: ["Income", "--up", "↑"], withdrawal: ["Expense", "--down", "↓"], deposit: ["Transfer", "--accent", "↔"] };
     const undated = m.steps.filter((x) => x.entry.lead && !x.entry.lead.paid_at).length;
+    // Entries dated after today are not in the balance yet. They are still listed, first, so they can be seen and removed.
+    const ahead = moneyEntries().filter((e) => e.date > state.data.today && (tab === "all" || e.kind === tab)).sort((a, b) => a.date.localeCompare(b.date));
+    const line = (entry, future) => `<tr${future ? ` class="is-future"` : ""}><td class="n">${niceDate(entry.date)}</td><td>${what(entry)}${future ? `<span> · scheduled, not in the balance yet</span>` : ""}</td>
+        <td><span class="kind" style="--c:var(${future ? "--mute" : KIND[entry.kind][1]})">${KIND[entry.kind][2]} ${KIND[entry.kind][0]}</span></td>
+        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td>
+        <td class="r">${entry.id ? `<button class="btn ghost sm icon" type="button" data-action="tx-del" data-id="${entry.id}" data-fk="xd-${entry.id}" aria-label="Delete ${esc(entry.label)}, ${signed(entry)}">${icon("x")}</button>` : ""}</td></tr>`;
     const what = ({ lead, label, kind }) => lead
       ? `<button class="who" type="button" data-action="open" data-id="${lead.id}" data-fk="tx-${lead.id}">${esc(lead.name)}${lead.business ? `<span> · ${esc(lead.business)}</span>` : ""}</button>`
       : esc(label || KIND[kind][0]);
@@ -635,11 +642,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   <section class="pane" aria-labelledby="txTitle">
     <div class="pane-head"><h2 id="txTitle">Transactions</h2><span class="pane-meta">${sentence(inPeriod())}</span>
       <div class="pane-tools"><div class="tabs" role="tablist" aria-label="Type">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="moneytab" data-tab="${key}" data-fk="mt-${key}" aria-selected="${tab === key}">${name}</button>`).join("")}</div></div></div>
-    <div class="pane-body">${rows.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th><th><span class="sr">Delete</span></th></tr></thead><tbody>
-      ${rows.map(({ entry }) => `<tr><td class="n">${niceDate(entry.date)}</td><td>${what(entry)}</td>
-        <td><span class="kind" style="--c:var(${KIND[entry.kind][1]})">${KIND[entry.kind][2]} ${KIND[entry.kind][0]}</span></td>
-        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td>
-        <td class="r">${entry.id ? `<button class="btn ghost sm icon" type="button" data-action="tx-del" data-id="${entry.id}" data-fk="xd-${entry.id}" aria-label="Delete ${esc(entry.label)}, ${signed(entry)}">${icon("x")}</button>` : ""}</td></tr>`).join("")}</tbody></table>`
+    <div class="pane-body">${rows.length || ahead.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th><th><span class="sr">Delete</span></th></tr></thead><tbody>
+      ${ahead.map((entry) => line(entry, true)).join("")}${rows.map(({ entry }) => line(entry, false)).join("")}</tbody></table>`
       : `<div class="empty"><b>Nothing here ${inPeriod()}.</b>When you move a lead to Paid, its value shows up as income.</div>`}
     ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}</div>
   </section>
@@ -833,7 +837,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       for (const pay of m.steps) if (Math.abs(px(pay.day) - x) < 14) day = pay.day; // close to a payment, land on it
       hoverDay(day);
     };
-    el.onpointerleave = () => hoverDay(-1);
+    el.onpointerdown = el.onpointermove; // a tap shows the value too, not only a drag
+    el.onpointerleave = (e) => { if (e.pointerType === "mouse") hoverDay(-1); }; // after a tap the value stays until the next tap
     el.onblur = () => hoverDay(-1);
     el.onkeydown = (e) => {
       const days = [...new Set(m.steps.map((x) => x.day))];
@@ -1030,9 +1035,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const svc = (on, label) => `<span class="svc ${on && !demo ? "on" : ""}"><i></i>${label}: ${demo ? "sample data" : on ? "connected" : "not connected"}</span>`;
     const strip = `<div class="strip">${sv ? svc(sv.email, "Email sending") + svc(sv.sms, "Text sending") + svc(sv.inbound || sv.twilio, "Incoming messages") + svc(sv.ai, "AI drafts")
       : `<span>This version of the back end doesn't report what's connected.</span>`}
-      <button class="btn sm" type="button" data-action="view" data-view="connections" data-fk="to-conn">${icon("plug")}Connections</button></div>`;
+      <button class="btn sm" type="button" data-action="view" data-view="connections" data-fk="to-conn">${icon("gear")}Settings</button></div>`;
     const inbox = d.inbox.length ? `<div class="strip"><span>${plural(d.inbox.length, "new website inquiry", "new website inquiries")} waiting for a decision.</span>
-      <button class="btn sm" type="button" data-action="view" data-view="overview" data-fk="to-ov">Review in Overview</button></div>` : "";
+      <button class="btn sm" type="button" data-action="view" data-view="tasks" data-fk="to-ov">Review in Tasks</button></div>` : "";
     let body;
     if (sv && sv.messages === false) {
       body = `<div class="empty"><b>The message log isn't set up yet.</b>Create the Messages table in the Catalyst Data Store, then refresh. The rest of the tracker works without it.</div>`;
@@ -1096,8 +1101,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const dark = (document.documentElement.dataset.theme || "light") === "dark";
     const st = (on) => (demo ? ["--warn", "Sample data"] : !sv ? ["--mute", "Unknown"] : on ? ["--up", "Connected"] : ["--mute", "Not connected"]);
     const rows = [
-      ["leads", "Website inquiry form", `New inquiries from the website appear under Needs attention. ${plural(d.inbox.length, "inquiry", "inquiries")} waiting now.`, demo ? ["--warn", "Sample data"] : ["--up", "Active"], "",
-        `<button class="btn sm" type="button" data-action="view" data-view="overview" data-fk="c-ov">Open Overview</button>`],
+      ["leads", "Website inquiry form", `New inquiries from the website appear in Tasks. ${plural(d.inbox.length, "inquiry", "inquiries")} waiting now.`, demo ? ["--warn", "Sample data"] : ["--up", "Active"], "",
+        `<button class="btn sm" type="button" data-action="view" data-view="tasks" data-fk="c-ov">Open Tasks</button>`],
       ["mail", "Daily summary email", "A morning email listing new inquiries, calls to update and follow-ups due.", st(sv && sv.digest),
         "Needs <code>DIGEST_FROM</code> (a sender verified in Catalyst Mail), <code>DIGEST_TO</code>, and the daily job.",
         `<button class="btn sm" type="button" data-action="digest" data-fk="c-digest">Preview</button>`],
@@ -1814,6 +1819,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     act(form.querySelector('[type="submit"]'), async () => {
       await call("/api/transactions", "POST", { kind: form.kind.value, date: form.date.value, amount, label: form.label.value });
       form.amount.value = ""; form.label.value = "";
+      form.date.value = state.data.today; // back to today, so the next entry isn't dated ahead by accident
       toast("Transaction added");
       await load();
     });
@@ -1939,7 +1945,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       if (typing || e.metaKey || e.ctrlKey || e.altKey || !state.data) return;
       if (e.key === "/") { e.preventDefault(); openPalette(); }
       else if (e.key === "n" || e.key === "N") { e.preventDefault(); openLead(null); }
-      else if (/^[1-6]$/.test(e.key)) setView(Object.keys(VIEWS)[Number(e.key) - 1]);
+      else if (/^[1-9]$/.test(e.key) && Number(e.key) <= Object.keys(VIEWS).length) setView(Object.keys(VIEWS)[Number(e.key) - 1]);
     });
 
     // Redraw the chart when the work area changes size (window resize, or the lead panel docking).

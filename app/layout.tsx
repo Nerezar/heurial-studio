@@ -44,7 +44,7 @@ const organization = {
   "@type": "Organization",
   name: shareTitle,
   url: CANONICAL_ORIGIN,
-  logo: `${CANONICAL_ORIGIN}/brand/mark.png`,
+  logo: `${CANONICAL_ORIGIN}/brand/mark-touch.png`,
   sameAs: SOCIAL_LINKS.map((link) => link.href),
 };
 

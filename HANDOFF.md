@@ -4,6 +4,22 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Audit pass, branch `audit-fixes` (2026-11-17), pushed, not merged, not deployed.** Fixed: entries dated after
+  today were counted in the balance (now left out until their day, and listed on Money as "scheduled"); amounts
+  with cents were rounded to whole dollars; the Money and Tasks screens were squeezed instead of scrolling;
+  tapping the chart showed nothing (only dragging did); number keys 7 and 8 were shown in the command bar but did
+  nothing; three labels used old section names; the Due today tile's explanation left out your own tasks; text
+  and status colours in the tracker's light look and the site's small print were below 4.5:1 contrast; the focus
+  ring was invisible on the navy sidebar; the site's structured data pointed at a logo file that does not exist; a
+  background-tab error on section changes. Tests: 5 money tests (2 new), 24 pipeline tests. Browser-checked on the
+  sample-data page: create, edit, move, delete a lead; log and delete time; add, tick, reopen, delete a task; add
+  and delete a transaction; convert an inquiry; finish a follow-up; every range against the table's own sums;
+  dialogs and Escape; the command bar; 1440, 768 and 375 wide. Website: every link, the contact form's validation
+  and success state, the sign-in API's refusals. **Blocked: testing the tracker signed in** (a local sign-in needs
+  throwaway test values and preview settings that the permission system refused to create), so persistence after
+  refresh and sign-back-in is untested. **Open in the Catalyst console: a deployment draft** "Transactions and
+  tasks (2578fc8)" whose diff was generated with all four default services ticked. It was never initiated. Abort
+  it, or regenerate it with only Serverless and Cloud Scale, before any Production deploy.
 - **Development is ready for transactions and tasks (2026-11-17, main `2578fc8`).** In Catalyst Development: the
   `Transactions` (table 141722000000014664) and `Tasks` (141722000000020458) tables exist with the columns from
   `catalyst/TRACKER-SETUP.md`, GLOBAL scope, and the App User role given no access (new tables default to letting it
