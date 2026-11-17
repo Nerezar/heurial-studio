@@ -15,8 +15,8 @@ const config: NextConfig = {
   env: { TRACKER_VERSION: trackerVersion },
   async redirects() {
     return [
-      // The site is two pages for now: the overview and Contact. The old addresses go to the overview.
-      ...["/about", "/services", "/products", "/resources"].map((source) => ({ source, destination: "/", permanent: false })),
+      // The site is three pages for now: the overview, Demos and Contact. The old addresses go to the overview.
+      ...["/about", "/services", "/resources"].map((source) => ({ source, destination: "/", permanent: false })),
       // The demo is a file, so its folder address needs pointing at it.
       { source: "/demo/tracker", destination: "/demo/tracker/index.html", permanent: false },
     ];

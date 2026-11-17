@@ -4,7 +4,9 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Two-page site, branch `two-pages` (2026-11-17), pushed, not merged, not deployed. It sits on top of
+- **Three pages (owner changed it back the same day):** Demos (`/products`) is restored with the tracker demo in
+  its frame, minus its link to the deleted Guides page. The nav is Overview, Demos, Contact.
+- **Site cut down, branch `two-pages` (2026-11-17), pushed, not merged, not deployed. It sits on top of
   `tracker-editorial`, so merging it brings the tracker restyle and money chart with it.** The owner asked for
   three things. Fonts: Newsreader is gone everywhere (site and tracker); headings and labels are Inter Tight again
   and the font files are deleted. Page change: a fade to white and back (380 ms in, 560 ms out) in place of the
