@@ -4,6 +4,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Tracker restyled to the owner's concept image (2026-11-17, on branch `two-pages`, pushed, not merged):** the
+  tracker's light look is now a soft blue page, a navy sidebar, white cards with soft shadows and glossy blue
+  buttons, in a block at the end of `tracker.css` scoped to the light theme. Dark mode is unchanged. Overview now
+  leads with the balance and chart full width, then the three tiles, then Needs attention beside the reports. The
+  chart shows the starting and current balance as labels, and an Income / Expenses row appears when there are
+  deposits or withdrawals. Kept from before, not in the concept: the greeting, the existing six sections (the
+  concept's Money, Tasks and Settings sections do not exist), and the stepped line (the concept's wavy line would
+  misstate daily balances). The website keeps its paper look, so the tracker no longer matches it. Checked on the
+  sample-data page at 1440 and 375, light and dark. Not checked: the signed-in tracker, dialogs, Safari.
 - **Three pages (owner changed it back the same day):** Demos (`/products`) is restored with the tracker demo in
   its frame, minus its link to the deleted Guides page. The nav is Overview, Demos, Contact.
 - **Site cut down, branch `two-pages` (2026-11-17), pushed, not merged, not deployed. It sits on top of

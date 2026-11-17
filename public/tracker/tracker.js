@@ -547,7 +547,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   /** The money panel: the balance, what the chosen period changed, the line, and the entries that make it up. */
   function moneyPane() {
     const m = moneyPath(), gain = m.total - m.start, rows = m.steps.slice().reverse();
-    const title = m.transfers ? "Balance" : "Total earned";
+    const title = m.transfers ? "Total balance" : "Total earned";
+    const spent = m.steps.reduce((sum, x) => sum + (x.entry.kind === "withdrawal" ? x.entry.cents : 0), 0);
     // A percentage only means something against a real starting balance; from almost nothing it is just a huge number.
     const share = m.start > 0 ? Math.round((Math.abs(gain) / m.start) * 100) : 0, pct = share > 0 && share < 1000 ? ` (${share}%)` : "";
     const change = !m.steps.length && !m.start ? "Nothing has been marked Paid yet"
@@ -566,6 +567,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       <div class="read" id="chartRead"></div>
     </div>
     <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the entries."></div>
+    ${m.transfers ? `<div class="flow"><div><i class="in" aria-hidden="true">↑</i><span>Income</span><b>${money(m.earned)}</b></div><div><i class="out" aria-hidden="true">↓</i><span>Expenses</span><b>${money(spent)}</b></div></div>` : ""}
     <h3 class="sub-head">${m.transfers ? "Money in and out" : "Payments"} ${inPeriod()}</h3>
     ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map(row).join("")}</ul>
       ${rows.length > 6 ? `<p class="foot-note">And ${rows.length - 6} earlier. Every paid project is listed in Leads.</p>` : ""}`
@@ -672,7 +674,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const fresh = sig !== chartSig;
     chartSig = sig;
     const W = Math.max(280, Math.round(el.clientWidth)), H = Math.max(180, Math.round(el.clientHeight));
-    const x0 = 14, x1 = W - 64, y0 = 16, y1 = H - 28;
+    const x0 = 14, x1 = W - 64, y0 = 34, y1 = H - 28;
     // shortcut: the scale starts at $0, so a balance below zero would run off the bottom; add a lower bound when withdrawals can exceed the balance.
     const { top, step } = niceScale(Math.max(m.start / 100, ...m.steps.map((x) => x.total / 100), 100), H < 260 ? 3 : 4);
     const px = (day) => x0 + (day / m.span) * (x1 - x0), py = (cents) => y1 - (cents / 100 / top) * (y1 - y0);
@@ -696,6 +698,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const marks = m.span < 3 ? [0, 1] : [0, 1 / 3, 2 / 3, 1];
     const dates = marks.map((f, i) => `<text class="g-axis" text-anchor="${i === 0 ? "start" : f === 1 ? "end" : "middle"}" x="${px(f * m.span).toFixed(1)}" y="${H - 8}">${f === 1 ? "Today" : niceDate(addDays(m.first, Math.round(f * m.span)))}</text>`).join("");
     const endY = py(m.total).toFixed(1);
+    // The balance going in and the balance now, as small labels above the line's two ends.
+    const tag = (x, y, cents) => {
+      const text = money(cents), w = text.length * 8 + 18, left = Math.max(2, Math.min(W - w - 2, x - w / 2)), top = Math.max(2, y - 34);
+      return `<g class="g-tag"><rect x="${left.toFixed(1)}" y="${top.toFixed(1)}" width="${w}" height="24" rx="8"/><text x="${(left + w / 2).toFixed(1)}" y="${(top + 16.5).toFixed(1)}">${text}</text></g>`;
+    };
+    const tags = tag(x0 + 28, py(m.start), m.start) + tag(x1, py(m.total), m.total);
     el.innerHTML = `<svg${fresh ? ` class="fresh"` : ""} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ga0"/><stop offset="1" class="ga1"/></linearGradient></defs>
       ${grid}
@@ -703,6 +711,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       ${pays}
       <circle class="g-dot" cx="${x1}" cy="${endY}" r="4"/>
       ${dates}
+      ${tags}
       <g class="g-x" id="gx" visibility="hidden"><line id="gxv" y1="${y0}" y2="${y1}"/><circle class="g-dot" id="gxd" r="5"/></g>
     </svg>`;
     geo = { m, px, py, at: -1 };

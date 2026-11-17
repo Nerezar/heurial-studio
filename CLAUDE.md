@@ -68,7 +68,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
 - The money chart's data is worked out in `public/tracker/money.js` (no page code; test: `node --test tracker/money.test.mjs`). Deposits and withdrawals move the balance but are never earnings.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
-- The tracker starts in the website's light look (paper, ink, blue; since 2026-11-17) with a dark mode one click away: flat panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
+- The tracker's light look follows the owner's own concept image (2026-11-17): soft blue page, navy sidebar, white cards, glossy blue buttons. It no longer matches the website's paper look, on purpose. Dark mode is one click away: three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
 - Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
 - Setup for Catalyst tables and env vars: `catalyst/TRACKER-SETUP.md`.
 

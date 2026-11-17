@@ -1,5 +1,5 @@
 /* HEURIAL tracker: styles shared by the real tracker (/admin) and the sample-data page.
-   It starts in the website's look: warm paper, ink, one blue, the same font, flat panels with hairline borders,
+   It starts in a light look: a soft blue page, a navy sidebar, white cards and glossy blue controls, with
    small tiles for the figures, and cards with a coloured dot. A dark mode is one click away. Blue marks what is
    selected; green, red and amber mean money in, late and due today. No glows, no gradients, no purple. */
 
@@ -46,35 +46,35 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  /* The website's values (app/globals.css): --bg, --surface, its ink, blue and status tones. */
-  --brand: #0e0e10;
-  --page: #f4f1ea;
-  --bg-0: #f4f1ea;
-  --bg-1: #faf8f3;
-  --bg-2: rgb(40 32 12 / .045);
-  --bg-3: rgb(40 32 12 / .09);
-  --panel: #faf8f3;
-  --card: #fffdf9;
-  --field: #fffdf9;
-  --line: rgb(60 50 28 / .14);
-  --line-2: rgb(60 50 28 / .26);
-  --text: #0e0e10;
-  --text-2: #3d3e43;
-  --text-3: #6b6d71;
-  --accent: #1d2fe0;
-  --accent-ink: #1a2590;
-  --accent-soft: rgb(29 47 224 / .09);
-  --signal: #1d2fe0;
-  --btn: #1d2fe0;
+  /* The owner's concept (2026-11-17): a soft blue page, navy sidebar, white cards and one bright blue. */
+  --brand: #0b1030;
+  --page: #e3e8ff;
+  --bg-0: #eef1ff;
+  --bg-1: #f7f8ff;
+  --bg-2: rgb(30 50 160 / .05);
+  --bg-3: rgb(30 50 160 / .1);
+  --panel: rgb(255 255 255 / .62);
+  --card: #ffffff;
+  --field: #ffffff;
+  --line: rgb(30 50 140 / .12);
+  --line-2: rgb(30 50 140 / .22);
+  --text: #0b1030;
+  --text-2: #3b4572;
+  --text-3: #68719c;
+  --accent: #1b3ff2;
+  --accent-ink: #1733c9;
+  --accent-soft: rgb(27 63 242 / .1);
+  --signal: #1b3ff2;
+  --btn: #1b3ff2;
   --on-btn: #ffffff;
-  --btn-hover: #1522ad;
-  --up: #2f7d50;
-  --down: #b4473b;
-  --warn: #8f5e08;
-  --cyan: #1f7389;
-  --mute: #6b6d71;
-  --shadow: 0 24px 60px -18px rgb(40 32 12 / .28);
-  --sky: none;
+  --btn-hover: #2247f5;
+  --up: #17862f;
+  --down: #c8323c;
+  --warn: #9a6200;
+  --cyan: #0e7fa3;
+  --mute: #68719c;
+  --shadow: 0 24px 60px -18px rgb(30 50 160 / .35);
+  --sky: linear-gradient(135deg, #f1f3ff 0%, #dde4ff 55%, #c9d3ff 100%);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -101,7 +101,6 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 .demo-bar { grid-area: demo; padding: 6px 16px; background: color-mix(in srgb, var(--warn) 14%, var(--bg-0)); border-bottom: 1px solid var(--line); color: var(--warn); font-size: 14px; font-weight: 500; text-align: center; }
 
 .rail { grid-area: rail; display: flex; flex-direction: column; gap: 6px; padding: 22px 14px 16px; background: rgb(255 255 255 / .018); border-right: 1px solid var(--line); }
-:root[data-theme="light"] .rail { background: #ebe7dd; }
 .rail-mark { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 22px; }
 /* HEURIAL marks: the brand SVGs used as masks, so they take the brand colour in either theme. */
 .mark { display: block; flex: none; background: var(--brand); -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; }
@@ -252,7 +251,7 @@ th[aria-sort] .sort { color: var(--text); }
 /* ---------- Overview ---------- */
 /* Three tiles, then the money on the left with what needs doing beside it, and the reports underneath.
    flex: none lets Overview be as tall as its panels and scroll, instead of squeezing them on top of each other. */
-.ov { flex: none; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "stats stats" "money queue" "reports queue"; grid-template-rows: auto auto 1fr; gap: 16px; align-items: start; }
+.ov { flex: none; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "money money" "stats stats" "queue reports"; grid-template-rows: auto; gap: 16px; align-items: start; }
 .ov-money { grid-area: money; } .ov-queue { grid-area: queue; align-self: stretch; } .ov-tabs { grid-area: reports; }
 .ov-queue .pane-body { max-height: 900px; }
 
@@ -288,6 +287,18 @@ th[aria-sort] .sort { color: var(--text); }
 .g-pay.is-transfer { stroke: var(--text-3); }
 .g-dot { fill: var(--accent); stroke: var(--bg-1); stroke-width: 2; }
 .g-x line { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 3 4; shape-rendering: crispEdges; }
+/* The balance at the start and end of the period, written on the chart. */
+.g-tag rect { fill: var(--bg-1); stroke: var(--line-2); }
+.g-tag text { fill: var(--accent); font: 600 13px var(--num); text-anchor: middle; }
+/* Money earned and money taken out in the period, side by side under the chart. */
+.flow { display: grid; grid-template-columns: 1fr 1fr; margin: 10px 22px 6px; border: 1px solid var(--line); border-radius: var(--r-lg); }
+.flow > div { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; align-items: center; padding: 12px 16px; }
+.flow > div + div { border-left: 1px solid var(--line); }
+.flow i { grid-row: span 2; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; font-style: normal; font-weight: 700; }
+.flow .in { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
+.flow .out { background: color-mix(in srgb, var(--down) 14%, transparent); color: var(--down); }
+.flow span { color: var(--text-2); font-size: 15px; }
+.flow b { font: 600 21px/1.2 var(--num); font-variant-numeric: tabular-nums; }
 .chart-note { display: grid; place-items: center; height: 100%; padding: 0 24px; color: var(--text-2); text-align: center; }
 .ov-money .sub-head { padding-top: 10px; }
 .ledger-row.is-transfer b { color: var(--text-2); }
@@ -491,7 +502,7 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 /* ---------- When the work area is narrow (a small window, or the lead panel is open) ---------- */
 @container main (max-width: 900px) {
   .vw { flex: none; }
-  .ov { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stats" "money" "queue" "reports"; grid-template-rows: none; }
+  .ov { grid-template-columns: minmax(0, 1fr); grid-template-areas: "money" "stats" "queue" "reports"; grid-template-rows: none; }
   .ov-queue .pane-body { max-height: none; }
   .ld { grid-template-columns: minmax(0, 1fr); }
   .facets { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0; }
@@ -606,3 +617,33 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Light look: navy sidebar, white cards, glossy blue controls. Dark mode is untouched. ---------- */
+/* The sidebar is dark in the light look, so it carries its own light-on-navy colours. */
+:root[data-theme="light"] .rail {
+  --brand: #fff; --text: #fff; --text-2: #d5dbff; --text-3: #9aa6e6; --accent-ink: #fff; --down: #ffb0a8;
+  --line: rgb(255 255 255 / .12); --line-2: rgb(255 255 255 / .2); --bg-2: rgb(255 255 255 / .07); --bg-3: rgb(255 255 255 / .12);
+  background: linear-gradient(180deg, #18215c, #0f1642); border-color: transparent; color: var(--text);
+}
+:root[data-theme="light"] :is(.btn.primary, .seg button[aria-pressed="true"], .rail-btn[aria-current="page"]) {
+  border: 1px solid #5b78ff; background: linear-gradient(180deg, #3d63ff, #1b3ff2); color: #fff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 0 6px 14px -6px rgb(20 50 220 / .6);
+}
+:root[data-theme="light"] .btn.primary:hover:not(:disabled) { border-color: #5b78ff; background: linear-gradient(180deg, #4a6dff, #2247f5); }
+:root[data-theme="light"] .rail-btn[aria-current="page"]::before { display: none; }
+:root[data-theme="light"] .btn:not(.primary, .ghost, .is-saved) { border-color: rgb(255 255 255 / .95); background: rgb(255 255 255 / .7); box-shadow: 0 2px 8px -4px rgb(40 60 160 / .35); }
+:root[data-theme="light"] .btn:not(.primary, .ghost, .is-saved):hover:not(:disabled) { background: #fff; border-color: var(--line-2); }
+:root[data-theme="light"] .btn { border-radius: 12px; }
+:root[data-theme="light"] .seg { border-color: rgb(255 255 255 / .95); border-radius: 14px; background: rgb(255 255 255 / .55); box-shadow: 0 2px 8px -4px rgb(40 60 160 / .35); }
+:root[data-theme="light"] .seg button { border-radius: 11px; }
+:root[data-theme="light"] :is(.pane, .stat) { border-color: rgb(255 255 255 / .95); border-radius: 18px; box-shadow: 0 10px 30px -18px rgb(40 60 160 / .4), inset 0 1px 0 #fff; }
+:root[data-theme="light"] .stat { background: var(--panel); }
+:root[data-theme="light"] .top-id h1 { font-size: 36px; font-weight: 800; letter-spacing: -.03em; }
+:root[data-theme="light"] .pane-head h2 { font-size: 19px; font-weight: 700; }
+:root[data-theme="light"] :is(.stat-v, .flow b) { font-weight: 700; }
+:root[data-theme="light"] .money-head .stat-v { font-size: 56px; }
+:root[data-theme="light"] .money-head .stat-l { color: var(--text-2); font-size: 18px; }
+:root[data-theme="light"] .money-d { color: var(--text-2); }
+:root[data-theme="light"] .money-d b { margin-right: 2px; padding: 0; background: none; font: 600 17px var(--sans); }
+:root[data-theme="light"] .demo-bar { background: rgb(255 255 255 / .55); color: var(--accent-ink); }
+@media (max-width: 860px) { :root[data-theme="light"] .top-id h1 { font-size: 27px; } :root[data-theme="light"] .money-head .stat-v { font-size: 44px; } }
