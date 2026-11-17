@@ -12,6 +12,14 @@
   font-display: swap;
 }
 
+/* Newsreader for headings on the editorial home page. */
+@font-face {
+  font-family: "Newsreader";
+  src: url("/fonts/newsreader-var.woff2") format("woff2");
+  font-weight: 400 500;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --bg: #0b0c0e;
@@ -47,6 +55,7 @@
   --fs-lead: 1.125rem;
   --masthead-height: 72px;
   --sans: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --ease-out: cubic-bezier(.22, .75, .25, 1);
 }

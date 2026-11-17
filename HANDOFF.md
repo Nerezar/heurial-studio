@@ -4,6 +4,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Editorial home, branch `editorial-home` (2026-11-17), pushed, not merged, not deployed:** the home page follows
+  the owner's concept "02 Editorial": warm paper background, ink text, one blue, Newsreader serif headings, mono
+  labels with a blue rule. The hero is copy on the left and tilted glass panels on the right (drawn in CSS, a sample
+  lead follow-up workflow). "How it works" is three numbered rows, followed by a card linking to Guides. Copy,
+  prices and promises are unchanged. The theme is scoped to the home page with `body:has(.ed)` in `app/home.css`;
+  the other pages are still dark until the owner approves the look. Left in place and now unused on the home page:
+  `components/flow-board.tsx`, its styles in `home.css`, and the `.steps` rail styles in `globals.css`. Checked in
+  the preview at 1440 and 375 wide: no sideways scroll, no console errors. Not checked: Safari, a real phone.
 - **Design pass live 2026-11-14 (website `cf3026f`, branch `refero-direction`):** merged to main and deployed to Slate
   Production, both on the owner's go-ahead. A full design pass on the website,
   guided by the Refero Styles guides for Linear, Ramp and Intercom (rules now in `CLAUDE.md`). Home: the hero is a

@@ -54,7 +54,8 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - Brand is HEURIAL in capitals. Assets are in `public/brand/`. Never use the Curivis brand.
 - Text is Inter Tight (`public/fonts/inter-tight-var.woff2`, the variable file: a single-weight file makes all bold text render regular, chosen 2026-11-13), numbers in sentences included. Standalone figures (prices, totals, counters) carry the `num` class and use Helvetica.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
-- Editorial look. The glass style was rejected as looking AI-made.
+- Editorial look. The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).
+- Headings on the editorial home page use Newsreader (`public/fonts/newsreader-var.woff2`), the closest open match to the serif in the owner's concept art.
 
 ## Site design (from the Refero Styles guides for Linear, Ramp and Intercom, 2026-11-14)
 - One accent: the blue is for the primary button and for live states inside demos. Links, headings and labels stay neutral.

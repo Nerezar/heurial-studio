@@ -1,4 +1,4 @@
-import { FlowBoard } from "@/components/flow-board";
+import { GlassStage } from "@/components/glass-stage";
 import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
@@ -51,22 +51,18 @@ const promises = [
 
 export default function Home() {
   return <>
-    <section className="hero is-navy" aria-labelledby="hero-title">
+    <section className="hero ed" aria-labelledby="hero-title">
       <div className="wrap hero-head">
-        <div className="hero-title">
+        <div className="hero-copy">
           <Chip>For small businesses</Chip>
           <h1 id="hero-title">Make work <span className="accent">flow better.</span></h1>
-        </div>
-        <div className="hero-copy">
           <p className="hero-lede">I take one repetitive task off your plate: following up with leads, answering the same questions, moving information between tools. Fixed price, inside the tools you already use.</p>
           <div className="hero-actions">
             <ButtonLink href={BOOKING_URL}>Book a free 20-min call</ButtonLink>
             <a href="#pricing" className="text-link">See prices <Icon name="arrow" size={17} /></a>
           </div>
         </div>
-      </div>
-      <div className="wrap hero-visual">
-        <FlowBoard />
+        <div className="hero-visual"><GlassStage /></div>
       </div>
       <dl className="wrap hero-facts">
         {facts.map(({ title, body }) => <div key={title}><dt>{title}</dt><dd>{body}</dd></div>)}
@@ -101,18 +97,40 @@ export default function Home() {
           <h2 id="steps-title">One annoying task, handled.</h2>
           <p>We pick the most repetitive task in your week, and I build a small workflow that takes care of it. About one week from kickoff.</p>
         </header>
-        <ol className="steps">
+        <ol className="ed-steps">
           {steps.map(({ title, time, body, get }, index) => (
-            <li className="step" key={title}>
-              <span className="step-dot" aria-hidden="true" />
-              <p className="step-count num" aria-hidden="true">0{index + 1}</p>
-              <h3>{title}</h3>
-              <p className="step-time"><Icon name="clock" size={14} />{time}</p>
-              <p className="step-body">{body}</p>
-              <p className="step-get"><Icon name="check" size={16} /><span><b>You get:</b> {get}</span></p>
+            <li key={title}>
+              <p className="ed-count" aria-hidden="true">0{index + 1}</p>
+              <div className="ed-step-name">
+                <h3>{title}</h3>
+                <p className="step-time"><Icon name="clock" size={14} />{time}</p>
+              </div>
+              <i aria-hidden="true" />
+              <div className="ed-step-body">
+                <p>{body}</p>
+                <p className="ed-get"><b>You get:</b> {get}</p>
+              </div>
             </li>
           ))}
         </ol>
+        <MotionLink href="/resources" className="ed-learn">
+          <span className="ed-learn-art" aria-hidden="true">
+            <svg viewBox="0 0 240 130" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id="edm-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fbfbfa" /><stop offset=".3" stopColor="#8b8f96" /><stop offset=".55" stopColor="#eeeff1" /><stop offset=".8" stopColor="#5d6169" /><stop offset="1" stopColor="#d4d6da" /></linearGradient>
+                <linearGradient id="edm-b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#6d7178" /><stop offset=".4" stopColor="#f6f6f5" /><stop offset=".7" stopColor="#9a9da3" /><stop offset="1" stopColor="#f1f1f0" /></linearGradient>
+                <filter id="edm-soft"><feGaussianBlur stdDeviation="2.4" /></filter>
+              </defs>
+              <rect width="240" height="130" fill="#c9cacd" />
+              <g filter="url(#edm-soft)">
+                <path d="M-20 104C40 24 92 132 150 62s92-50 122-12v100H-20Z" fill="url(#edm-a)" />
+                <path d="M-20 58C30-12 100 92 160 30s90-40 112-10v52C222 42 190 102 130 92S40 62-20 112Z" fill="url(#edm-b)" />
+              </g>
+            </svg>
+          </span>
+          <span className="ed-learn-text"><small>Guides</small><b>Practical guides, plainly written.</b></span>
+          <Icon name="arrow" size={22} />
+        </MotionLink>
         <p className="steps-more"><MotionLink href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></MotionLink></p>
       </div>
     </section>
