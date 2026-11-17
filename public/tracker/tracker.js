@@ -28,10 +28,18 @@
   // When a lead reaches one of these stages and has no follow-up, suggest one.
   const FOLLOW_PLAN = { held: [3, "Send a follow-up after the call"], proposal: [3, "Check in on the proposal"], paid: [14, "Ask for a testimonial"] };
   const RANGES = [["1", "1D", "last day"], ["7", "1W", "last 7 days"], ["30", "1M", "last 30 days"], ["90", "3M", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "ALL", "all time"]];
+  // Every screen. The first five lead the sidebar's five sections, so the number keys 1 to 5 open them.
   const VIEWS = {
-    overview: ["Overview", "overview"], pipeline: ["Pipeline", "pipeline"], leads: ["Leads", "leads"], time: ["Time", "time"],
-    messages: ["Messages", "messages"], connections: ["Connections", "plug"],
+    overview: ["Overview", "overview"], money: ["Money", "wallet"], pipeline: ["Lead board", "leads"], tasks: ["Tasks", "tasks"],
+    connections: ["Settings", "gear"], leads: ["Lead list", "leads"], time: ["Time", "time"], messages: ["Messages", "messages"],
   };
+  // The sidebar: a section's name, its icon, and the screens inside it (more than one shows as tabs at the top).
+  const SECTIONS = [
+    ["Overview", "overview", ["overview"]], ["Money", "wallet", ["money"]],
+    ["Leads", "leads", ["pipeline", "leads", "time", "messages"]], ["Tasks", "tasks", ["tasks"]], ["Settings", "gear", ["connections"]],
+  ];
+  const sectionOf = (view) => SECTIONS.find((sec) => sec[2].includes(view));
+  const TAB_NAME = { pipeline: "Board", leads: "List", time: "Time", messages: "Messages" };
   const CHANNEL = { note: ["Note", "note"], email: ["Email", "mail"], sms: ["Text", "sms"], call: ["Call", "phone"] };
   const DUE_BUCKETS = [["late", "Overdue", "--down"], ["today", "Due today", "--warn"], ["week", "Next 7 days", "--accent"], ["later", "Later", "--mute"], ["none", "None set", "--mute"]];
   const ICONS = {
@@ -39,6 +47,9 @@
     pipeline: '<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/>',
     leads: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.9 3 2.8 3 5.7"/>',
     time: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14.5h2"/>',
+    tasks: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
     messages: '<path d="M4 5h16v11H9l-5 4z"/>',
     plug: '<path d="M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0zM12 17v4"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
@@ -113,7 +124,7 @@
   let cfg = null;
   const state = {
     data: null, all: [], loading: true, error: "", online: false, lastSync: 0,
-    view: "overview", range: "30", loadedRange: "", ovTab: "conversion",
+    view: "overview", range: "30", loadedRange: "", ovTab: "conversion", moneyTab: "all",
     query: "", facets: { stage: new Set(), source: new Set(), due: new Set() }, sort: { key: "booked_at", dir: "desc" },
     time: null, timeLoading: false,
     lead: null, isNew: false, tab: "details", dirty: false, thread: null, leadTime: null,
@@ -228,7 +239,7 @@
   }
 
   // ---------- Frame ----------
-  const railBtn = (key) => `<button class="rail-btn" type="button" data-action="view" data-view="${key}" title="${VIEWS[key][0]}">${icon(VIEWS[key][1])}<span>${VIEWS[key][0]}</span>${key === "overview" ? `<b class="rail-badge" id="railBadge" hidden></b>` : ""}</button>`;
+  const railBtn = ([name, ico, views]) => `<button class="rail-btn" type="button" data-action="view" data-view="${views[0]}" title="${name}">${icon(ico)}<span>${name}</span>${name === "Tasks" ? `<b class="rail-badge" id="railBadge" hidden></b>` : ""}</button>`;
 
   function mount() {
     const demo = cfg.mode === "demo";
@@ -236,11 +247,9 @@
 <div class="app" id="app">
   ${demo ? `<div class="demo-bar" role="note">Sample data. Nothing here is saved or sent, and a refresh starts over.</div>` : ""}
   <nav class="rail" aria-label="Sections">
-    <div class="rail-mark" aria-hidden="true"><i class="mark word"></i></div>
-    <div class="rail-nav">${["overview", "pipeline", "leads", "time", "messages"].map(railBtn).join("")}</div>
+    <div class="rail-mark" aria-hidden="true"><i class="mark sym"></i><i class="mark word"></i></div>
+    <div class="rail-nav">${SECTIONS.map(railBtn).join("")}</div>
     <div class="rail-foot">
-      ${railBtn("connections")}
-      <button class="rail-btn" type="button" id="themeBtn" data-action="theme" data-m="hide"></button>
       ${cfg.auth ? `<button class="rail-btn" type="button" data-action="signout" data-m="hide" title="Sign out">${icon("out")}<span>Sign out</span></button>` : ""}
       <div class="rail-status" id="status"></div>
     </div>
@@ -386,7 +395,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function renderChrome() {
     const d = state.data, urgent = d ? urgentCount(d) : 0;
     document.querySelectorAll(".rail-btn[data-view]").forEach((b) => {
-      if (b.dataset.view === state.view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+      if (sectionOf(state.view)[2][0] === b.dataset.view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     $("railBadge").hidden = !urgent;
     $("railBadge").textContent = urgent;
@@ -401,16 +410,17 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 
   const SUBTITLE = {
     pipeline: "Every lead by stage. Drag a card to move it.", leads: "Everyone who booked a call, with filters.",
-    time: "Hours logged on each lead.", messages: "Notes, calls, emails and texts.", connections: "What the tracker is connected to.",
+    time: "Hours logged on each lead.", messages: "Notes, calls, emails and texts.", connections: "Appearance, and what the tracker is connected to.",
+    money: "What came in, what went out, and what is left.", tasks: "Everything waiting on you.",
   };
   /** The page heading: a greeting and what needs you on Overview, a plain line elsewhere. */
   function heading(d) {
-    if (state.view !== "overview") return [VIEWS[state.view][0], SUBTITLE[state.view] || ""];
+    if (state.view !== "overview") return [sectionOf(state.view)[0], SUBTITLE[state.view] || ""];
     const h = new Date().getHours();
     const hello = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-    if (!d) return [hello, ""];
+    if (!d) return ["Overview", hello + "."];
     const n = urgentCount(d);
-    return [hello, n ? `${plural(n, "thing needs", "things need")} you today.` : "You're all caught up."];
+    return ["Overview", `${hello}. ${n ? `${plural(n, "thing needs", "things need")} you today.` : "You're all caught up."}`];
   }
 
   /** Change against the period just before, from the same data. Nothing is shown when there's no such period. */
@@ -436,7 +446,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
    * the total, the Won so far tile and the list under the chart always agree.
    */
   const moneyPath = () => HeurialMoney.series(moneyEntries(), { today: state.data.today, days: state.range === "all" ? null : Number(state.range) });
-  const TRANSFER = { deposit: "Deposit", withdrawal: "Withdrawal" };
+  const TRANSFER = { deposit: "Transfer", withdrawal: "Expense" };
   /** An entry's amount with its sign: money in is +, a withdrawal is −. */
   const signed = (entry) => `${entry.kind === "withdrawal" ? "−" : "+"}${money(entry.cents)}`;
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
@@ -496,7 +506,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 
     let html = state.error ? `<div class="banner" role="alert"><span>${esc(state.error)}</span><button class="btn sm" type="button" data-action="refresh">Try again</button></div>` : "";
     if (!d) html += state.loading ? `<div class="vw pane">${skeleton()}</div>` : "";
-    else html += { overview: viewOverview, pipeline: viewPipeline, leads: viewLeads, time: viewTime, messages: viewMessages, connections: viewConnections }[state.view]();
+    else {
+      // A section with several screens (Leads) gets a row of tabs to move between them.
+      const tabs = sectionOf(state.view)[2];
+      if (tabs.length > 1) html += `<div class="seg sect-tabs" role="group" aria-label="${sectionOf(state.view)[0]} screens">${tabs.map((key) => `<button type="button" data-action="view" data-view="${key}" data-fk="sect-${key}" aria-pressed="${key === state.view}">${TAB_NAME[key]}</button>`).join("")}</div>`;
+      html += { overview: viewOverview, money: viewMoney, pipeline: viewPipeline, leads: viewLeads, time: viewTime, messages: viewMessages, tasks: viewTasks, connections: viewConnections }[state.view]();
+    }
     // Where each board card sits now, so one that changes column can travel to its new place.
     const was = new Map([...view.querySelectorAll(".board .card[data-id]")].map((el) => [el.dataset.id, el.getBoundingClientRect()]));
     if (flyFrom) was.set(flyFrom.id, flyFrom.box);
@@ -512,7 +527,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (el.tagName === "INPUT" && el.type === "search") el.setSelectionRange(el.value.length, el.value.length);
       }
     }
-    if (d && state.view === "overview") { drawChart(); rollStats(); }
+    if (d && (state.view === "overview" || state.view === "money")) { drawChart(); rollStats(); }
     if (was.size && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       for (const el of view.querySelectorAll(".board .card[data-id]")) {
         const a = was.get(el.dataset.id), b = el.getBoundingClientRect();
@@ -526,17 +541,39 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
 
   // ----- Overview -----
+  /** What needs doing today, as one short list: new inquiries, calls that need a status, and follow-ups that are due. */
+  function todayItems(d) {
+    const open = (id) => `data-action="open" data-id="${id}"`;
+    return [
+      ...d.inbox.map((i) => ({ key: "i" + i.id, when: ago(i.created_at), cls: "new", title: `Reply to ${i.name}`, sub: i.source, act: `data-action="view" data-view="tasks"` })),
+      ...d.stale.map((x) => ({ key: "s" + x.id, when: niceDate(x.call_at), cls: "late", title: `Update the call with ${x.name}`, sub: "Still marked as booked", act: open(x.id) })),
+      ...d.followups.filter((f) => f.follow_up_at <= d.today).map((f) => ({ key: "f" + f.id, ...due(f.follow_up_at), when: due(f.follow_up_at).text, title: f.follow_up_note || "Follow up", sub: f.name, act: open(f.id) })),
+    ];
+  }
+  /** Open leads and what they are worth, as two large figures. */
+  function leadSum(d, note) {
+    const open = d.leads.filter((l) => OPEN.includes(l.status));
+    return `<div class="lead-sum"><p><b>${open.length}</b>open ${open.length === 1 ? "lead" : "leads"}</p><p><b>${money(open.reduce((a, l) => a + l.value_cents, 0))}</b>potential</p>${note ? `<span>${note}</span>` : ""}</div>`;
+  }
   function viewOverview() {
-    const d = state.data, urgent = urgentCount(d);
+    const d = state.data, urgent = urgentCount(d), today = todayItems(d);
     const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
     const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
     return `<div class="vw ov">
-  ${statCards()}
   ${moneyPane()}
-  <section class="pane ov-queue" aria-labelledby="queueTitle">
-    <div class="pane-head"><h2 id="queueTitle">Needs attention</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
+  ${statCards()}
+  <section class="pane ov-today" aria-labelledby="todayTitle">
+    <div class="pane-head"><h2 id="todayTitle">Today</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
-    <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
+    <div class="pane-body">${today.length ? `<ul class="todo">${today.slice(0, 4).map((x) => `<li><button class="todo-row" type="button" ${x.act} data-fk="td-${x.key}">
+        <span class="q-when ${x.cls}">${esc(x.when)}</span><span class="todo-t">${esc(x.title)}<small>${esc(x.sub || "")}</small></span></button></li>`).join("")}</ul>`
+      : `<div class="empty"><b>Nothing needs you today.</b>No new inquiries, no calls to update, and no follow-ups due.</div>`}
+      <button class="more" type="button" data-action="view" data-view="tasks" data-fk="all-tasks">View all tasks →</button></div>
+  </section>
+  <section class="pane ov-leads" aria-labelledby="leadsTitle">
+    <div class="pane-head"><h2 id="leadsTitle">Leads</h2></div>
+    <div class="pane-body">${leadSum(d)}
+      <button class="more" type="button" data-action="view" data-view="pipeline" data-fk="all-leads">View all leads →</button></div>
   </section>
   <section class="pane ov-tabs" aria-label="Reports">
     <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
@@ -544,9 +581,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   </section>
 </div>`;
   }
-  /** The money panel: the balance, what the chosen period changed, the line, and the entries that make it up. */
+  /** The money card: the balance, what the chosen period changed, the line, and income beside expenses. */
   function moneyPane() {
-    const m = moneyPath(), gain = m.total - m.start, rows = m.steps.slice().reverse();
+    const m = moneyPath(), gain = m.total - m.start;
     const title = m.transfers ? "Total balance" : "Total earned";
     const spent = m.steps.reduce((sum, x) => sum + (x.entry.kind === "withdrawal" ? x.entry.cents : 0), 0);
     // A percentage only means something against a real starting balance; from almost nothing it is just a huge number.
@@ -555,12 +592,6 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       : !m.steps.length ? `No change ${inPeriod()}`
       : `<b${gain < 0 ? ` class="is-down"` : ""}>${gain < 0 ? "▼" : "▲"} ${money(Math.abs(gain))}${pct}</b> ${inPeriod()}${m.transfers ? ` · ${money(m.earned)} earned` : ""}`;
     const label = `${title} ${money(m.total)}. ${m.steps.length ? `${gain < 0 ? "Down" : "Up"} ${money(Math.abs(gain))} ${inPeriod()}, ${money(m.earned)} of it earned` : `No change ${inPeriod()}`}`;
-    const who = (l) => `${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}`;
-    const undated = m.steps.filter((x) => x.entry.lead && !x.entry.lead.paid_at).length;
-    const row = ({ entry }) => entry.lead
-      ? `<li><button class="ledger-row" type="button" data-action="open" data-id="${entry.lead.id}" data-fk="pay-${entry.lead.id}">
-      <span class="ledger-when">${niceDate(entry.date)}</span><span class="ledger-who">${who(entry.lead)}</span><b>${signed(entry)}</b></button></li>`
-      : `<li><div class="ledger-row is-transfer"><span class="ledger-when">${niceDate(entry.date)}</span><span class="ledger-who">${esc(entry.label || TRANSFER[entry.kind])}<span> · ${TRANSFER[entry.kind]}, not earnings</span></span><b>${signed(entry)}</b></div></li>`;
     return `<section class="pane ov-money" aria-labelledby="moneyTitle">
     <div class="money-head">
       <div><h2 class="stat-l" id="moneyTitle">${title}</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
@@ -568,18 +599,59 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     </div>
     <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the entries."></div>
     ${m.transfers ? `<div class="flow"><div><i class="in" aria-hidden="true">↑</i><span>Income</span><b>${money(m.earned)}</b></div><div><i class="out" aria-hidden="true">↓</i><span>Expenses</span><b>${money(spent)}</b></div></div>` : ""}
-    <h3 class="sub-head">${m.transfers ? "Money in and out" : "Payments"} ${inPeriod()}</h3>
-    ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map(row).join("")}</ul>
-      ${rows.length > 6 ? `<p class="foot-note">And ${rows.length - 6} earlier. Every paid project is listed in Leads.</p>` : ""}`
-    : `<p class="foot-note">${m.total ? `No payments ${inPeriod()}.` : "Nothing has been marked Paid yet."} When you move a lead to Paid, its value is added to this line.</p>`}
-    ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}
   </section>`;
+  }
+
+  // ----- Money -----
+  /** The balance and chart again, then every entry behind the line as a table, with a filter by type. */
+  function viewMoney() {
+    const m = moneyPath(), tab = state.moneyTab;
+    const rows = m.steps.slice().reverse().filter((x) => tab === "all" || x.entry.kind === tab);
+    const tabs = [["all", "All"], ["earning", "Income"], ["withdrawal", "Expenses"], ["deposit", "Transfers"]];
+    const KIND = { earning: ["Income", "--up", "↑"], withdrawal: ["Expense", "--down", "↓"], deposit: ["Transfer", "--accent", "↔"] };
+    const undated = m.steps.filter((x) => x.entry.lead && !x.entry.lead.paid_at).length;
+    const what = ({ lead, label, kind }) => lead
+      ? `<button class="who" type="button" data-action="open" data-id="${lead.id}" data-fk="tx-${lead.id}">${esc(lead.name)}${lead.business ? `<span> · ${esc(lead.business)}</span>` : ""}</button>`
+      : esc(label || KIND[kind][0]);
+    return `<div class="vw mn">
+  ${moneyPane()}
+  <section class="pane" aria-labelledby="txTitle">
+    <div class="pane-head"><h2 id="txTitle">Transactions</h2><span class="pane-meta">${sentence(inPeriod())}</span>
+      <div class="pane-tools"><div class="tabs" role="tablist" aria-label="Type">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="moneytab" data-tab="${key}" data-fk="mt-${key}" aria-selected="${tab === key}">${name}</button>`).join("")}</div></div></div>
+    <div class="pane-body">${rows.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th></tr></thead><tbody>
+      ${rows.map(({ entry }) => `<tr><td class="n">${niceDate(entry.date)}</td><td>${what(entry)}</td>
+        <td><span class="kind" style="--c:var(${KIND[entry.kind][1]})">${KIND[entry.kind][2]} ${KIND[entry.kind][0]}</span></td>
+        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty"><b>Nothing here ${inPeriod()}.</b>When you move a lead to Paid, its value shows up as income.</div>`}
+    ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}</div>
+  </section>
+</div>`;
+  }
+
+  // ----- Tasks -----
+  /** Everything waiting on you, with its buttons, beside the follow-ups that are further out. */
+  function viewTasks() {
+    const d = state.data, urgent = urgentCount(d);
+    const later = d.followups.filter((f) => f.follow_up_at > addDays(d.today, 7));
+    return `<div class="vw tk">
+  <section class="pane" aria-labelledby="queueTitle">
+    <div class="pane-head"><h2 id="queueTitle">Today and this week</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
+      <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
+    <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
+  </section>
+  <section class="pane" aria-labelledby="laterTitle">
+    <div class="pane-head"><h2 id="laterTitle">Upcoming</h2>${later.length ? `<span class="count">${later.length}</span>` : ""}</div>
+    <div class="pane-body">${later.length ? later.map((f) => `<div class="q-row">
+        <span class="q-when">${niceDate(f.follow_up_at)}</span>
+        <div class="q-main"><button class="who" type="button" data-action="open" data-id="${f.id}" data-fk="up-${f.id}">${esc(f.name)}${f.business ? `<span> · ${esc(f.business)}</span>` : ""}</button><p>${esc(f.follow_up_note || "Follow up")}</p></div>
+      </div>`).join("") : `<div class="empty">Nothing scheduled after this week.</div>`}</div>
+  </section>
+</div>`;
   }
 
   function queueHtml() {
     const d = state.data, t = d.today;
     const upcoming = d.followups.filter((f) => f.follow_up_at <= addDays(t, 7));
-    const later = d.followups.length - upcoming.length;
     const who = (id, name, biz) => `<button class="who" type="button" data-action="open" data-id="${id}" data-fk="who-${id}">${esc(name)}${biz ? `<span> · ${esc(biz)}</span>` : ""}</button>`;
     let html = "";
     if (d.inbox.length) {
@@ -614,7 +686,6 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       }).join("");
     }
     if (!html) html = `<div class="empty"><b>Nothing needs you right now.</b>No new inquiries, no calls to update, and no follow-ups due in the next 7 days.</div>`;
-    if (later) html += `<p class="foot-note">${plural(later, "more follow-up")} scheduled after ${niceDate(addDays(t, 7))}.</p>`;
     return html;
   }
 
@@ -759,7 +830,6 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function viewPipeline() {
     const d = state.data;
     const by = (st) => d.leads.filter((l) => l.status === st);
-    const open = d.leads.filter((l) => OPEN.includes(l.status));
     const lanes = ORDER.map((st) => {
       const leads = by(st), total = leads.reduce((a, l) => a + l.value_cents, 0);
       return `<section class="lane" data-status="${st}" aria-label="${STATUS[st].label}, ${plural(leads.length, "lead")}">
@@ -768,7 +838,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       </section>`;
     }).join("");
     return `<div class="vw pl">
-      <p class="pl-note">${plural(d.leads.length, "lead")} booked ${inPeriod()} · ${open.length} open · ${money(open.reduce((a, l) => a + l.value_cents, 0))} in play. Drag a card to another column, or use its Move menu.</p>
+      ${leadSum(d, `${plural(d.leads.length, "lead")} booked ${inPeriod()}. Drag a card to another column, or use its Move menu.`)}
       <div class="board" data-scroll="board">${lanes}</div>
     </div>`;
   }
@@ -1008,12 +1078,10 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       <p>${desc}</p>${how && !demo && label !== "Connected" ? `<p class="how">${how}</p>` : ""}
       <div class="conn-side"><span class="tag" style="--c:var(${c})">${label}</span>${action}</div></div>`;
     return `<div class="vw pane">
-      <div class="pane-head"><h2>Services</h2><span class="pane-meta">${demo ? "On this page everything runs on sample data. The real tracker shows what's connected."
+      <div class="pane-head"><h2>Workspace and connections</h2><span class="pane-meta">${demo ? "On this page everything runs on sample data. The real tracker shows what's connected."
         : !sv ? "This version of the back end doesn't report what's connected. Deploy the current pipeline function to see it."
         : "What the tracker is connected to right now. Settings live on the Catalyst pipeline function; steps are in catalyst/TRACKER-SETUP.md."}</span></div>
       <div class="pane-body"><div class="conn-list">
-        ${rows.map(row).join("")}
-        ${deviceRows(sv)}
         <h3 class="sub-head">Workspace</h3>
         <div class="conn"><div class="conn-ico">${icon(dark ? "moon" : "sun")}</div><h3>Appearance</h3><p>${dark ? "Dark" : "Light"} mode is on.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="theme" data-fk="c-theme">Switch to ${dark ? "light" : "dark"}</button></div></div>
@@ -1021,6 +1089,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
           <div class="conn-side"><button class="btn sm" type="button" data-action="export" data-fk="c-export">Export CSV</button></div></div>
         ${cfg.auth ? `<div class="conn"><div class="conn-ico">${icon("out")}</div><h3>Session</h3><p>You're signed in on this browser.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="signout" data-fk="c-out">Sign out</button></div></div>` : ""}
+        <h3 class="sub-head">Connections</h3>
+        ${rows.map(row).join("")}
+        ${deviceRows(sv)}
       </div></div>
     </div>`;
   }
@@ -1057,6 +1128,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   function paintTheme() {
     const dark = (document.documentElement.dataset.theme || "light") === "dark";
+    if (!$("themeBtn")) return; // the switch now lives in Settings
     $("themeBtn").innerHTML = `${icon(dark ? "sun" : "moon")}<span>${dark ? "Light" : "Dark"}</span>`;
     $("themeBtn").title = dark ? "Switch to light mode" : "Switch to dark mode";
   }
@@ -1135,6 +1207,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       case "insp-close": return closeInspector();
       case "tab": return showTab(el.dataset.tab);
       case "ovtab": state.ovTab = el.dataset.tab; return renderView();
+      case "moneytab": state.moneyTab = el.dataset.tab; return renderView();
       case "sort": {
         const key = el.dataset.key;
         state.sort = state.sort.key === key ? { key, dir: state.sort.dir === "asc" ? "desc" : "asc" } : { key, dir: ["value_cents", "hours", "booked_at"].includes(key) ? "desc" : "asc" };

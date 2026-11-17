@@ -105,6 +105,7 @@ kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid 
 /* HEURIAL marks: the brand SVGs used as masks, so they take the brand colour in either theme. */
 .mark { display: block; flex: none; background: var(--brand); -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; }
 .mark.word { --src: url("/brand/wordmark.svg"); width: 92px; height: 20px; }
+.mark.sym { --src: url("/brand/mark.svg"); width: 26px; height: 24px; }
 .signin-brand { display: grid; justify-items: start; gap: 10px; }
 .signin-brand .mark.word { width: 150px; height: 32px; margin-left: -7px; }
 .rail-nav, .rail-foot { display: grid; gap: 4px; }
@@ -251,9 +252,8 @@ th[aria-sort] .sort { color: var(--text); }
 /* ---------- Overview ---------- */
 /* Three tiles, then the money on the left with what needs doing beside it, and the reports underneath.
    flex: none lets Overview be as tall as its panels and scroll, instead of squeezing them on top of each other. */
-.ov { flex: none; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "money money" "stats stats" "queue reports"; grid-template-rows: auto; gap: 16px; align-items: start; }
-.ov-money { grid-area: money; } .ov-queue { grid-area: queue; align-self: stretch; } .ov-tabs { grid-area: reports; }
-.ov-queue .pane-body { max-height: 900px; }
+.ov { flex: none; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "money money" "stats stats" "today leads" "reports reports"; grid-template-rows: auto; gap: 16px; align-items: start; }
+.ov-money { grid-area: money; } .ov-today { grid-area: today; align-self: stretch; } .ov-leads { grid-area: leads; align-self: stretch; } .ov-tabs { grid-area: reports; }
 
 /* The tiles: the figure first, its name under it, as in the preview on the website. */
 .stats { grid-area: stats; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -301,13 +301,6 @@ th[aria-sort] .sort { color: var(--text); }
 .flow b { font: 600 21px/1.2 var(--num); font-variant-numeric: tabular-nums; }
 .chart-note { display: grid; place-items: center; height: 100%; padding: 0 24px; color: var(--text-2); text-align: center; }
 .ov-money .sub-head { padding-top: 10px; }
-.ledger-row.is-transfer b { color: var(--text-2); }
-.ledger-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; min-height: 50px; padding: 0 22px; border: 0; border-top: 1px solid var(--line); background: none; font-size: 16px; text-align: left; transition: background-color .12s; }
-.ledger-row:hover { background: var(--bg-2); }
-.ledger-when { color: var(--text-3); font: 14px var(--num); font-variant-numeric: tabular-nums; }
-.ledger-who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ledger-who span { color: var(--text-2); font-weight: 400; }
-.ledger-row b { color: var(--up); font: 600 16px var(--num); font-variant-numeric: tabular-nums; }
 .ov-money .foot-note { border-top: 1px solid var(--line); padding-top: 12px; }
 
 .q-title { display: flex; align-items: center; gap: 10px; padding: 18px 22px 8px; color: var(--text-3); font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
@@ -328,7 +321,40 @@ th[aria-sort] .sort { color: var(--text); }
 /* ---------- Pipeline ---------- */
 /* Plain columns of cards, as in the preview: a small heading, then each lead with a dot for how urgent it is. */
 .pl { display: flex; flex-direction: column; gap: 14px; }
-.pl-note { flex: none; color: var(--text-3); font-size: 15px; }
+/* Open leads and their value as two large figures: at the top of the board, and in the Leads card on Overview. */
+.lead-sum { flex: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 30px; padding: 14px 22px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
+.lead-sum p { color: var(--text-2); font-size: 17px; }
+.lead-sum b { margin-right: 8px; color: var(--text); font: 700 30px/1.2 var(--num); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.lead-sum span { margin-left: auto; color: var(--text-3); font-size: 14px; }
+.pane-body > .lead-sum { margin: 4px 22px 0; padding: 6px 0 14px; border: 0; border-radius: 0; background: none; }
+/* The row of tabs that moves between a section's screens. */
+.sect-tabs { flex: none; align-self: flex-start; margin-bottom: 14px; }
+/* Overview's short list for today, and the plain links under its cards. */
+.todo { padding: 0 10px; }
+.todo-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: center; width: 100%; min-height: 56px; padding: 8px 12px; border: 0; border-radius: 12px; background: none; font-size: 16px; text-align: left; }
+.todo li + li .todo-row { box-shadow: 0 -1px 0 var(--line); }
+.todo-row:hover { background: var(--bg-2); box-shadow: none; }
+.todo-t { display: grid; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-t small { color: var(--text-2); font-size: 15px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+.more { display: inline-flex; align-items: center; min-height: 44px; margin: 6px 22px 14px; padding: 0; border: 0; background: none; color: var(--accent-ink); font-size: 16px; font-weight: 600; }
+.more:hover { text-decoration: underline; text-underline-offset: 4px; }
+/* Money: the card, then the table of entries. A coloured tag says what kind each one is. */
+.mn { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
+.mn .ov-money { grid-area: auto; }
+.kind { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 8px; background: color-mix(in srgb, var(--c) 13%, transparent); color: var(--c); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.tbl td.amt { color: var(--up); font-weight: 600; }
+.tbl td.amt.out { color: var(--down); }
+/* Tasks: what is waiting now on the left, what is further out on the right. */
+.tk { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@container main (max-width: 900px) { .tk { grid-template-columns: minmax(0, 1fr); } }
+/* On a wide Overview the balance sits beside its chart, as one card. */
+@container main (min-width: 980px) {
+  .ov .ov-money { display: grid; grid-template-columns: minmax(250px, 28%) minmax(0, 1fr); align-items: start; }
+  .ov .ov-money .money-head { flex-direction: column; justify-content: flex-start; }
+  .ov .ov-money .read { justify-items: start; max-width: none; text-align: left; }
+  .ov .ov-money .chart { margin-top: 18px; }
+  .ov .ov-money .flow { grid-column: 1 / -1; }
+}
 .board { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: 12px; overflow: auto; padding-bottom: 6px; }
 .lane { display: flex; flex-direction: column; min-width: 0; min-height: 100%; padding: 2px 6px 8px; border: 1px dashed transparent; border-radius: var(--r-lg); transition: background-color .15s, border-color .15s; }
 .lane.over { border-color: var(--signal); background: var(--accent-soft); }
@@ -502,7 +528,7 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 /* ---------- When the work area is narrow (a small window, or the lead panel is open) ---------- */
 @container main (max-width: 900px) {
   .vw { flex: none; }
-  .ov { grid-template-columns: minmax(0, 1fr); grid-template-areas: "money" "stats" "queue" "reports"; grid-template-rows: none; }
+  .ov { grid-template-columns: minmax(0, 1fr); grid-template-areas: "money" "stats" "today" "leads" "reports"; grid-template-rows: none; }
   .ov-queue .pane-body { max-height: none; }
   .ld { grid-template-columns: minmax(0, 1fr); }
   .facets { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0; }
@@ -520,7 +546,6 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
   .money-head { flex-direction: column; gap: 4px; padding-inline: 16px; }
   .money-head .stat-v { font-size: 40px; }
   .read { justify-items: start; max-width: none; min-height: 44px; text-align: left; }
-  .ledger-row { grid-template-columns: 64px minmax(0, 1fr) auto; padding-inline: 16px; }
   .time-row { grid-template-columns: 1fr 1fr; }
   .time-row .field:first-child, .time-row .field:nth-child(4), .time-row .btn { grid-column: 1 / -1; }
   .board { grid-auto-columns: 82%; }
@@ -646,4 +671,7 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 :root[data-theme="light"] .money-d { color: var(--text-2); }
 :root[data-theme="light"] .money-d b { margin-right: 2px; padding: 0; background: none; font: 600 17px var(--sans); }
 :root[data-theme="light"] .demo-bar { background: rgb(255 255 255 / .55); color: var(--accent-ink); }
+:root[data-theme="light"] .lane { padding: 8px 10px 12px; border: 1px solid rgb(255 255 255 / .95); border-radius: 18px; background: var(--panel); box-shadow: 0 10px 30px -18px rgb(40 60 160 / .4); }
+:root[data-theme="light"] .lane-head h2 { color: var(--text); font-size: 19px; font-weight: 700; }
+:root[data-theme="light"] .lead-sum:not(.pane-body > *) { border-color: rgb(255 255 255 / .95); border-radius: 18px; box-shadow: 0 10px 30px -18px rgb(40 60 160 / .4), inset 0 1px 0 #fff; }
 @media (max-width: 860px) { :root[data-theme="light"] .top-id h1 { font-size: 27px; } :root[data-theme="light"] .money-head .stat-v { font-size: 44px; } }

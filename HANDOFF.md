@@ -4,6 +4,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Tracker regrouped into five sections from the owner's five concept images (2026-11-17, branch `two-pages`,
+  pushed, not merged):** the sidebar is Overview, Money, Leads, Tasks, Settings (`SECTIONS` in `tracker.js`).
+  Nothing was removed: Leads holds the old Pipeline, Leads, Time and Messages screens as tabs (Board, List, Time,
+  Messages) and Settings is the old Connections screen with appearance and export first. **Money** is new: the
+  balance card, then a table of every entry with a type filter. **Tasks** is new: the old Needs attention list
+  with its buttons, beside follow-ups further out. **Overview** is the balance beside its chart, the three tiles,
+  a short Today list, a Leads card and the reports. All of it is built from data the tracker already had; no
+  back-end change. **Not built, though the images show them:** Add transaction and Add task buttons, a Completed
+  tab, per-task checkboxes, workspace name / currency / time zone, notification switches, a Calendar connection,
+  and "Save changes". Each needs storage that does not exist yet. Checked on the sample-data page at 1440 and 375.
+  Not checked: the signed-in tracker, the command palette's Go to list, drag and drop after the regroup.
 - **Tracker restyled to the owner's concept image (2026-11-17, on branch `two-pages`, pushed, not merged):** the
   tracker's light look is now a soft blue page, a navy sidebar, white cards with soft shadows and glossy blue
   buttons, in a block at the end of `tracker.css` scoped to the light theme. Dark mode is unchanged. Overview now

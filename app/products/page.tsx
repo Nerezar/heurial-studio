@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 };
 
 const views = [
-  { label: "Needs you", title: "Start the day with a short list", description: "New website inquiries, calls that need a status, and follow-ups that are due, all in one place with one-click actions." },
-  { label: "Pipeline", title: "Drag a lead along", description: "Move a card between columns as a conversation progresses. A follow-up date is suggested for you." },
-  { label: "Daily email", title: "Get it without opening anything", description: "Click “Email preview” to see the summary I get each morning. In this demo, nothing is ever sent." },
+  { label: "Tasks", title: "Start the day with a short list", description: "New website inquiries, calls that need a status, and follow-ups that are due, all in one place with one-click actions." },
+  { label: "Leads", title: "Drag a lead along", description: "Move a card between columns as a conversation progresses. A follow-up date is suggested for you." },
+  { label: "Daily email", title: "Get it without opening anything", description: "Open Tasks and click “Daily email” to see the summary I get each morning. In this demo, nothing is ever sent." },
 ];
 
 export default function Products() {
