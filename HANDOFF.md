@@ -12,6 +12,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   the other pages are still dark until the owner approves the look. Left in place and now unused on the home page:
   `components/flow-board.tsx`, its styles in `home.css`, and the `.steps` rail styles in `globals.css`. Checked in
   the preview at 1440 and 375 wide: no sideways scroll, no console errors. Not checked: Safari, a real phone.
+  **Motion added the same day (owner asked for a lively site):** the glass panels drift, lean toward the pointer,
+  and the dark panel's four names swap the front sheet's sample screen; a highlight walks along its three steps.
+  A band of flowing silver sits under the hero and in the Guides card (`components/silver.tsx`, a small WebGL
+  shader that pauses off screen). "A simple example" (`components/example-flow.tsx`) steps through Inquiry,
+  Follow-up, Booking until a visitor picks one. All of it holds still for reduced motion. Not checked: frame rate
+  on a slow phone, Safari.
 - **Design pass live 2026-11-14 (website `cf3026f`, branch `refero-direction`):** merged to main and deployed to Slate
   Production, both on the owner's go-ahead. A full design pass on the website,
   guided by the Refero Styles guides for Linear, Ramp and Intercom (rules now in `CLAUDE.md`). Home: the hero is a

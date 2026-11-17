@@ -61,7 +61,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - One accent: the blue is for the primary button and for live states inside demos. Links, headings and labels stay neutral.
 - Flat surfaces separated by hairlines. No glows, drop shadows or decorative gradients (the hero and closing keep one plain floor gradient).
 - Content is 1200px wide at most. Text under headings uses three sizes: `--fs-small`, `--fs-body`, `--fs-lead`.
-- Motion is short and has a job. The page-change wipe (the owner asked for it) stays under half a second each way. No animated prices.
+- On 2026-11-17 the owner asked for a lively home page: the glass panels drift and follow the pointer, the silver flows (`components/silver.tsx`), and the example flow steps by itself. Everything holds still for reduced motion. Elsewhere: motion is short and has a job. The page-change wipe (the owner asked for it) stays under half a second each way. No animated prices.
 
 ## Tracker
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.

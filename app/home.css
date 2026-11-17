@@ -56,7 +56,8 @@ body:has(.ed) ::selection { background: #1d2fe0; color: #fff; }
 body:has(.ed) .is-navy { background: none; }
 body:has(.ed) :is(h1, h2, h3) { font-family: var(--serif); letter-spacing: -.025em; }
 body:has(.ed) .label { font-family: var(--mono); font-size: .75rem; letter-spacing: .16em; color: var(--text); }
-body:has(.ed) .label > i { order: 1; width: 44px; height: 1px; margin-left: 6px; }
+body:has(.ed) .label > i { order: 1; width: 44px; height: 1px; margin-left: 6px; transform-origin: left; animation: ed-rule .8s var(--ease-out) both; }
+@keyframes ed-rule { from { scale: 0 1; } }
 body:has(.ed) .rate-price { letter-spacing: -.045em; }
 /* The header, menu and footer take the paper colours too. The logo file is light grey, so it is darkened. */
 body:has(.ed) :is(.site-header, .nav-cta, .nav-menu, .nav-close) { color: var(--white); }
@@ -68,10 +69,15 @@ body:has(.ed) .nav-dialog { background: var(--bg); }
 body:has(.ed) .site-footer { background: var(--paper); color: var(--text); }
 body:has(.ed) .site-footer nav a { color: var(--white); }
 
+/* The pointer position over the glass, -1 to 1. Registered as numbers so the panels ease toward it. */
+@property --px { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --py { syntax: "<number>"; inherits: true; initial-value: 0; }
+
 /* ---------- Glass panels (hero illustration). Sizes are in em so the whole scene scales with its width. ---------- */
 .stage { container-type: inline-size; }
 .stage-scene {
-  --tilt: perspective(150em) rotateX(16deg) rotateY(-22deg) rotateZ(-8deg);
+  --tilt: perspective(150em) rotateX(calc(16deg - var(--py) * 7deg)) rotateY(calc(-22deg + var(--px) * 10deg)) rotateZ(-8deg);
+  transition: --px .6s var(--ease-out), --py .6s var(--ease-out);
   position: relative;
   aspect-ratio: 50 / 41;
   font-size: 2cqw;
@@ -79,10 +85,13 @@ body:has(.ed) .site-footer nav a { color: var(--white); }
   color: #171b3a;
 }
 .stage-scene > * { position: absolute; }
-.stage-scene > .is-slab { left: 25em; top: 2.5em; width: 21em; height: 19em; --r: 1.7em; }
-.stage-scene > .is-back { left: 15.5em; top: 7.5em; width: 32em; height: 23em; --r: 1.9em; }
-.stage-scene > .is-main { left: 12.5em; top: 12.5em; width: 33em; height: 21em; --r: 1.6em; }
-.stage-scene > .is-side { left: 3em; top: 16.5em; width: 12.5em; height: 19.5em; --r: 1.4em; }
+/* --d is how far a layer slides with the pointer (far layers go the other way), --fd offsets its drift. */
+.stage-scene > .is-slab { left: 25em; top: 2.5em; width: 21em; height: 19em; --r: 1.7em; --d: -1.8em; --fd: -1s; }
+.stage-scene > .is-back { left: 15.5em; top: 7.5em; width: 32em; height: 23em; --r: 1.9em; --d: -.8em; --fd: -3s; }
+.stage-scene > .is-main { left: 12.5em; top: 12.5em; width: 33em; height: 21em; --r: 1.6em; --d: .6em; --fd: -5s; }
+.stage-scene > .is-side { left: 3em; top: 16.5em; width: 12.5em; height: 19.5em; --r: 1.4em; --d: 1.8em; --fd: -7s; }
+.stage-scene > :is(.stage-edge, .stage-sheet) { translate: calc(var(--px) * var(--d)) calc(var(--py) * var(--d)); animation: stage-float 9s ease-in-out var(--fd) infinite; }
+@keyframes stage-float { 50% { translate: calc(var(--px) * var(--d)) calc(var(--py) * var(--d) - .8em); } }
 /* The rim: an outline of the sheet, pushed down and right a hair at a time so it reads as the glass's thickness. */
 .stage-edge { --e1: #fff; --e2: #e6eaff; --e3: #cdd4ff; --e4: #a9b3f2; filter: drop-shadow(.1em .12em 0 var(--e1)) drop-shadow(.1em .12em 0 var(--e2)) drop-shadow(.1em .12em 0 var(--e2)) drop-shadow(.1em .12em 0 var(--e3)) drop-shadow(.1em .12em 0 var(--e3)) drop-shadow(.1em .12em 0 var(--e4)); }
 .stage-edge > i { position: absolute; inset: 0; border: .14em solid var(--e1); border-radius: var(--r); transform: var(--tilt); }
@@ -100,7 +109,7 @@ body:has(.ed) .site-footer nav a { color: var(--white); }
 }
 /* A band of reflected light across each face, then a fine grain so the frosting isn't flat. */
 .stage-sheet::before, .stage-sheet::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
-.stage-sheet::before { background: linear-gradient(112deg, transparent 26%, rgb(255 255 255 / .5) 39%, rgb(255 255 255 / .1) 46%, transparent 58%), radial-gradient(120% 80% at 0 0, rgb(255 255 255 / .5), transparent 55%); }
+.stage-sheet::before { background: linear-gradient(112deg, transparent 26%, rgb(255 255 255 / .5) 39%, rgb(255 255 255 / .1) 46%, transparent 58%) calc(50% - var(--px) * 45%) 0 / 220% 100%, radial-gradient(120% 80% at 0 0, rgb(255 255 255 / .5), transparent 55%); }
 .stage-sheet::after { opacity: .16; mix-blend-mode: overlay; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
 .stage-sheet > * { position: relative; z-index: 1; }
 .stage-sheet.is-slab { border-color: rgb(150 165 255 / .7); background: linear-gradient(150deg, #5068ff, #2236f0 45%, #1420b4); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset .12em .12em 0 rgb(255 255 255 / .45), inset -.3em -.3em 1em rgb(5 10 80 / .5); }
@@ -117,14 +126,38 @@ body:has(.ed) .site-footer nav a { color: var(--white); }
 .stage-flow { list-style: none; display: flex; gap: 2.4em; margin: 1.5em 0 0; padding: 0; }
 .stage-flow li { position: relative; display: grid; gap: .5em; justify-items: center; align-content: center; width: 6.4em; height: 5.4em; border-radius: .7em; border: 1px solid rgb(255 255 255 / .9); background: rgb(255 255 255 / .62); box-shadow: 0 .5em 1em -.4em rgb(30 40 150 / .3), inset 0 .08em 0 #fff; font-size: .78em; font-weight: 500; }
 .stage-flow li + li::before { content: "→"; position: absolute; left: -2.1em; top: 50%; translate: 0 -50%; font-size: 1.3em; color: #2b3166; }
-.stage-flow .is-live { border-color: rgb(120 140 255 / .9); color: #1d2fe0; background: linear-gradient(160deg, rgb(205 214 255 / .9), rgb(150 168 255 / .75)); }
+/* The highlight walks along the three steps, two seconds each. */
+.stage-flow li { animation: stage-live 6s calc((var(--i) - 3) * 2s) infinite; }
+@keyframes stage-live { 0%, 30% { border-color: rgb(120 140 255 / .9); color: #1d2fe0; background-color: rgb(176 190 255 / .85); translate: 0 -.35em; } 37%, 100% { translate: none; } }
+.stage-lines i { transform-origin: left; animation: stage-type 6s ease-in-out infinite; }
+.stage-lines i:nth-child(even) { animation-delay: -1.5s; }
+@keyframes stage-type { 0%, 100% { scale: 1 1; } 45% { scale: .45 1; } }
 .stage-lines { display: grid; grid-template-columns: 1.1fr .9fr; gap: .8em 1.6em; margin-top: 1.6em; padding: 1.1em 1.2em; border-radius: .8em; border: 1px solid rgb(255 255 255 / .7); background: rgb(255 255 255 / .34); }
 .stage-lines i { height: .55em; border-radius: 1em; background: rgb(60 75 170 / .28); }
 .stage-lines i:nth-child(n + 3) { background: rgb(60 75 170 / .16); }
 .stage-mark { width: 2em; height: auto; }
 .stage-nav { list-style: none; display: grid; gap: .5em; margin: 1.5em 0 0; padding: 0; font-size: .8em; }
-.stage-nav li { display: flex; align-items: center; gap: .7em; padding: .6em .7em; border-radius: .6em; color: #c9cffb; }
+.stage-nav li { display: flex; align-items: center; gap: .7em; padding: .6em .7em; border-radius: .6em; color: #c9cffb; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.stage-nav li:hover { color: #fff; background-color: rgb(255 255 255 / .1); }
 .stage-nav .is-on { color: #fff; background: linear-gradient(160deg, #4d64ff, #2538e8); box-shadow: inset 0 .08em 0 rgb(255 255 255 / .4), 0 .4em 1em -.3em rgb(40 60 255 / .7); }
+
+/* ---------- Flowing silver (a live canvas; the gradient shows if it can't run) ---------- */
+.silver { display: block; width: 100%; height: 100%; background: linear-gradient(115deg, #f4f4f3, #8f9299 35%, #ececed 55%, #6a6e75 80%, #d6d8db); }
+.ed-silver { height: clamp(180px, 26vw, 340px); margin-bottom: clamp(44px, 5.4vw, 76px); overflow: hidden; border-radius: var(--radius); }
+
+/* ---------- A simple example: three stages you can click through ---------- */
+.ed-example { display: grid; gap: 16px; padding: clamp(18px, 2.4vw, 28px); border-radius: var(--radius); background: #dfe3fb; }
+.ed-example-row { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: clamp(8px, 1.6vw, 20px); color: var(--signal); }
+.ed-example button { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 10px; border-radius: 8px; border: 0; background: var(--surface); color: var(--white); font-weight: 500; transition: background-color .25s ease, color .25s ease, translate .25s var(--ease-out), box-shadow .25s ease; }
+.ed-example button:hover { translate: 0 -2px; }
+.ed-example button[aria-pressed="true"] { background: var(--signal); color: #fff; box-shadow: 0 10px 20px -10px rgb(29 47 224 / .7); }
+.ed-example-text { min-height: 3.2em; color: var(--text); animation: ed-swap .35s var(--ease-out); }
+@keyframes ed-swap { from { opacity: 0; translate: 0 6px; } }
+@media (max-width: 520px) {
+  .ed-example-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ed-example-row > svg, .ed-example button svg { display: none; }
+  .ed-example button { font-size: .9rem; }
+}
 
 /* ---------- Steps as numbered rows, and the link to the guides ---------- */
 .ed-steps { list-style: none; padding: 0; border-top: 1px solid var(--white); }
@@ -132,12 +165,15 @@ body:has(.ed) .site-footer nav a { color: var(--white); }
 .ed-count { padding-top: .7em; font-family: var(--mono); font-size: var(--fs-small); color: var(--text); }
 .ed-step-name { display: grid; gap: 8px; }
 .ed-step-name h3 { font-size: clamp(1.7rem, 2.8vw, 2.4rem); }
-.ed-steps > li > i { height: 1px; margin-top: 1.25em; background: var(--signal); }
+.ed-steps > li > i { height: 1px; margin-top: 1.25em; background: var(--signal); transform-origin: left; transition: scale .35s var(--ease-out); }
+.ed-steps > li:hover > i { scale: 1.7 1; }
+.ed-step-name h3 { transition: translate .35s var(--ease-out); }
+.ed-steps > li:hover h3 { translate: 6px 0; }
 .ed-step-body { display: grid; gap: 10px; max-width: 58ch; color: var(--muted); }
 .ed-get { color: var(--text); }
 .ed-get b { color: var(--white); font-weight: 600; }
 .ed-learn { display: grid; grid-template-columns: minmax(110px, 30%) minmax(0, 1fr) auto; align-items: center; gap: clamp(16px, 3vw, 36px); margin-top: clamp(28px, 3.4vw, 44px); padding-right: clamp(16px, 3vw, 36px); overflow: hidden; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--white); }
-.ed-learn-art, .ed-learn-art svg { display: block; width: 100%; height: 100%; min-height: 112px; }
+.ed-learn-art { display: block; height: 100%; min-height: 112px; }
 .ed-learn-text { display: grid; gap: 6px; padding-block: 18px; }
 .ed-learn-text small { font-family: var(--mono); font-size: .75rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .ed-learn-text b { font-family: var(--serif); font-size: clamp(1.4rem, 2.4vw, 2rem); font-weight: 400; letter-spacing: -.025em; line-height: 1.1; }

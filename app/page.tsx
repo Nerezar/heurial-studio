@@ -1,7 +1,9 @@
+import { ExampleFlow } from "@/components/example-flow";
 import { GlassStage } from "@/components/glass-stage";
 import { Icon } from "@/components/icon";
 import { MotionLink } from "@/components/route-transition";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
+import { Silver } from "@/components/silver";
 import { BOOKING_URL } from "@/lib/site";
 import "./home.css";
 
@@ -64,9 +66,11 @@ export default function Home() {
         </div>
         <div className="hero-visual"><GlassStage /></div>
       </div>
+      <div className="wrap"><ExampleFlow /></div>
       <dl className="wrap hero-facts">
         {facts.map(({ title, body }) => <div key={title}><dt>{title}</dt><dd>{body}</dd></div>)}
       </dl>
+      <div className="wrap ed-silver"><Silver /></div>
     </section>
 
     <section className="section" aria-labelledby="problems-title">
@@ -114,20 +118,7 @@ export default function Home() {
           ))}
         </ol>
         <MotionLink href="/resources" className="ed-learn">
-          <span className="ed-learn-art" aria-hidden="true">
-            <svg viewBox="0 0 240 130" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id="edm-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fbfbfa" /><stop offset=".3" stopColor="#8b8f96" /><stop offset=".55" stopColor="#eeeff1" /><stop offset=".8" stopColor="#5d6169" /><stop offset="1" stopColor="#d4d6da" /></linearGradient>
-                <linearGradient id="edm-b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#6d7178" /><stop offset=".4" stopColor="#f6f6f5" /><stop offset=".7" stopColor="#9a9da3" /><stop offset="1" stopColor="#f1f1f0" /></linearGradient>
-                <filter id="edm-soft"><feGaussianBlur stdDeviation="2.4" /></filter>
-              </defs>
-              <rect width="240" height="130" fill="#c9cacd" />
-              <g filter="url(#edm-soft)">
-                <path d="M-20 104C40 24 92 132 150 62s92-50 122-12v100H-20Z" fill="url(#edm-a)" />
-                <path d="M-20 58C30-12 100 92 160 30s90-40 112-10v52C222 42 190 102 130 92S40 62-20 112Z" fill="url(#edm-b)" />
-              </g>
-            </svg>
-          </span>
+          <span className="ed-learn-art"><Silver /></span>
           <span className="ed-learn-text"><small>Guides</small><b>Practical guides, plainly written.</b></span>
           <Icon name="arrow" size={22} />
         </MotionLink>
