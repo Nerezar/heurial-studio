@@ -4,7 +4,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Editorial home, branch `editorial-home` (2026-11-17), pushed, not merged, not deployed:** the home page follows
+- **Editorial redesign live 2026-11-17 (website `b9166c0`):** merged to main and deployed to Slate Production, both on
+  the owner's go-ahead. Live check: every public page 200, `/admin` 307, the home page serves the glass panels,
+  example flow and silver canvas, the serif font file loads. Still not checked: an assistant answer on Guides, the
+  contact thank-you state, Safari, a real phone. What was built, from the branch notes: the home page follows
   the owner's concept "02 Editorial": warm paper background, ink text, one blue, Newsreader serif headings, mono
   labels with a blue rule. The hero is copy on the left and tilted glass panels on the right (drawn in CSS, a sample
   lead follow-up workflow). "How it works" is three numbered rows, followed by a card linking to Guides. Copy,
