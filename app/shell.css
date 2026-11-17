@@ -1,6 +1,6 @@
 /* Site frame: header, footer, page intros, the closing call to action, and page-change motion. */
 
-/* ---------- Header: clear over the page, a paper bar once you scroll. The logo file is light grey, so it is darkened. ---------- */
+/* ---------- Header: clear over the page, a paper bar once you scroll ---------- */
 .site-header {
   position: fixed;
   inset: 0 0 auto;
@@ -22,8 +22,9 @@ html[data-scrolled] .site-header {
   align-items: center;
   gap: clamp(18px, 3vw, 44px);
 }
-.brand { display: inline-flex; justify-self: start; }
-.brand img { width: clamp(128px, 13vw, 168px); height: auto; filter: brightness(0); }
+.brand { display: inline-flex; align-items: center; gap: 10px; justify-self: start; }
+.brand img { width: clamp(112px, 11vw, 148px); height: auto; }
+.brand .brand-mark { width: 27px; }
 
 .nav-links { display: flex; align-items: center; gap: clamp(16px, 2.6vw, 38px); }
 .nav-links a {
@@ -108,7 +109,6 @@ html[data-scrolled] .site-header {
 .site-footer { border-top: 1px solid var(--line); background: var(--paper); color: var(--text); }
 .footer-grid { display: grid; grid-template-columns: 1fr minmax(230px, 34%); gap: 32px; align-items: start; padding-block: clamp(56px, 8vw, 110px) clamp(42px, 6vw, 86px); }
 .footer-identity { display: grid; gap: 12px; justify-items: start; }
-.footer-identity img { width: 176px; height: auto; filter: brightness(0); }
 .footer-identity p { color: var(--muted); }
 .footer-social { display: flex; flex-wrap: wrap; gap: 16px; }
 .site-footer nav { display: grid; border-bottom: 1px solid var(--line); }
@@ -146,8 +146,14 @@ html[data-scrolled] .site-header {
   to { transform: translateY(0); clip-path: inset(0 0 -14%); }
 }
 
-/* ---------- Closing call to action ---------- */
-.closing { border-top: 1px solid var(--line); }
+/* ---------- Silver: a live canvas. The gradient shows if it can't run. As a ribbon it has no backing. ---------- */
+.silver { display: block; width: 100%; height: 100%; background: linear-gradient(115deg, #f4f4f3, #8f9299 35%, #ececed 55%, #6a6e75 80%, #d6d8db); }
+.silver.is-ribbon { background: none; filter: drop-shadow(0 10px 12px rgb(20 28 90 / .2)); }
+.ribbon { height: clamp(120px, 15vw, 200px); pointer-events: none; }
+
+/* ---------- Closing call to action. The ribbon comes in from the right and passes behind the button. ---------- */
+.closing { position: relative; isolation: isolate; overflow: clip; border-top: 1px solid var(--line); }
+.closing-ribbon { position: absolute; z-index: -1; height: clamp(96px, 10vw, 140px); inset: auto 0 calc(clamp(70px, 10vw, 150px) + 24px) 0; translate: 0 50%; -webkit-mask-image: linear-gradient(90deg, transparent 46%, #000 60%); mask-image: linear-gradient(90deg, transparent 46%, #000 60%); }
 .closing-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
@@ -157,7 +163,7 @@ html[data-scrolled] .site-header {
 }
 .closing-panel .label { grid-column: 1 / -1; }
 .closing-panel h2 { max-width: 13ch; font-size: clamp(2.4rem, 5.2vw, 4.75rem); }
-.closing-panel .closing-copy { display: grid; gap: 22px; justify-items: start; }
+.closing-panel .closing-copy { display: grid; gap: 34px; justify-items: start; }
 .closing-panel .closing-copy p { max-width: 40ch; color: var(--text); font-size: var(--fs-lead); }
 
 /* ---------- Page change: a panel wipes up over the old page, then pulls away ---------- */
@@ -166,7 +172,9 @@ html[data-scrolled] .site-header {
   inset: 0;
   z-index: 15;
   pointer-events: none;
-  background: #0d0f12;
+  /* The wipe is the brand blue, with its two lines in white. */
+  --signal: #fff;
+  background: var(--blue);
   transform: translateY(101%);
   visibility: hidden;
 }
@@ -217,6 +225,7 @@ html[data-scrolled] .site-header {
   .nav-links, .nav-cta { display: none; }
   .nav-menu { display: inline-flex; }
   .footer-grid, .closing-panel { grid-template-columns: 1fr; }
+  .closing-ribbon { height: 96px; -webkit-mask-image: none; mask-image: none; opacity: .9; }
 }
 
 /* "Page not found" fills the screen so the footer doesn't ride up. */

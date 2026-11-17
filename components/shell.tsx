@@ -5,12 +5,12 @@ import { tone } from "@/lib/style";
 import { Icon } from "./icon";
 import { Navigation } from "./navigation";
 import { MotionLink } from "./route-transition";
+import { Silver } from "./silver";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
   { href: "/services", label: "Questions" },
   { href: "/products", label: "Demos" },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -33,7 +33,7 @@ export function Chip({ children, color }: { children: ReactNode; color?: Tone })
 export function Header() {
   return <header className="site-header">
     <div className="wrap header-inner">
-      <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} priority /></MotionLink>
+      <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image className="brand-mark" src="/brand/mark-ink.svg" alt="" width={816} height={728} priority /><Image src="/brand/wordmark-ink.svg" alt="" width={1520} height={323} priority /></MotionLink>
       <Navigation links={primaryLinks} />
       <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer" className="nav-cta">Book a free call<Icon name="diagonal" size={14} /></a>
     </div>
@@ -44,7 +44,7 @@ export function Footer() {
   return <footer className="site-footer">
     <div className="wrap footer-grid">
       <div className="footer-identity">
-        <MotionLink href="/" aria-label="HEURIAL home"><Image src="/brand/wordmark.svg" alt="" width={1520} height={323} /></MotionLink>
+        <MotionLink href="/" className="brand" aria-label="HEURIAL home"><Image className="brand-mark" src="/brand/mark-ink.svg" alt="" width={816} height={728} /><Image src="/brand/wordmark-ink.svg" alt="" width={1520} height={323} /></MotionLink>
         <p>Make work flow better.</p>
         <a className="text-link" href="mailto:hello@heurial.studio">hello@heurial.studio</a>
         <p className="footer-social">{SOCIAL_LINKS.map(({ label, href }) => <a key={href} className="text-link" href={href} target="_blank" rel="noopener noreferrer">{label}</a>)}</p>
@@ -70,6 +70,7 @@ export function PageIntro({ label, title, description, compact = false }: { labe
 
 export function Closing() {
   return <section className="closing is-navy" aria-labelledby="closing-title">
+    <div className="ribbon closing-ribbon" aria-hidden="true"><Silver ribbon /></div>
     <div className="wrap closing-panel">
       <Chip>Free 20-minute call</Chip>
       <h2 id="closing-title">Got a task you’re tired of doing?</h2>

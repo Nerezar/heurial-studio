@@ -70,7 +70,7 @@ export default function Home() {
       <dl className="wrap hero-facts">
         {facts.map(({ title, body }) => <div key={title}><dt>{title}</dt><dd>{body}</dd></div>)}
       </dl>
-      <div className="wrap ed-silver"><Silver /></div>
+      <div className="ribbon hero-ribbon" aria-hidden="true"><Silver ribbon /></div>
     </section>
 
     <section className="section" aria-labelledby="problems-title">

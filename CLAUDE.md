@@ -51,7 +51,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - Never use the user's GitHub password.
 
 ## Copy and brand
-- Brand is HEURIAL in capitals. Assets are in `public/brand/`. Never use the Curivis brand.
+- Brand is HEURIAL in capitals. Assets are in `public/brand/`; on the light site use the `-ink` logo files (the plain ones are light grey, for dark surfaces). Never use the Curivis brand.
 - Text is Inter Tight (`public/fonts/inter-tight-var.woff2`, the variable file: a single-weight file makes all bold text render regular, chosen 2026-11-13), numbers in sentences included. Standalone figures (prices, totals, counters) carry the `num` class and use Helvetica.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
 - Editorial look, light: warm paper, ink, one blue (`--signal`), mono labels with a blue rule. Tokens are in `app/globals.css`; `--white` is the heading ink (a name left from the dark theme). The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).

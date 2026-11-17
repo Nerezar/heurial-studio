@@ -20,6 +20,9 @@
   font-display: swap;
 }
 
+/* The angle of the silver edge on buttons, registered so it can animate. */
+@property --turn { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
 :root {
   color-scheme: light;
   --bg: #f4f1ea;
@@ -163,7 +166,23 @@ button, select, summary { cursor: pointer; }
   transition: background-color .22s ease, border-color .22s ease, color .22s ease;
 }
 .button svg { flex: none; transition: transform .22s var(--ease-out); }
-.button.primary { background: var(--btn-bg); color: var(--btn-fg); }
+.button.primary { position: relative; isolation: isolate; background: var(--btn-bg); color: var(--btn-fg); }
+/* A silver ribbon wraps the edge of every primary button and keeps travelling round it. */
+.button.primary::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  padding: 3px;
+  border-radius: 9px;
+  background: conic-gradient(from var(--turn), #fbfbfa, #8b8f96 12%, #f1f2f3 25%, #5d6169 38%, #fdfdfd 50%, #9a9da3 62%, #eeeff1 75%, #6d7178 88%, #fbfbfa);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ribbon-turn 7s linear infinite;
+}
+.button.primary:hover::before { animation-duration: 2.5s; }
+@keyframes ribbon-turn { to { --turn: 360deg; } }
 .button.primary:hover { background: var(--btn-hover); color: var(--btn-fg); }
 .button.primary:hover svg { transform: translateX(3px); }
 .button.secondary { color: var(--white); background: transparent; border-color: var(--line-strong); }

@@ -13,6 +13,10 @@ const config: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   env: { TRACKER_VERSION: trackerVersion },
+  // The About page is off the site for now. Its file is still in app/about; delete this to bring it back.
+  async redirects() {
+    return [{ source: "/about", destination: "/", permanent: false }];
+  },
   async headers() {
     const privateArea = [
       { key: "X-Robots-Tag", value: "noindex, nofollow" },
