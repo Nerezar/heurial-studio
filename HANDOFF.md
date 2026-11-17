@@ -4,6 +4,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Tracker in the site's look, branch `tracker-editorial` (2026-11-17), pushed, not merged, not deployed:** the
+  tracker and its demo now start in a light theme with the website's paper, ink, blue and Newsreader titles
+  (`public/tracker/tracker.css`, light is the default in both HTML pages and `tracker.js`). Dark mode is still one
+  click away and anyone who chose it keeps it. The drifting blue light behind the page is gone. Every tool is
+  unchanged. The frame around the demo on the Demos page is light too, and `/demo/tracker` (which returned 404)
+  now redirects to the demo file. The installed app's colours in `public/admin/manifest.webmanifest` are light.
+  Checked in the preview on the sample-data page: all six sections, a lead panel, the theme switch, 1440 and 375
+  wide, and the `/admin` sign-in card. Not checked: the signed-in real tracker, dialogs other than the lead panel,
+  the installed phone app, Safari.
 - **Finishing pass live 2026-11-17 (website `4781994`):** merged to main and deployed to Slate Production, both on the
   owner's go-ahead. Live check: every public page 200, `/admin` 307, `/about` 307 to the home page (the config-file
   redirect works on Slate), no About link in the page or sitemap, the ribbon and ink logos are served. What changed: About is off the site

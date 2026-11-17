@@ -30,17 +30,16 @@
 @keyframes faq-open { from { opacity: 0; } }
 
 /* ---------- Demos: the tracker in a window frame ---------- */
-/* The demo runs in its own dark window, so the frame keeps dark colours. */
-.demo-frame { --line: #2a2d30; --line-strong: #44484c; --white: #f3f2ed; --text: #d6d7d3; --muted: #a7a8a7; --faint: #8b8e91; overflow: hidden; border-radius: var(--radius); border: 1px solid var(--line-strong); background: #0a0d12; }
-.demo-frame-bar { display: flex; align-items: center; gap: 14px; padding: 9px 12px; background: #181a1d; border-bottom: 1px solid var(--line); color: var(--muted); }
+.demo-frame { overflow: hidden; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--bg); }
+.demo-frame-bar { display: flex; align-items: center; gap: 14px; padding: 9px 12px; background: var(--paper); border-bottom: 1px solid var(--line); color: var(--muted); }
 .demo-frame-bar span { display: flex; gap: 6px; }
-.demo-frame-bar i { width: 9px; height: 9px; border-radius: 50%; background: #3a3d41; }
+.demo-frame-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
 .demo-frame-bar p { flex: 1; min-width: 0; overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
 .demo-frame-bar small { color: var(--faint); font-size: inherit; }
 .demo-frame-bar a { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding-inline: 12px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--text); font-size: .8rem; white-space: nowrap; }
 .demo-frame-bar a:hover { border-color: var(--white); color: var(--white); }
 .demo-frame-body { position: relative; height: min(80vh, 840px); min-height: 560px; }
-.demo-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: #0a0d12; }
+.demo-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
 .demo-caption { margin-top: 14px; color: var(--faint); font-size: var(--fs-small); }
 
 .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(18px, 3vw, 44px); }

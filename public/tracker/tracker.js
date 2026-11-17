@@ -957,7 +957,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   // ----- Connections -----
   function viewConnections() {
     const d = state.data, sv = services(), demo = cfg.mode === "demo";
-    const dark = (document.documentElement.dataset.theme || "dark") === "dark";
+    const dark = (document.documentElement.dataset.theme || "light") === "dark";
     const st = (on) => (demo ? ["--warn", "Sample data"] : !sv ? ["--mute", "Unknown"] : on ? ["--up", "Connected"] : ["--mute", "Not connected"]);
     const rows = [
       ["leads", "Website inquiry form", `New inquiries from the website appear under Needs attention. ${plural(d.inbox.length, "inquiry", "inquiries")} waiting now.`, demo ? ["--warn", "Sample data"] : ["--up", "Active"], "",
@@ -1023,14 +1023,14 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     load();
   }
   function toggleTheme() {
-    const next = (document.documentElement.dataset.theme || "dark") === "dark" ? "light" : "dark";
+    const next = (document.documentElement.dataset.theme || "light") === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     store("hp-theme", next);
     paintTheme();
     if (state.view === "connections") renderView();
   }
   function paintTheme() {
-    const dark = (document.documentElement.dataset.theme || "dark") === "dark";
+    const dark = (document.documentElement.dataset.theme || "light") === "dark";
     $("themeBtn").innerHTML = `${icon(dark ? "sun" : "moon")}<span>${dark ? "Light" : "Dark"}</span>`;
     $("themeBtn").title = dark ? "Switch to light mode" : "Switch to dark mode";
   }
@@ -1668,7 +1668,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   function paintPalette() {
     const q = $("palInput").value.trim().toLowerCase(), d = state.data;
-    const dark = (document.documentElement.dataset.theme || "dark") === "dark";
+    const dark = (document.documentElement.dataset.theme || "light") === "dark";
     const items = [];
     if (d && q) for (const l of d.leads.filter((x) => matches(x, q)).slice(0, 7)) items.push({ group: "Leads", ic: "leads", label: l.name, hint: [l.business, STATUS[l.status].label].filter(Boolean).join(" · "), run: () => openById(l.id) });
     const commands = [

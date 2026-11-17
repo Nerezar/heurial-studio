@@ -67,7 +67,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
-- The tracker keeps its own dark workspace look (the website went light on 2026-11-17): flat dark panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
+- The tracker starts in the website's light look (paper, ink, blue, Newsreader titles; since 2026-11-17) with a dark mode one click away: flat panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
 - Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
 - Setup for Catalyst tables and env vars: `catalyst/TRACKER-SETUP.md`.
 
