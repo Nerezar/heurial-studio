@@ -84,6 +84,52 @@ function cleanTime(body, today) {
   return { lead_id, entry_date, hours: Math.round(hours * 100) / 100, note: text(body.note, 300) };
 }
 
+const TX_KINDS = ["earning", "deposit", "withdrawal"];
+
+/**
+ * A money entry typed in by hand. "earning" is income that didn't come from a lead, "deposit" is money put in
+ * (a transfer, not earned) and "withdrawal" is money that went out.
+ */
+function cleanTransaction(body, today) {
+  if (!body || typeof body !== "object") throw new Bad("Invalid request.");
+  const cents = Math.round(Number(body.amount) * 100);
+  if (!Number.isFinite(cents) || cents <= 0 || cents > 1e11) throw new Bad("Amount must be more than 0.");
+  if (!TX_KINDS.includes(body.kind)) throw new Bad("Choose income, expense or transfer.");
+  const tx_date = body.date || today;
+  if (!DATE.test(tx_date)) throw new Bad("Date must be YYYY-MM-DD.");
+  const label = text(body.label, 120);
+  if (!label) throw new Bad("Add a short description.");
+  return { tx_date, amount_cents: cents, kind: body.kind, label };
+}
+const transactionFromRow = (row) => ({
+  id: String(row.ROWID), date: row.tx_date || "", amount_cents: Number(row.amount_cents) || 0,
+  kind: TX_KINDS.includes(row.kind) ? row.kind : "deposit", label: row.label || "",
+});
+
+/** A task of your own, with an optional due date. `partial` is for a change to an existing one. */
+function cleanTask(body, today, partial = false) {
+  if (!body || typeof body !== "object") throw new Bad("Invalid request.");
+  const out = {};
+  if (!partial || "title" in body) {
+    out.title = text(body.title, 200);
+    if (!out.title) throw new Bad("Say what the task is.");
+  }
+  if (!partial || "due_at" in body) {
+    out.due_at = body.due_at || "";
+    if (out.due_at && !DATE.test(out.due_at)) throw new Bad("Date must be YYYY-MM-DD.");
+  }
+  if ("done" in body) out.done_at = body.done ? today : "";
+  else if (!partial) out.done_at = "";
+  return out;
+}
+const taskFromRow = (row) => ({ id: String(row.ROWID), title: row.title || "", due_at: row.due_at || "", done_at: row.done_at || "" });
+/** Open tasks first, soonest due at the top and undated last; then finished ones, most recent first. */
+function tasksFromRows(rows) {
+  const late = (t) => t.due_at || "9999-99-99";
+  return rows.map(taskFromRow).sort((a, b) => (Boolean(a.done_at) - Boolean(b.done_at))
+    || (a.done_at ? b.done_at.localeCompare(a.done_at) : late(a).localeCompare(late(b))) || a.id.localeCompare(b.id)).slice(0, 500);
+}
+
 /** Normalise a Data Store row into the shape the tracker page uses. */
 function leadFromRow(row, hoursByLead = {}) {
   return {
@@ -346,7 +392,7 @@ ${trackerUrl ? `<p style="margin:16px 0 0"><a href="${esc(trackerUrl)}" style="d
 }
 
 module.exports = {
-  Bad, STATUSES, CHANNELS, cleanLead, withPaidDate, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
+  Bad, STATUSES, CHANNELS, TX_KINDS, cleanTransaction, transactionFromRow, cleanTask, taskFromRow, tasksFromRows, cleanLead, withPaidDate, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
   inboxFromRows, leadFromInquiry, buildDigest, todayIn, addDays, ID,
 };
 

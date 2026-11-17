@@ -208,7 +208,7 @@ test("messages: log, send through a connected service, and delete with the lead"
   const data = await call(deps, "GET", "/data?range=30");
   assert.equal(data.body.messages.length, 4);
   assert.equal(data.body.messages[0].lead_name, "Thread Co");
-  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false, twilio: false, ai: false, push: false });
+  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false, twilio: false, ai: false, push: false, money: true, tasks: true });
 
   await call(deps, "DELETE", `/messages/${thread.body[0].id}`);
   assert.equal((await call(deps, "GET", `/leads/${id}/messages`)).body.length, 3);
@@ -307,4 +307,49 @@ test("a Leads table with no paid_at column still saves the lead, and the reply s
   assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "paid", paid_at: "", notes: "Thanks sent" })).body, { ok: true });
   assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "lost" })).body, { ok: true });
   assert.equal((await call(deps, "GET", "/data?range=30")).body.summary.revenue_cents, 29500);
+});
+
+test("transactions: saved by hand, listed in full, kept apart by kind", async () => {
+  const { deps } = setup();
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "deposit", amount: 0, label: "x" })).body.error, "Amount must be more than 0.");
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "gift", amount: 5, label: "x" })).body.error, "Choose income, expense or transfer.");
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "deposit", amount: 5 })).body.error, "Add a short description.");
+  const made = await call(deps, "POST", "/transactions", { kind: "withdrawal", amount: 45.5, date: "2026-11-10", label: "Software" });
+  assert.equal(made.status, 201);
+  await call(deps, "POST", "/transactions", { kind: "deposit", amount: 500, label: "Owner deposit" });
+  const data = await call(deps, "GET", "/data?range=7");
+  assert.deepEqual(data.body.transactions.find((t) => t.id === made.body.id), { id: made.body.id, date: "2026-11-10", amount_cents: 4550, kind: "withdrawal", label: "Software" });
+  assert.equal(data.body.transactions.find((t) => t.kind === "deposit").date, "2026-11-11"); // no date given: today
+  assert.equal((await call(deps, "DELETE", `/transactions/${made.body.id}`)).status, 200);
+  assert.equal((await call(deps, "GET", "/data")).body.transactions.length, 1);
+});
+
+test("tasks: add, finish, reopen and delete, with open ones first by due date", async () => {
+  const { deps } = setup();
+  assert.equal((await call(deps, "POST", "/tasks", { title: "  " })).body.error, "Say what the task is.");
+  assert.equal((await call(deps, "POST", "/tasks", { title: "x", due_at: "soon" })).body.error, "Date must be YYYY-MM-DD.");
+  const later = await call(deps, "POST", "/tasks", { title: "Later", due_at: "2026-11-20" });
+  const undated = await call(deps, "POST", "/tasks", { title: "Whenever" });
+  const soon = await call(deps, "POST", "/tasks", { title: "Soon", due_at: "2026-11-12" });
+  let tasks = (await call(deps, "GET", "/data")).body.tasks;
+  assert.deepEqual(tasks.map((t) => t.title), ["Soon", "Later", "Whenever"]);
+  assert.equal((await call(deps, "PATCH", `/tasks/${soon.body.id}`, { done: true })).status, 200);
+  tasks = (await call(deps, "GET", "/data")).body.tasks;
+  assert.deepEqual(tasks.map((t) => [t.title, t.done_at]), [["Later", ""], ["Whenever", ""], ["Soon", "2026-11-11"]]);
+  await call(deps, "PATCH", `/tasks/${soon.body.id}`, { done: false });
+  assert.equal((await call(deps, "GET", "/data")).body.tasks[0].title, "Soon");
+  assert.equal((await call(deps, "PATCH", "/tasks/999", { done: true })).status, 404);
+  assert.equal((await call(deps, "DELETE", `/tasks/${later.body.id}`)).status, 200);
+  assert.equal((await call(deps, "DELETE", `/tasks/${undated.body.id}`)).status, 200);
+  assert.equal((await call(deps, "GET", "/data")).body.tasks.length, 1);
+});
+
+test("without the Transactions and Tasks tables the tracker still loads, with those parts off", async () => {
+  const { deps, store } = setup();
+  const list = store.list;
+  store.list = async (table) => { if (table === "Transactions" || table === "Tasks") throw new Error("no such table"); return list(table); };
+  const data = await call(deps, "GET", "/data");
+  assert.equal(data.status, 200);
+  assert.deepEqual([data.body.transactions, data.body.tasks], [[], []]);
+  assert.deepEqual([data.body.services.money, data.body.services.tasks], [false, false]);
 });

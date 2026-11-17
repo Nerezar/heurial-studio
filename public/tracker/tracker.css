@@ -344,6 +344,23 @@ th[aria-sort] .sort { color: var(--text); }
 .kind { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 8px; background: color-mix(in srgb, var(--c) 13%, transparent); color: var(--c); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .tbl td.amt { color: var(--up); font-weight: 600; }
 .tbl td.amt.out { color: var(--down); }
+/* The add bars on Money and Tasks reuse the Time bar's row, with their own columns. */
+.time-row.is-tx { grid-template-columns: 150px 160px 130px minmax(140px, 1fr) auto; padding-top: 18px; }
+.time-row.is-task { grid-template-columns: minmax(0, 1fr) 170px auto; padding-bottom: 14px; }
+.setup-note { padding: 0 22px 16px; }
+/* Your own tasks: a tick box, the task, when it is due, and a delete button. */
+.tk-main { display: grid; gap: 16px; min-width: 0; }
+.task-list { padding: 0 10px 8px; }
+.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px 12px; align-items: center; min-height: 54px; padding: 4px 6px; font-size: 16px; }
+.task + .task { box-shadow: 0 -1px 0 var(--line); }
+.task-box { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; }
+.task-box i { display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--line-2); border-radius: 7px; background: var(--field); color: transparent; transition: background-color .15s, border-color .15s; }
+.task-box i .i { width: 15px; height: 15px; stroke-width: 2.6; }
+.task-box:hover i { border-color: var(--accent); }
+.task.is-done .task-box i { border-color: var(--accent); background: var(--accent); color: #fff; }
+.task-t { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.task.is-done .task-t { color: var(--text-3); font-weight: 400; text-decoration: line-through; }
+.tabs .count { margin-left: 2px; }
 /* Tasks: what is waiting now on the left, what is further out on the right. */
 .tk { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 @container main (max-width: 900px) { .tk { grid-template-columns: minmax(0, 1fr); } }
@@ -546,7 +563,9 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
   .money-head { flex-direction: column; gap: 4px; padding-inline: 16px; }
   .money-head .stat-v { font-size: 40px; }
   .read { justify-items: start; max-width: none; min-height: 44px; text-align: left; }
-  .time-row { grid-template-columns: 1fr 1fr; }
+  .time-row, .time-row.is-tx { grid-template-columns: 1fr 1fr; }
+  .time-row.is-task { grid-template-columns: 1fr; }
+  .time-row.is-task .btn { grid-column: auto; }
   .time-row .field:first-child, .time-row .field:nth-child(4), .time-row .btn { grid-column: 1 / -1; }
   .board { grid-auto-columns: 82%; }
   .q-row { grid-template-columns: minmax(0, 1fr); margin: 0 6px; }

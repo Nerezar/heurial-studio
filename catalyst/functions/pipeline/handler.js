@@ -8,7 +8,7 @@ const { cleanSubscription, short } = require("./push");
 
 const MAX_BODY = 32 * 1024;
 const MAX_EMAIL = 4 * 1024 * 1024; // provider posts can include HTML and attachments; only the text is kept
-const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages", push: "PushSubscriptions" };
+const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages", push: "PushSubscriptions", tx: "Transactions", tasks: "Tasks" };
 
 function keyMatches(given, expected) {
   if (!expected || typeof given !== "string") return false;
@@ -138,6 +138,8 @@ async function handle(req, res, deps) {
 
     // The Messages table is newer than the others. Until it exists, the rest of the tracker keeps working.
     const listMessages = async () => { try { return await store.list(TABLES.messages); } catch { return null; } };
+    // Transactions and Tasks are newer still, and treated the same way: without the table, that part is simply off.
+    const listOptional = async (table) => { try { return await store.list(table); } catch { return null; } };
     const loadAll = async () => {
       const [leadRows, timeRows, inquiryRows, messageRows] = await Promise.all([
         store.list(TABLES.leads), store.list(TABLES.time), store.list(TABLES.inquiries), listMessages(),
@@ -189,8 +191,33 @@ async function handle(req, res, deps) {
 
     if (method === "GET" && path === "data") {
       const range = url.searchParams.get("range") || "30";
-      const { messagesReady, ...rows } = await loadAll();
-      return send(200, { ...core.summarize({ ...rows, range, today }), services: services(messagesReady) });
+      const [{ messagesReady, ...rows }, txRows, taskRows] = await Promise.all([loadAll(), listOptional(TABLES.tx), listOptional(TABLES.tasks)]);
+      return send(200, {
+        ...core.summarize({ ...rows, range, today }),
+        transactions: (txRows || []).map(core.transactionFromRow),
+        tasks: core.tasksFromRows(taskRows || []),
+        services: { ...services(messagesReady), money: txRows !== null, tasks: taskRows !== null },
+      });
+    }
+
+    // Money entries typed in by hand, and your own tasks.
+    if (path === "transactions" && method === "POST") {
+      const saved = await store.insert(TABLES.tx, core.cleanTransaction(await readJson(req), today));
+      return send(201, { id: String(saved.ROWID) });
+    }
+    if ((m = path.match(/^transactions\/(\d{1,20})$/)) && method === "DELETE") {
+      await store.remove(TABLES.tx, m[1]);
+      return send(200, { ok: true });
+    }
+    if (path === "tasks" && method === "POST") {
+      const saved = await store.insert(TABLES.tasks, core.cleanTask(await readJson(req), today));
+      return send(201, { id: String(saved.ROWID) });
+    }
+    if ((m = path.match(/^tasks\/(\d{1,20})$/)) && (method === "PATCH" || method === "DELETE")) {
+      if (method === "DELETE") { await store.remove(TABLES.tasks, m[1]); return send(200, { ok: true }); }
+      if (!(await store.get(TABLES.tasks, m[1]))) throw new core.Bad("That task no longer exists.", 404);
+      await store.update(TABLES.tasks, { ...core.cleanTask(await readJson(req), today, true), ROWID: m[1] });
+      return send(200, { ok: true });
     }
 
     if (path === "leads" && method === "POST") {

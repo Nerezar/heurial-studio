@@ -124,7 +124,7 @@
   let cfg = null;
   const state = {
     data: null, all: [], loading: true, error: "", online: false, lastSync: 0,
-    view: "overview", range: "30", loadedRange: "", ovTab: "conversion", moneyTab: "all",
+    view: "overview", range: "30", loadedRange: "", ovTab: "conversion", moneyTab: "all", taskTab: "open",
     query: "", facets: { stage: new Set(), source: new Set(), due: new Set() }, sort: { key: "booked_at", dir: "desc" },
     time: null, timeLoading: false,
     lead: null, isNew: false, tab: "details", dirty: false, thread: null, leadTime: null,
@@ -137,7 +137,11 @@
   const rangeText = () => RANGES.find((r) => r[0] === state.range)[2];
   /** "in the last 30 days", or "across all time". */
   const inPeriod = () => (state.range === "all" ? "across all time" : `in the ${rangeText()}`);
-  const urgentCount = (d) => d.inbox.length + d.stale.length + d.followups.filter((f) => f.follow_up_at <= d.today).length;
+  /** Your own tasks that are due today or overdue. */
+  const dueTasks = (d) => (state.tasks || []).filter((t) => !t.done_at && t.due_at && t.due_at <= d.today);
+  const urgentCount = (d) => d.inbox.length + d.stale.length + d.followups.filter((f) => f.follow_up_at <= d.today).length + dueTasks(d).length;
+  /** Whether a part of the back end is there. The sample-data page has everything. */
+  const has = (part) => cfg.mode === "demo" || Boolean(services() && services()[part]);
   const matches = (lead, q) => !q || [lead.name, lead.business, lead.email, lead.phone, lead.source].some((v) => String(v || "").toLowerCase().includes(q));
   const services = () => (state.data && state.data.services) || null;
 
@@ -201,7 +205,8 @@
       const [data, ever] = await Promise.all([call("/api/data?range=" + state.range), state.range === "all" ? null : call("/api/data?range=all")]);
       state.data = data;
       state.all = (ever || data).leads;
-      state.tx = (ever || data).transactions || []; // deposits and withdrawals, once the API sends them
+      state.tx = (ever || data).transactions || []; // money entries added by hand
+      state.tasks = (ever || data).tasks || [];
       state.loadedRange = state.range;
       state.error = "";
       state.online = true;
@@ -433,13 +438,13 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   /** The day a lead's money came in. A lead paid before paid dates were recorded only has the day its call was booked. */
   const paidDay = (l) => l.paid_at || l.booked_at;
   /**
-   * What feeds the money chart. Today that is every paid lead, on the day it was paid. Deposits and withdrawals
-   * join them when the API sends `transactions` ({ date, amount_cents, kind, label }).
+   * What feeds the money chart: every paid lead, on the day it was paid, and the entries added by hand on the
+   * Money screen (`transactions`: { id, date, amount_cents, kind, label }).
    */
   function moneyEntries() {
     const paid = (state.all || []).filter((l) => l.status === "paid" && paidDay(l) && l.value_cents > 0)
       .map((l) => ({ date: paidDay(l), cents: l.value_cents, kind: "earning", label: l.name, lead: l }));
-    return paid.concat((state.tx || []).map((t) => ({ date: t.date, cents: t.amount_cents, kind: t.kind, label: t.label })));
+    return paid.concat((state.tx || []).map((t) => ({ id: t.id, date: t.date, cents: t.amount_cents, kind: t.kind, label: t.label })));
   }
   /**
    * The money line for the chosen period, worked out in money.js. Built from the entries themselves, so the line,
@@ -547,6 +552,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     return [
       ...d.inbox.map((i) => ({ key: "i" + i.id, when: ago(i.created_at), cls: "new", title: `Reply to ${i.name}`, sub: i.source, act: `data-action="view" data-view="tasks"` })),
       ...d.stale.map((x) => ({ key: "s" + x.id, when: niceDate(x.call_at), cls: "late", title: `Update the call with ${x.name}`, sub: "Still marked as booked", act: open(x.id) })),
+      ...dueTasks(d).map((t) => ({ key: "t" + t.id, ...due(t.due_at), when: due(t.due_at).text, title: t.title, sub: "Your task", act: `data-action="view" data-view="tasks"` })),
       ...d.followups.filter((f) => f.follow_up_at <= d.today).map((f) => ({ key: "f" + f.id, ...due(f.follow_up_at), when: due(f.follow_up_at).text, title: f.follow_up_note || "Follow up", sub: f.name, act: open(f.id) })),
     ];
   }
@@ -613,15 +619,27 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const what = ({ lead, label, kind }) => lead
       ? `<button class="who" type="button" data-action="open" data-id="${lead.id}" data-fk="tx-${lead.id}">${esc(lead.name)}${lead.business ? `<span> · ${esc(lead.business)}</span>` : ""}</button>`
       : esc(label || KIND[kind][0]);
+    const add = has("money") ? `<form class="pane tm-add" data-submit="tx-add" novalidate aria-label="Add a transaction">
+    <div class="time-row is-tx">
+      <label class="field"><span>Type</span><select name="kind" data-keep="x-kind" data-fk="x-kind"><option value="earning">Income</option><option value="withdrawal">Expense</option><option value="deposit">Transfer in</option></select></label>
+      <label class="field"><span>Date</span><input type="date" name="date" data-keep="x-date" data-fk="x-date" value="${state.data.today}"></label>
+      <label class="field"><span>Amount</span><input type="number" name="amount" min="0.01" step="0.01" inputmode="decimal" data-keep="x-amt" data-fk="x-amt"></label>
+      <label class="field"><span>Description</span><input type="text" name="label" maxlength="120" data-keep="x-label" data-fk="x-label"></label>
+      <button class="btn primary" type="submit" data-fk="x-submit">${icon("plus")}Add transaction</button>
+    </div>
+    <p class="field-err foot-note" id="txAddErr" role="alert" hidden></p>
+  </form>` : `<p class="foot-note setup-note">Adding transactions is off until the Transactions table exists. The steps are in catalyst/TRACKER-SETUP.md.</p>`;
     return `<div class="vw mn">
   ${moneyPane()}
+  ${add}
   <section class="pane" aria-labelledby="txTitle">
     <div class="pane-head"><h2 id="txTitle">Transactions</h2><span class="pane-meta">${sentence(inPeriod())}</span>
       <div class="pane-tools"><div class="tabs" role="tablist" aria-label="Type">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="moneytab" data-tab="${key}" data-fk="mt-${key}" aria-selected="${tab === key}">${name}</button>`).join("")}</div></div></div>
-    <div class="pane-body">${rows.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th></tr></thead><tbody>
+    <div class="pane-body">${rows.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th><th><span class="sr">Delete</span></th></tr></thead><tbody>
       ${rows.map(({ entry }) => `<tr><td class="n">${niceDate(entry.date)}</td><td>${what(entry)}</td>
         <td><span class="kind" style="--c:var(${KIND[entry.kind][1]})">${KIND[entry.kind][2]} ${KIND[entry.kind][0]}</span></td>
-        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td></tr>`).join("")}</tbody></table>`
+        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td>
+        <td class="r">${entry.id ? `<button class="btn ghost sm icon" type="button" data-action="tx-del" data-id="${entry.id}" data-fk="xd-${entry.id}" aria-label="Delete ${esc(entry.label)}, ${signed(entry)}">${icon("x")}</button>` : ""}</td></tr>`).join("")}</tbody></table>`
       : `<div class="empty"><b>Nothing here ${inPeriod()}.</b>When you move a lead to Paid, its value shows up as income.</div>`}
     ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}</div>
   </section>
@@ -633,14 +651,36 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function viewTasks() {
     const d = state.data, urgent = urgentCount(d);
     const later = d.followups.filter((f) => f.follow_up_at > addDays(d.today, 7));
+    const mine = state.tasks || [], tab = state.taskTab, shown = mine.filter((t) => (tab === "done") === Boolean(t.done_at));
+    const tabs = [["open", "Open", mine.filter((t) => !t.done_at).length], ["done", "Completed", mine.filter((t) => t.done_at).length]];
     return `<div class="vw tk">
+  <div class="tk-main">
+  <section class="pane" aria-labelledby="mineTitle">
+    <div class="pane-head"><h2 id="mineTitle">Your tasks</h2>
+      <div class="pane-tools"><div class="tabs" role="tablist" aria-label="Show">${tabs.map(([key, name, n]) => `<button class="tab" type="button" role="tab" data-action="tasktab" data-tab="${key}" data-fk="kt-${key}" aria-selected="${tab === key}">${name}<span class="count">${n}</span></button>`).join("")}</div></div></div>
+    ${has("tasks") ? `<form data-submit="task-add" novalidate aria-label="Add a task">
+      <div class="time-row is-task">
+        <label class="field"><span>Task</span><input type="text" name="title" maxlength="200" data-keep="k-title" data-fk="k-title"></label>
+        <label class="field"><span>Due (optional)</span><input type="date" name="due_at" data-keep="k-due" data-fk="k-due"></label>
+        <button class="btn primary" type="submit" data-fk="k-submit">${icon("plus")}Add task</button>
+      </div>
+      <p class="field-err foot-note" id="taskAddErr" role="alert" hidden></p>
+    </form>` : `<p class="foot-note setup-note">Adding tasks is off until the Tasks table exists. The steps are in catalyst/TRACKER-SETUP.md.</p>`}
+    <div class="pane-body">${shown.length ? `<ul class="task-list">${shown.map((t) => `<li class="task${t.done_at ? " is-done" : ""}">
+        <button class="task-box" type="button" role="checkbox" aria-checked="${Boolean(t.done_at)}" data-action="task-toggle" data-id="${t.id}" data-done="${t.done_at ? "" : "1"}" data-fk="tk-${t.id}" aria-label="${t.done_at ? "Reopen" : "Finish"}: ${esc(t.title)}"><i>${icon("check")}</i></button>
+        <span class="task-t">${esc(t.title)}</span>
+        ${t.done_at ? `<span class="due">Done ${niceDate(t.done_at)}</span>` : t.due_at ? dueTag(t.due_at) : ""}
+        <button class="btn ghost sm icon" type="button" data-action="task-del" data-id="${t.id}" data-fk="tkd-${t.id}" aria-label="Delete task: ${esc(t.title)}">${icon("x")}</button></li>`).join("")}</ul>`
+      : `<div class="empty">${tab === "done" ? "Nothing finished yet." : has("tasks") ? "No tasks of your own. Add one above." : "No tasks of your own."}</div>`}</div>
+  </section>
   <section class="pane" aria-labelledby="queueTitle">
-    <div class="pane-head"><h2 id="queueTitle">Today and this week</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
+    <div class="pane-head"><h2 id="queueTitle">From your leads</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
     <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
   </section>
+  </div>
   <section class="pane" aria-labelledby="laterTitle">
-    <div class="pane-head"><h2 id="laterTitle">Upcoming</h2>${later.length ? `<span class="count">${later.length}</span>` : ""}</div>
+    <div class="pane-head"><h2 id="laterTitle">Later follow-ups</h2>${later.length ? `<span class="count">${later.length}</span>` : ""}</div>
     <div class="pane-body">${later.length ? later.map((f) => `<div class="q-row">
         <span class="q-when">${niceDate(f.follow_up_at)}</span>
         <div class="q-main"><button class="who" type="button" data-action="open" data-id="${f.id}" data-fk="up-${f.id}">${esc(f.name)}${f.business ? `<span> · ${esc(f.business)}</span>` : ""}</button><p>${esc(f.follow_up_note || "Follow up")}</p></div>
@@ -1108,7 +1148,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       if (next === "time") ensureTime();
     };
     // Where the browser can, the old section lifts away and the new one rises in (styled in tracker.css).
-    if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(swap);
+    // In a background tab the browser skips the animation and rejects these promises; the swap itself still runs.
+    if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) { const move = document.startViewTransition(swap); move.ready.catch(() => {}); move.finished.catch(() => {}); }
     else swap();
   }
   function setRange(range) {
@@ -1208,6 +1249,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       case "tab": return showTab(el.dataset.tab);
       case "ovtab": state.ovTab = el.dataset.tab; return renderView();
       case "moneytab": state.moneyTab = el.dataset.tab; return renderView();
+      case "tasktab": state.taskTab = el.dataset.tab; return renderView();
       case "sort": {
         const key = el.dataset.key;
         state.sort = state.sort.key === key ? { key, dir: state.sort.dir === "asc" ? "desc" : "asc" } : { key, dir: ["value_cents", "hours", "booked_at"].includes(key) ? "desc" : "asc" };
@@ -1245,6 +1287,13 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         await leave(button);
         await load();
       });
+      case "tx-del": {
+        const ok = await confirmBox({ title: "Delete this transaction?", text: "It comes off the balance. This can't be undone.", action: "Delete", danger: true });
+        if (!ok) return;
+        return act(button, async () => { await call("/api/transactions/" + id, "DELETE"); toast("Transaction deleted"); await load(); });
+      }
+      case "task-toggle": return act(button, async () => { await call("/api/tasks/" + id, "PATCH", { done: Boolean(el.dataset.done) }); await load(); });
+      case "task-del": return act(button, async () => { await call("/api/tasks/" + id, "DELETE"); toast("Task deleted"); await load(); });
       case "time-del": {
         const ok = await confirmBox({ title: "Delete this time entry?", text: "The hours come off the lead's total. This can't be undone.", action: "Delete entry", danger: true });
         if (!ok) return;
@@ -1755,6 +1804,34 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     });
   }
 
+  /** The Add transaction bar on the Money screen. */
+  function onTxAdd(form) {
+    const err = $("txAddErr"), amount = Number(form.amount.value);
+    const fail = (message, field) => { err.textContent = message; err.hidden = false; field.focus(); };
+    if (!(amount > 0)) return fail("Enter an amount above 0.", form.amount);
+    if (!form.label.value.trim()) return fail("Add a short description.", form.label);
+    err.hidden = true;
+    act(form.querySelector('[type="submit"]'), async () => {
+      await call("/api/transactions", "POST", { kind: form.kind.value, date: form.date.value, amount, label: form.label.value });
+      form.amount.value = ""; form.label.value = "";
+      toast("Transaction added");
+      await load();
+    });
+  }
+  /** The Add task bar on the Tasks screen. */
+  function onTaskAdd(form) {
+    const err = $("taskAddErr");
+    if (!form.title.value.trim()) { err.textContent = "Say what the task is."; err.hidden = false; return form.title.focus(); }
+    err.hidden = true;
+    act(form.querySelector('[type="submit"]'), async () => {
+      await call("/api/tasks", "POST", { title: form.title.value, due_at: form.due_at.value });
+      form.title.value = ""; form.due_at.value = "";
+      state.taskTab = "open";
+      toast("Task added");
+      await load();
+    });
+  }
+
   // ---------- Command bar ----------
   let palItems = [], palAt = 0;
   function openPalette() {
@@ -1830,7 +1907,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     document.addEventListener("input", onInput);
     document.addEventListener("submit", (e) => {
       const form = e.target.closest("form[data-submit]");
-      if (form && form.dataset.submit === "time-add") { e.preventDefault(); onTimeAdd(form); }
+      const run = form && { "time-add": onTimeAdd, "tx-add": onTxAdd, "task-add": onTaskAdd }[form.dataset.submit];
+      if (run) { e.preventDefault(); run(form); }
     });
     bindDrag(view);
     bindInspector();

@@ -4,6 +4,20 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Saving for transactions and tasks is built (2026-11-17, branch `two-pages`, pushed, not merged, nothing
+  deployed).** Code: `core.js` (both copies) gains `cleanTransaction`, `cleanTask` and their row readers;
+  `handler.js` gains `POST /transactions`, `DELETE /transactions/:id`, `POST /tasks`, `PATCH /tasks/:id` (`done`,
+  `title`, `due_at`) and `DELETE /tasks/:id`, returns `transactions` and `tasks` from `/data`, and reports
+  `services.money` and `services.tasks`; the site's proxy allows the new routes. Money has an Add transaction bar
+  and a delete button on hand-added rows; Tasks has "Your tasks" with an add bar, tick boxes, Open / Completed and
+  delete. Tasks due today or overdue count in the badge and the Today list. **To switch it on for the real
+  tracker, in this order:** 1) create the `Transactions` and `Tasks` tables (columns in `catalyst/TRACKER-SETUP.md`)
+  in Development, 2) deploy `pipeline` to Development and test, 3) console deployment to Production with Data
+  Store and Functions selected, 4) deploy the site. Until the tables exist the tracker still loads and shows a
+  note where each add bar would be. The same function deploy turns on the 1D range. Checked: 24 pipeline tests,
+  and add / delete / finish / reopen on the sample-data page at 1440 and 375. Not checked: the real path through
+  the site's proxy to a deployed function. Not built: editing a transaction (delete and re-add), tasks linked to
+  a lead (follow-ups cover that), tasks in the daily email, workspace settings and notification switches.
 - **Tracker regrouped into five sections from the owner's five concept images (2026-11-17, branch `two-pages`,
   pushed, not merged):** the sidebar is Overview, Money, Leads, Tasks, Settings (`SECTIONS` in `tracker.js`).
   Nothing was removed: Leads holds the old Pipeline, Leads, Time and Messages screens as tabs (Board, List, Time,

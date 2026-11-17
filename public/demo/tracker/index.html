@@ -93,11 +93,18 @@ const demo = (() => {
   // Sample money moved in and out, to show how the chart keeps it apart from earnings. The real tracker has no
   // transactions yet: its chart is paid leads only until they are connected.
   const transactions = [
-    { date: day(-80), amount_cents: 50000, kind: "deposit", label: "Owner deposit (sample)" },
-    { date: day(-24), amount_cents: 30000, kind: "withdrawal", label: "Software subscriptions (sample)" },
-    { date: day(-9), amount_cents: 100000, kind: "deposit", label: "Owner deposit (sample)" },
+    { ROWID: id(), tx_date: day(-80), amount_cents: 50000, kind: "deposit", label: "Owner deposit (sample)" },
+    { ROWID: id(), tx_date: day(-24), amount_cents: 30000, kind: "withdrawal", label: "Software subscriptions (sample)" },
+    { ROWID: id(), tx_date: day(-9), amount_cents: 100000, kind: "deposit", label: "Owner deposit (sample)" },
   ];
-  return { today, leads, time, inquiries, messages, transactions, id };
+  // Sample tasks of your own, beside the ones the tracker raises from leads.
+  const tasks = [
+    { ROWID: id(), title: "Review the website draft", due_at: day(0), done_at: "" },
+    { ROWID: id(), title: "Check the automation test", due_at: day(1), done_at: "" },
+    { ROWID: id(), title: "Prepare the project brief", due_at: day(4), done_at: "" },
+    { ROWID: id(), title: "Send the October invoice", due_at: day(-6), done_at: day(-5) },
+  ];
+  return { today, leads, time, inquiries, messages, transactions, tasks, id };
 })();
 
 const bad = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -110,11 +117,21 @@ async function api(path, method = "GET", body) {
   const find = (rows, id) => rows.find((r) => String(r.ROWID) === String(id));
   const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries, messageRows: demo.messages });
   // Nothing is connected on this page, and it says so.
-  const services = { messages: true, digest: false, email: false, sms: false, inbound: false, twilio: false, ai: false };
+  const services = { messages: true, digest: false, email: false, sms: false, inbound: false, twilio: false, ai: false, money: true, tasks: true };
   const wrap = (fn) => { try { return fn(); } catch (e) { if (e instanceof core.Bad) throw bad(e.message, e.status); throw e; } };
   let m;
 
-  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true, transactions: demo.transactions }));
+  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true, transactions: demo.transactions.map(core.transactionFromRow), tasks: core.tasksFromRows(demo.tasks) }));
+  if (method === "POST" && p === "transactions") return wrap(() => { const row = { ...core.cleanTransaction(body, today), ROWID: demo.id() }; demo.transactions.push(row); return { id: row.ROWID }; });
+  if ((m = p.match(/^transactions\/(\d+)$/)) && method === "DELETE") { const i = demo.transactions.findIndex((t) => String(t.ROWID) === m[1]); if (i >= 0) demo.transactions.splice(i, 1); return { ok: true }; }
+  if (method === "POST" && p === "tasks") return wrap(() => { const row = { ...core.cleanTask(body, today), ROWID: demo.id() }; demo.tasks.push(row); return { id: row.ROWID }; });
+  if ((m = p.match(/^tasks\/(\d+)$/)) && (method === "PATCH" || method === "DELETE")) return wrap(() => {
+    const i = demo.tasks.findIndex((t) => String(t.ROWID) === m[1]);
+    if (method === "DELETE") { if (i >= 0) demo.tasks.splice(i, 1); return { ok: true }; }
+    if (i < 0) throw bad("That task no longer exists.", 404);
+    Object.assign(demo.tasks[i], core.cleanTask(body, today, true));
+    return { ok: true };
+  });
   if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.withPaidDate(core.cleanLead(body, false, today), null, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
   if ((m = p.match(/^leads\/(\d+)$/))) {
     const row = find(demo.leads, m[1]);

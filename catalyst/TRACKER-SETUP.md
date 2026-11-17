@@ -110,6 +110,34 @@ itself, so a lead still saves and can still be moved to Paid; only the date is d
 
 For all of these tables, check **Scopes & Permissions**: no end-user role may read or write.
 
+**`Transactions`**: money entries added by hand on the Money screen (optional; without it, Money shows paid leads only
+and the Add transaction bar is replaced by a note):
+
+| Column         | Type         |
+| -------------- | ------------ |
+| `tx_date`      | Var Char 10  |
+| `amount_cents` | BigInt       |
+| `kind`         | Var Char 12  |
+| `label`        | Var Char 120 |
+
+`kind` is `earning` (income that didn't come from a lead), `deposit` (money put in: a transfer, never counted as
+earned) or `withdrawal` (an expense). `amount_cents` is always positive; the kind decides the sign.
+
+**`Tasks`**: your own tasks on the Tasks screen (optional; without it, Tasks shows only what the tracker raises from leads):
+
+| Column    | Type         |
+| --------- | ------------ |
+| `title`   | Var Char 200 |
+| `due_at`  | Var Char 10  |
+| `done_at` | Var Char 10  |
+
+`done_at` is the day a task was ticked off, and empty while it is open. Tasks of your own are not in the daily email yet.
+
+The same rule applies to these two: under **Scopes & Permissions**, no end-user role may read or write.
+
+Both need the current `pipeline` function (it adds `/transactions` and `/tasks`, and reports `money` and `tasks` under
+`services`) and the current site (its `/api/admin` proxy lets those routes through).
+
 ## 2. Deploy the two functions (from `catalyst/`)
 
 ```sh
