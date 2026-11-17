@@ -1,5 +1,5 @@
 /* HEURIAL tracker: the data behind the money chart, kept apart from its drawing so real transactions can be
-   plugged in later. No page, no colours: entries in, a running balance out. Tested in tracker/money.test.cjs.
+   plugged in later. No page, no colours: entries in, a running balance out. Tested in tracker/money.test.mjs.
 
    An entry is { date: "YYYY-MM-DD", cents, kind, label }. `cents` is always positive. `kind` is:
      "earning"     money a client paid. Raises the balance and counts as earned.

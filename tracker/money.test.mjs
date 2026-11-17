@@ -1,7 +1,10 @@
-// Run with: node --test tracker/money.test.cjs
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { series } = require("../public/tracker/money.js");
+// Run with: node --test tracker/money.test.mjs
+import test from "node:test";
+import assert from "node:assert/strict";
+import * as loaded from "../public/tracker/money.js";
+
+// money.js is a plain browser script: under Node it either exports itself or sets a global, depending on how it is read.
+const { series } = loaded.default ?? globalThis.HeurialMoney;
 
 const entries = [
   { date: "2026-01-05", cents: 50000, kind: "deposit", label: "Opening deposit" },

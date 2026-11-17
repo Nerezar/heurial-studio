@@ -16,7 +16,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   **Money chart reworked on the same branch (owner's spec, 2026-11-17):** blue thin line with a soft blue fill and
   an eased rise into each entry (each day's balance is still exact); range buttons are 1D, 1W, 1M, 3M, 1Y, ALL;
   the percentage is hidden when the starting balance makes it meaningless. The chart's data now lives in
-  `public/tracker/money.js` (pure, tested by `node --test tracker/money.test.cjs`); `tracker.js` only draws it.
+  `public/tracker/money.js` (pure, tested by `node --test tracker/money.test.mjs`); `tracker.js` only draws it.
   Entries are earnings (paid leads), deposits or withdrawals: deposits and withdrawals move the balance but never
   count as earned, and the "Won so far" tile is earnings only. The real API sends no transactions yet, so the real
   tracker still shows paid leads alone; the demo has three sample ones, labelled "(sample)". To connect real ones,
