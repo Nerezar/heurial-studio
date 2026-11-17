@@ -27,7 +27,7 @@
   };
   // When a lead reaches one of these stages and has no follow-up, suggest one.
   const FOLLOW_PLAN = { held: [3, "Send a follow-up after the call"], proposal: [3, "Check in on the proposal"], paid: [14, "Ask for a testimonial"] };
-  const RANGES = [["7", "Week", "last 7 days"], ["30", "Month", "last 30 days"], ["90", "3 months", "last 90 days"], ["365", "Year", "last 12 months"], ["all", "All", "all time"]];
+  const RANGES = [["1", "1D", "last day"], ["7", "1W", "last 7 days"], ["30", "1M", "last 30 days"], ["90", "3M", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "ALL", "all time"]];
   const VIEWS = {
     overview: ["Overview", "overview"], pipeline: ["Pipeline", "pipeline"], leads: ["Leads", "leads"], time: ["Time", "time"],
     messages: ["Messages", "messages"], connections: ["Connections", "plug"],
@@ -190,6 +190,7 @@
       const [data, ever] = await Promise.all([call("/api/data?range=" + state.range), state.range === "all" ? null : call("/api/data?range=all")]);
       state.data = data;
       state.all = (ever || data).leads;
+      state.tx = (ever || data).transactions || []; // deposits and withdrawals, once the API sends them
       state.loadedRange = state.range;
       state.error = "";
       state.online = true;
@@ -415,35 +416,29 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   /** Change against the period just before, from the same data. Nothing is shown when there's no such period. */
   function delta(cur, prev, fmt, neutral) {
     if (!state.data.previous || state.range === "all" || cur == null || prev == null) return "";
-    const diff = cur - prev, title = `Compared with the ${state.range} days before`;
+    const diff = cur - prev, title = `Compared with the ${plural(Number(state.range), "day")} before`;
     if (Math.abs(diff) < 1e-9) return `<span class="delta flat" title="${title}">0</span>`;
     return `<span class="delta ${neutral ? "flat" : diff > 0 ? "up" : "down"}" title="${title}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</span>`;
   }
   /** The day a lead's money came in. A lead paid before paid dates were recorded only has the day its call was booked. */
   const paidDay = (l) => l.paid_at || l.booked_at;
   /**
-   * The money line: everything paid so far, as a running total across the chosen period. It starts from what had
-   * already been earned before the period and steps up on the day each project was paid. Built from the leads
-   * themselves, so the line, the total, the Won so far tile and the list of payments under it always agree.
-   * `before` is what the period just before this one added, for the tile's comparison.
+   * What feeds the money chart. Today that is every paid lead, on the day it was paid. Deposits and withdrawals
+   * join them when the API sends `transactions` ({ date, amount_cents, kind, label }).
    */
-  function moneyPath() {
-    const d = state.data, days = Number(state.range);
+  function moneyEntries() {
     const paid = (state.all || []).filter((l) => l.status === "paid" && paidDay(l) && l.value_cents > 0)
-      .sort((a, b) => paidDay(a).localeCompare(paidDay(b)));
-    const first = state.range === "all" ? addDays(paid.length ? paidDay(paid[0]) : d.today, -2) : addDays(d.today, -days);
-    const prior = state.range === "all" ? "" : addDays(first, -days);
-    const span = Math.max(1, dayDiff(d.today, first));
-    let total = 0, start = 0, before = 0;
-    const steps = [];
-    for (const l of paid) {
-      const when = paidDay(l);
-      if (when >= first) steps.push({ day: Math.max(0, Math.min(span, dayDiff(when, first))), total: total + l.value_cents, lead: l });
-      else { start += l.value_cents; if (prior && when >= prior) before += l.value_cents; }
-      total += l.value_cents;
-    }
-    return { first, span, start, total, steps, before };
+      .map((l) => ({ date: paidDay(l), cents: l.value_cents, kind: "earning", label: l.name, lead: l }));
+    return paid.concat((state.tx || []).map((t) => ({ date: t.date, cents: t.amount_cents, kind: t.kind, label: t.label })));
   }
+  /**
+   * The money line for the chosen period, worked out in money.js. Built from the entries themselves, so the line,
+   * the total, the Won so far tile and the list under the chart always agree.
+   */
+  const moneyPath = () => HeurialMoney.series(moneyEntries(), { today: state.data.today, days: state.range === "all" ? null : Number(state.range) });
+  const TRANSFER = { deposit: "Deposit", withdrawal: "Withdrawal" };
+  /** An entry's amount with its sign: money in is +, a withdrawal is −. */
+  const signed = (entry) => `${entry.kind === "withdrawal" ? "−" : "+"}${money(entry.cents)}`;
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
   /** Roll the headline figures to their values on first view and whenever they change. */
   const shownStats = {};
@@ -467,7 +462,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   }
   /** Three headline figures for Overview, set out like the tracker's preview on the website. */
   function statCards() {
-    const d = state.data, m = moneyPath(), won = m.total - m.start;
+    const d = state.data, m = moneyPath(), won = m.earned;
     const urgent = urgentCount(d);
     const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
     const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls")].filter(Boolean).join(" · ");
@@ -549,24 +544,30 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   </section>
 </div>`;
   }
-  /** The money panel: the total earned, what the chosen period added, the line, and the payments that make it up. */
+  /** The money panel: the balance, what the chosen period changed, the line, and the entries that make it up. */
   function moneyPane() {
     const m = moneyPath(), gain = m.total - m.start, rows = m.steps.slice().reverse();
-    const change = !m.total ? "Nothing has been marked Paid yet"
-      : !gain ? `No payments ${inPeriod()}`
-      : `<b>▲ ${money(gain)}${m.start ? ` (${Math.round((gain / m.start) * 100)}%)` : ""}</b> ${inPeriod()}`;
-    const label = `Total earned ${money(m.total)}. ${gain ? `${money(gain)} from ${plural(m.steps.length, "payment")} ${inPeriod()}` : `No payments ${inPeriod()}`}`;
+    const title = m.transfers ? "Balance" : "Total earned";
+    // A percentage only means something against a real starting balance; from almost nothing it is just a huge number.
+    const share = m.start > 0 ? Math.round((Math.abs(gain) / m.start) * 100) : 0, pct = share > 0 && share < 1000 ? ` (${share}%)` : "";
+    const change = !m.steps.length && !m.start ? "Nothing has been marked Paid yet"
+      : !m.steps.length ? `No change ${inPeriod()}`
+      : `<b${gain < 0 ? ` class="is-down"` : ""}>${gain < 0 ? "▼" : "▲"} ${money(Math.abs(gain))}${pct}</b> ${inPeriod()}${m.transfers ? ` · ${money(m.earned)} earned` : ""}`;
+    const label = `${title} ${money(m.total)}. ${m.steps.length ? `${gain < 0 ? "Down" : "Up"} ${money(Math.abs(gain))} ${inPeriod()}, ${money(m.earned)} of it earned` : `No change ${inPeriod()}`}`;
     const who = (l) => `${esc(l.name)}${l.business ? `<span> · ${esc(l.business)}</span>` : ""}`;
-    const undated = m.steps.filter((x) => !x.lead.paid_at).length;
+    const undated = m.steps.filter((x) => x.entry.lead && !x.entry.lead.paid_at).length;
+    const row = ({ entry }) => entry.lead
+      ? `<li><button class="ledger-row" type="button" data-action="open" data-id="${entry.lead.id}" data-fk="pay-${entry.lead.id}">
+      <span class="ledger-when">${niceDate(entry.date)}</span><span class="ledger-who">${who(entry.lead)}</span><b>${signed(entry)}</b></button></li>`
+      : `<li><div class="ledger-row is-transfer"><span class="ledger-when">${niceDate(entry.date)}</span><span class="ledger-who">${esc(entry.label || TRANSFER[entry.kind])}<span> · ${TRANSFER[entry.kind]}, not earnings</span></span><b>${signed(entry)}</b></div></li>`;
     return `<section class="pane ov-money" aria-labelledby="moneyTitle">
     <div class="money-head">
-      <div><h2 class="stat-l" id="moneyTitle">Total earned</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
+      <div><h2 class="stat-l" id="moneyTitle">${title}</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
       <div class="read" id="chartRead"></div>
     </div>
-    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the payments."></div>
-    <h3 class="sub-head">Payments ${inPeriod()}</h3>
-    ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map((x) => `<li><button class="ledger-row" type="button" data-action="open" data-id="${x.lead.id}" data-fk="pay-${x.lead.id}">
-      <span class="ledger-when">${niceDate(paidDay(x.lead))}</span><span class="ledger-who">${who(x.lead)}</span><b>+${money(x.lead.value_cents)}</b></button></li>`).join("")}</ul>
+    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the entries."></div>
+    <h3 class="sub-head">${m.transfers ? "Money in and out" : "Payments"} ${inPeriod()}</h3>
+    ${rows.length ? `<ul class="ledger">${rows.slice(0, 6).map(row).join("")}</ul>
       ${rows.length > 6 ? `<p class="foot-note">And ${rows.length - 6} earlier. Every paid project is listed in Leads.</p>` : ""}`
     : `<p class="foot-note">${m.total ? `No payments ${inPeriod()}.` : "Nothing has been marked Paid yet."} When you move a lead to Paid, its value is added to this line.</p>`}
     ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}
@@ -661,12 +662,19 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (!el || !d) return;
     const m = moneyPath();
     // The drawing-in animation plays only when the numbers are new, not on every refresh.
+    if (!m.steps.length && !m.start) {
+      el.innerHTML = `<p class="chart-note">No money recorded yet. Mark a lead Paid and the line starts here.</p>`;
+      geo = null;
+      $("chartRead").textContent = "";
+      return;
+    }
     const sig = state.range + m.start + m.steps.map((x) => x.day + ":" + x.total).join();
     const fresh = sig !== chartSig;
     chartSig = sig;
     const W = Math.max(280, Math.round(el.clientWidth)), H = Math.max(180, Math.round(el.clientHeight));
     const x0 = 14, x1 = W - 64, y0 = 16, y1 = H - 28;
-    const { top, step } = niceScale(Math.max(m.total / 100, 100), H < 260 ? 3 : 4);
+    // shortcut: the scale starts at $0, so a balance below zero would run off the bottom; add a lower bound when withdrawals can exceed the balance.
+    const { top, step } = niceScale(Math.max(m.start / 100, ...m.steps.map((x) => x.total / 100), 100), H < 260 ? 3 : 4);
     const px = (day) => x0 + (day / m.span) * (x1 - x0), py = (cents) => y1 - (cents / 100 / top) * (y1 - y0);
 
     let grid = "";
@@ -674,19 +682,26 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       const y = Math.round(py(v * 100)) + .5;
       grid += `<line class="g-grid" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/><text class="g-axis" x="${x1 + 10}" y="${y + 4}">${usd(v)}</text>`;
     }
-    // Flat until a payment, then straight up by its value: the line is the money, not a smoothed guess.
-    let line = `M${x0},${py(m.start).toFixed(1)}`;
-    for (const x of m.steps) line += `H${px(x.day).toFixed(1)}V${py(x.total).toFixed(1)}`;
+    // Flat until an entry, then a short eased rise that lands exactly on its day at its exact value. The curve only
+    // softens the corner inside that one day; every day's balance is the real one.
+    const ease = Math.min(14, (x1 - x0) / m.span);
+    let line = `M${x0},${py(m.start).toFixed(1)}`, lastX = x0, lastY = py(m.start);
+    for (const x of m.steps) {
+      const toX = px(x.day), toY = py(x.total), fromX = Math.max(lastX, toX - ease), mid = ((fromX + toX) / 2).toFixed(1);
+      line += toX - fromX < 1 ? `V${toY.toFixed(1)}` : `H${fromX.toFixed(1)}C${mid},${lastY.toFixed(1)} ${mid},${toY.toFixed(1)} ${toX.toFixed(1)},${toY.toFixed(1)}`;
+      lastX = toX; lastY = toY;
+    }
     line += `H${x1}`;
-    const pays = m.steps.map((x) => `<circle class="g-pay" cx="${px(x.day).toFixed(1)}" cy="${py(x.total).toFixed(1)}" r="4"/>`).join("");
-    const dates = [0, 1 / 3, 2 / 3, 1].map((f, i) => `<text class="g-axis" text-anchor="${i === 0 ? "start" : i === 3 ? "end" : "middle"}" x="${px(f * m.span).toFixed(1)}" y="${H - 8}">${i === 3 ? "Today" : niceDate(addDays(m.first, Math.round(f * m.span)))}</text>`).join("");
+    const pays = m.steps.map((x) => `<circle class="g-pay${x.entry.kind === "earning" ? "" : " is-transfer"}" cx="${px(x.day).toFixed(1)}" cy="${py(x.total).toFixed(1)}" r="3.5"/>`).join("");
+    const marks = m.span < 3 ? [0, 1] : [0, 1 / 3, 2 / 3, 1];
+    const dates = marks.map((f, i) => `<text class="g-axis" text-anchor="${i === 0 ? "start" : f === 1 ? "end" : "middle"}" x="${px(f * m.span).toFixed(1)}" y="${H - 8}">${f === 1 ? "Today" : niceDate(addDays(m.first, Math.round(f * m.span)))}</text>`).join("");
     const endY = py(m.total).toFixed(1);
     el.innerHTML = `<svg${fresh ? ` class="fresh"` : ""} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ga0"/><stop offset="1" class="ga1"/></linearGradient></defs>
       ${grid}
       <path class="g-area" d="${line}V${y1}H${x0}Z"/><path class="g-line" pathLength="1" d="${line}"/>
       ${pays}
-      <circle class="g-glow" cx="${x1}" cy="${endY}" r="9"/><circle class="g-dot" cx="${x1}" cy="${endY}" r="4"/>
+      <circle class="g-dot" cx="${x1}" cy="${endY}" r="4"/>
       ${dates}
       <g class="g-x" id="gx" visibility="hidden"><line id="gxv" y1="${y0}" y2="${y1}"/><circle class="g-dot" id="gxd" r="5"/></g>
     </svg>`;
@@ -717,7 +732,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const { m, px, py } = geo;
     if (day < 0) {
       gx.setAttribute("visibility", "hidden");
-      read.innerHTML = `<span>${plural(m.steps.length, "payment")} ${inPeriod()}</span>`;
+      read.innerHTML = `<span>${plural(m.steps.length, m.transfers ? "entry" : "payment", m.transfers ? "entries" : "payments")} ${inPeriod()}</span>`;
       return;
     }
     const sofar = m.steps.filter((x) => x.day <= day), total = sofar.length ? sofar[sofar.length - 1].total : m.start;
@@ -725,8 +740,10 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     gx.setAttribute("visibility", "visible");
     $("gxv").setAttribute("x1", x); $("gxv").setAttribute("x2", x);
     $("gxd").setAttribute("cx", x); $("gxd").setAttribute("cy", py(total).toFixed(1));
-    read.innerHTML = `<span>${niceDate(addDays(m.first, day))} · total <b>${money(total)}</b></span>`
-      + sofar.filter((pay) => pay.day === day).map((pay) => `<span class="plus"><b>+${money(pay.lead.value_cents)}</b> ${esc(pay.lead.name)}</span>`).join("");
+    read.innerHTML = `<span>${niceDate(addDays(m.first, day))} · ${m.transfers ? "balance" : "total"} <b>${money(total)}</b></span>`
+      + sofar.filter((pay) => pay.day === day).map(({ entry }) => entry.kind === "earning"
+        ? `<span class="plus"><b>${signed(entry)}</b> ${esc(entry.label)}</span>`
+        : `<span><b>${signed(entry)}</b> ${TRANSFER[entry.kind]}</span>`).join("");
   }
 
   // ----- Pipeline -----

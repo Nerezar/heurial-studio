@@ -66,6 +66,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 ## Tracker
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
+- The money chart's data is worked out in `public/tracker/money.js` (no page code; test: `node --test tracker/money.test.cjs`). Deposits and withdrawals move the balance but are never earnings.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
 - The tracker starts in the website's light look (paper, ink, blue, Newsreader titles; since 2026-11-17) with a dark mode one click away: flat panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
 - Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
@@ -73,7 +74,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 
 ## Checks before calling anything done
 - `npx tsc --noEmit`, `npx eslint .`, `next build`
-- `node --test` inside `catalyst/functions/pipeline`
+- `node --test` inside `catalyst/functions/pipeline`, and `node --test tracker/money.test.cjs` from the repo root
 - Look at UI changes in the preview, not just the code.
 - Local testing: `next dev` plus `catalyst/functions/pipeline/dev-server.js` (stand-in on :4600). The production build only accepts an `https://` `PIPELINE_FUNCTION_URL`.
 - The preview pane throttles timers. Wait on conditions, and blur focused fields before sending shortcut keys.

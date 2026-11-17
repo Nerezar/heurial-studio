@@ -13,6 +13,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   Checked in the preview on the sample-data page: all six sections, a lead panel, the theme switch, 1440 and 375
   wide, and the `/admin` sign-in card. Not checked: the signed-in real tracker, dialogs other than the lead panel,
   the installed phone app, Safari.
+  **Money chart reworked on the same branch (owner's spec, 2026-11-17):** blue thin line with a soft blue fill and
+  an eased rise into each entry (each day's balance is still exact); range buttons are 1D, 1W, 1M, 3M, 1Y, ALL;
+  the percentage is hidden when the starting balance makes it meaningless. The chart's data now lives in
+  `public/tracker/money.js` (pure, tested by `node --test tracker/money.test.cjs`); `tracker.js` only draws it.
+  Entries are earnings (paid leads), deposits or withdrawals: deposits and withdrawals move the balance but never
+  count as earned, and the "Won so far" tile is earnings only. The real API sends no transactions yet, so the real
+  tracker still shows paid leads alone; the demo has three sample ones, labelled "(sample)". To connect real ones,
+  return `transactions: [{ date, amount_cents, kind, label }]` from `/api/data`.
+  **Deploy order matters:** 1D needs `core.js` in the `pipeline` function (it now accepts range `1`), so deploy and
+  promote the function before the site, or 1D on the real tracker answers "Bad range". Not checked: the empty
+  chart message, a balance below zero (the scale starts at $0).
 - **Finishing pass live 2026-11-17 (website `4781994`):** merged to main and deployed to Slate Production, both on the
   owner's go-ahead. Live check: every public page 200, `/admin` 307, `/about` 307 to the home page (the config-file
   redirect works on Slate), no About link in the page or sitemap, the ribbon and ink logos are served. What changed: About is off the site

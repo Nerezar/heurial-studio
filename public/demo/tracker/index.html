@@ -28,6 +28,7 @@
 <!-- The public demo. Same interface as the real tracker (/tracker/tracker.js), but all data is made up and lives
      in this page's memory: nothing is saved or sent, and a refresh starts over. -->
 <script>__load("js", "/demo/tracker/core.js");</script>
+<script>__load("js", "/tracker/money.js");</script>
 <script>__load("js", "/tracker/tracker.js");</script>
 <script>
 /* ---------- Demo back end: sample data in memory, same routes and logic as the real tracker ---------- */
@@ -89,7 +90,14 @@ const demo = (() => {
     msg("Elena Petrova", "out", "call", "", "Walked through the scope. She wants the monthly report left out of phase one.", 2, 11),
     msg("Aisha Rahman", "in", "sms", "", "The reminders are working great. Thank you!", 1, 9),
   ];
-  return { today, leads, time, inquiries, messages, id };
+  // Sample money moved in and out, to show how the chart keeps it apart from earnings. The real tracker has no
+  // transactions yet: its chart is paid leads only until they are connected.
+  const transactions = [
+    { date: day(-80), amount_cents: 50000, kind: "deposit", label: "Owner deposit (sample)" },
+    { date: day(-24), amount_cents: 30000, kind: "withdrawal", label: "Software subscriptions (sample)" },
+    { date: day(-9), amount_cents: 100000, kind: "deposit", label: "Owner deposit (sample)" },
+  ];
+  return { today, leads, time, inquiries, messages, transactions, id };
 })();
 
 const bad = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -106,7 +114,7 @@ async function api(path, method = "GET", body) {
   const wrap = (fn) => { try { return fn(); } catch (e) { if (e instanceof core.Bad) throw bad(e.message, e.status); throw e; } };
   let m;
 
-  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true }));
+  if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true, transactions: demo.transactions }));
   if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.withPaidDate(core.cleanLead(body, false, today), null, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
   if ((m = p.match(/^leads\/(\d+)$/))) {
     const row = find(demo.leads, m[1]);

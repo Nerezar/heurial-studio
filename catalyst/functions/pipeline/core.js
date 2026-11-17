@@ -122,7 +122,7 @@ function agg(rows) {
 
 /** Everything the dashboard needs, computed from all leads, time entries and inquiries. */
 function summarize({ leadRows, timeRows, inquiryRows = [], messageRows = [], range, today }) {
-  if (!["7", "30", "90", "365", "all"].includes(String(range))) throw new Bad("Bad range.");
+  if (!["1", "7", "30", "90", "365", "all"].includes(String(range))) throw new Bad("Bad range.");
   const hours = hoursByLead(timeRows);
   const all = leadRows.map((r) => leadFromRow(r, hours));
   const cutoff = range === "all" ? "0000-00-00" : addDays(today, -Number(range));

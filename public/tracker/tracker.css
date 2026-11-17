@@ -272,6 +272,7 @@ th[aria-sort] .sort { color: var(--text); }
 .money-head .stat-l { font-size: 16px; font-weight: 500; }
 .money-head .stat-v { display: block; margin-top: 2px; font-size: 46px; letter-spacing: -.035em; }
 .money-d { margin-top: 6px; color: var(--text-3); font-size: 15px; }
+.money-d b.is-down { background: color-mix(in srgb, var(--down) 14%, transparent); color: var(--down); }
 .money-d b { margin-right: 4px; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--up) 14%, transparent); color: var(--up); font: 600 14px var(--num); font-variant-numeric: tabular-nums; }
 .read { flex: none; display: grid; gap: 2px; justify-items: end; max-width: 55%; padding-top: 4px; color: var(--text-2); font-size: 15px; text-align: right; }
 .read b { color: var(--text); font: 500 15px var(--num); font-variant-numeric: tabular-nums; }
@@ -280,15 +281,18 @@ th[aria-sort] .sort { color: var(--text); }
 .chart svg { display: block; }
 .g-grid { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
 .g-axis { fill: var(--text-3); font: 14px var(--num); }
-.g-line { fill: none; stroke: var(--up); stroke-width: 2.25; stroke-linejoin: round; }
+/* The line is the brand blue. Green stays for the amounts earned. */
+.g-line { fill: none; stroke: var(--accent); stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
 .g-area { fill: url(#gArea); }
-.ga0 { stop-color: var(--up); stop-opacity: .26; } .ga1 { stop-color: var(--up); stop-opacity: 0; }
-.g-pay { fill: var(--bg-1); stroke: var(--up); stroke-width: 2; }
-.g-dot { fill: var(--up); stroke: var(--bg-1); stroke-width: 2; }
-.g-glow { fill: var(--up); opacity: .28; transform-box: fill-box; transform-origin: center; animation: g-pulse 2.4s ease-in-out infinite; }
+.ga0 { stop-color: var(--accent); stop-opacity: .16; } .ga1 { stop-color: var(--accent); stop-opacity: 0; }
+.g-pay { fill: var(--bg-1); stroke: var(--accent); stroke-width: 1.75; }
+/* A deposit or withdrawal: money moved, not earned. */
+.g-pay.is-transfer { stroke: var(--text-3); }
+.g-dot { fill: var(--accent); stroke: var(--bg-1); stroke-width: 2; }
 .g-x line { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 3 4; shape-rendering: crispEdges; }
-@keyframes g-pulse { 50% { opacity: 0; transform: scale(1.7); } }
+.chart-note { display: grid; place-items: center; height: 100%; padding: 0 24px; color: var(--text-2); text-align: center; }
 .ov-money .sub-head { padding-top: 10px; }
+.ledger-row.is-transfer b { color: var(--text-2); }
 .ledger-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; min-height: 50px; padding: 0 22px; border: 0; border-top: 1px solid var(--line); background: none; font-size: 16px; text-align: left; transition: background-color .12s; }
 .ledger-row:hover { background: var(--bg-2); }
 .ledger-when { color: var(--text-3); font: 14px var(--num); font-variant-numeric: tabular-nums; }

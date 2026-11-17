@@ -32,6 +32,7 @@
 <noscript>The tracker needs JavaScript to run.</noscript>
 <!-- The real tracker. The interface is shared with the public demo (/tracker/tracker.js); this page only supplies
      the data source: the signed-in owner's session and the /api/admin/* routes. -->
+<script>__load("js", "/tracker/money.js");</script>
 <script>__load("js", "/tracker/tracker.js");</script>
 <script>
 const json = (res) => res.json().catch(() => ({}));
