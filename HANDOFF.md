@@ -4,7 +4,9 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Finishing pass, branch `finalize-ribbon` (2026-11-17), pushed, not merged, not deployed:** About is off the site
+- **Finishing pass live 2026-11-17 (website `4781994`):** merged to main and deployed to Slate Production, both on the
+  owner's go-ahead. Live check: every public page 200, `/admin` 307, `/about` 307 to the home page (the config-file
+  redirect works on Slate), no About link in the page or sitemap, the ribbon and ink logos are served. What changed: About is off the site
   for now (out of the nav, footer and sitemap; `/about` redirects home from `next.config.ts`; the page file is
   untouched). The header and footer logo is the H mark plus the wordmark in ink (`public/brand/*-ink.svg`), no CSS
   filter. The page-change wipe is the brand blue. The silver band is now a twisting ribbon with nothing behind it
