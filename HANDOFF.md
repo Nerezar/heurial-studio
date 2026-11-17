@@ -4,6 +4,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Development is ready for transactions and tasks (2026-11-17, main `2578fc8`).** In Catalyst Development: the
+  `Transactions` (table 141722000000014664) and `Tasks` (141722000000020458) tables exist with the columns from
+  `catalyst/TRACKER-SETUP.md`, GLOBAL scope, and the App User role given no access (new tables default to letting it
+  read; both were changed to match the others). `pipeline` was deployed to Development from `2578fc8`. Checked: an
+  unkeyed request returns 401, and each table accepted and returned a row shaped like the function's (the two test
+  rows were deleted). **Not checked: a keyed request to the new routes.** The Development key is not stored
+  locally and was not read into the chat. **Production and the live site are unchanged.** Next: a console
+  deployment (Development → Settings → Environments → Deployments → Create Deployment) with Data Store and Functions
+  selected, read the diff, then deploy the site from main. A new Production table should be checked for the same
+  App User default.
 - **Saving for transactions and tasks is built (2026-11-17, branch `two-pages`, pushed, not merged, nothing
   deployed).** Code: `core.js` (both copies) gains `cleanTransaction`, `cleanTask` and their row readers;
   `handler.js` gains `POST /transactions`, `DELETE /transactions/:id`, `POST /tasks`, `PATCH /tasks/:id` (`done`,
