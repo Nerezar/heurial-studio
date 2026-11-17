@@ -8,13 +8,11 @@ import { MotionLink } from "./route-transition";
 import { Silver } from "./silver";
 
 const primaryLinks = [
-  { href: "/", label: "Home" },
-  { href: "/services", label: "Questions" },
-  { href: "/products", label: "Demos" },
+  { href: "/", label: "Overview" },
   { href: "/contact", label: "Contact" },
 ];
 
-export const links = [...primaryLinks, { href: "/resources", label: "Guides" }];
+export const links = primaryLinks;
 
 type Tone = Parameters<typeof tone>[0];
 
@@ -70,7 +68,7 @@ export function PageIntro({ label, title, description, compact = false }: { labe
 
 export function Closing() {
   return <section className="closing is-navy" aria-labelledby="closing-title">
-    <div className="ribbon closing-ribbon" aria-hidden="true"><Silver ribbon /></div>
+    <div className="ribbon closing-ribbon" aria-hidden="true"><Silver /></div>
     <div className="wrap closing-panel">
       <Chip>Free 20-minute call</Chip>
       <h2 id="closing-title">Got a task you’re tired of doing?</h2>

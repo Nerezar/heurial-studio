@@ -1,7 +1,6 @@
 import { ExampleFlow } from "@/components/example-flow";
 import { GlassStage } from "@/components/glass-stage";
 import { Icon } from "@/components/icon";
-import { MotionLink } from "@/components/route-transition";
 import { ButtonLink, Chip, Closing } from "@/components/shell";
 import { Silver } from "@/components/silver";
 import { BOOKING_URL } from "@/lib/site";
@@ -70,7 +69,7 @@ export default function Home() {
       <dl className="wrap hero-facts">
         {facts.map(({ title, body }) => <div key={title}><dt>{title}</dt><dd>{body}</dd></div>)}
       </dl>
-      <div className="ribbon hero-ribbon" aria-hidden="true"><Silver ribbon /></div>
+      <div className="ribbon hero-ribbon" aria-hidden="true"><Silver /></div>
     </section>
 
     <section className="section" aria-labelledby="problems-title">
@@ -117,12 +116,6 @@ export default function Home() {
             </li>
           ))}
         </ol>
-        <MotionLink href="/resources" className="ed-learn">
-          <span className="ed-learn-art"><Silver /></span>
-          <span className="ed-learn-text"><small>Guides</small><b>Practical guides, plainly written.</b></span>
-          <Icon name="arrow" size={22} />
-        </MotionLink>
-        <p className="steps-more"><MotionLink href="/services" className="text-link">Read the common questions <Icon name="diagonal" size={16} /></MotionLink></p>
       </div>
     </section>
 

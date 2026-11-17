@@ -2,29 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-// A slow height field made of layered waves, lit like polished metal under studio strip lights.
-const FRAGMENT = `
-precision highp float;
-uniform vec2 r; uniform float t; uniform vec2 m;
-float h(vec2 p) {
-  p += .3 * vec2(sin(p.y * 1.3 + t * .5), cos(p.x * 1.1 - t * .4));
-  float v = sin(p.x * 1.5 + t * .55 + sin(p.y * 1.2 - t * .3) * 1.5);
-  v += .6 * sin(p.y * 2.2 - t * .4 + sin(p.x * 1.6 + t * .25) * 1.7);
-  v += .3 * sin((p.x + p.y) * 2.9 + t * .6);
-  return v;
-}
-void main() {
-  vec2 p = (gl_FragCoord.xy - .5 * r) / r.y * vec2(.75, 1.5) + m * .6;
-  float e = .012, a = h(p);
-  vec3 n = normalize(vec3(h(p + vec2(e, 0.)) - a, h(p + vec2(0., e)) - a, e * 4.2));
-  vec3 d = reflect(vec3(0., 0., -1.), n);
-  float bands = .5 + .5 * sin(d.y * 9. + d.x * 3. + 1.2);
-  float c = mix(.4, 1., pow(bands, 1.25)) * mix(.74, 1., smoothstep(-.4, .8, d.y));
-  c += .35 * pow(max(dot(n, normalize(vec3(.4, .6, .7))), 0.), 48.);
-  gl_FragColor = vec4(vec3(c) * vec3(.965, .975, 1.), 1.);
-}`;
-
-// The same metal as a single twisting ribbon with nothing behind it: a wavy centre line whose width narrows as it turns over.
+// Polished metal as a single twisting ribbon with nothing behind it: a wavy centre line whose width narrows as it turns
+// over, lit like studio strip lights.
 const RIBBON = `
 precision highp float;
 uniform vec2 r; uniform float t; uniform vec2 m;
@@ -44,8 +23,8 @@ void main() {
   gl_FragColor = vec4(vec3(col) * vec3(.965, .975, 1.) * alpha, alpha);
 }`;
 
-/** Flowing silver, drawn live. It follows the pointer a little, pauses off screen, and holds still for reduced motion. */
-export function Silver({ ribbon = false }: { ribbon?: boolean }) {
+/** A flowing silver ribbon, drawn live. It follows the pointer a little, pauses off screen, and holds still for reduced motion. */
+export function Silver() {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -54,7 +33,7 @@ export function Silver({ ribbon = false }: { ribbon?: boolean }) {
     if (!canvas || !gl) return; // The CSS gradient behind the canvas stays as the fallback.
 
     const program = gl.createProgram()!;
-    for (const [type, source] of [[gl.VERTEX_SHADER, "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}"], [gl.FRAGMENT_SHADER, ribbon ? RIBBON : FRAGMENT]] as const) {
+    for (const [type, source] of [[gl.VERTEX_SHADER, "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}"], [gl.FRAGMENT_SHADER, RIBBON]] as const) {
       const shader = gl.createShader(type)!;
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
@@ -106,7 +85,7 @@ export function Silver({ ribbon = false }: { ribbon?: boolean }) {
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", move);
     };
-  }, [ribbon]);
+  }, []);
 
-  return <canvas ref={ref} className={`silver${ribbon ? " is-ribbon" : ""}`} aria-hidden="true" />;
+  return <canvas ref={ref} className="silver" aria-hidden="true" />;
 }

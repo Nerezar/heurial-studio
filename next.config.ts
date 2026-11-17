@@ -13,10 +13,10 @@ const config: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   env: { TRACKER_VERSION: trackerVersion },
-  // The About page is off the site for now. Its file is still in app/about; delete this to bring it back.
   async redirects() {
     return [
-      { source: "/about", destination: "/", permanent: false },
+      // The site is two pages for now: the overview and Contact. The old addresses go to the overview.
+      ...["/about", "/services", "/products", "/resources"].map((source) => ({ source, destination: "/", permanent: false })),
       // The demo is a file, so its folder address needs pointing at it.
       { source: "/demo/tracker", destination: "/demo/tracker/index.html", permanent: false },
     ];

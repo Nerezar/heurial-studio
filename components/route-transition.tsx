@@ -18,8 +18,9 @@ const reducedMotion = "(prefers-reduced-motion: reduce)";
 const prefersReduced = () => window.matchMedia(reducedMotion).matches;
 
 // The wipe is kept short so a page change never feels like a wait.
-const COVER_IN = { duration: 300, easing: "cubic-bezier(.76, 0, .24, 1)" };
-const COVER_OUT = { duration: 420, easing: "cubic-bezier(.76, 0, .24, 1)" };
+// The page fades to white and back. Slow enough to read as a fade, short enough not to hold anyone up.
+const COVER_IN = { duration: 380, easing: "cubic-bezier(.4, 0, .2, 1)" };
+const COVER_OUT = { duration: 560, easing: "cubic-bezier(.4, 0, .2, 1)" };
 const MAX_WAIT = 4000;
 
 /** Resolves when an animation ends, or just after it should have. A tab in the background never ticks its animations, and a page change must not wait on one. */
@@ -122,14 +123,14 @@ export function RouteMotion({ children }: { children: ReactNode }) {
 
     busy.current = true;
     const run = async () => {
-      // 1. Old page sinks away while the panel wipes up over it.
+      // 1. Old page eases away while white fades in over it.
       panel.classList.add("is-active");
       const leave = main.animate(
-        [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-16px)" }],
-        { duration: 220, easing: "ease-in", fill: "forwards" },
+        [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-8px)" }],
+        { duration: 340, easing: "ease-in-out", fill: "forwards" },
       );
       await settled(panel.animate(
-        [{ transform: "translateY(101%)" }, { transform: "translateY(0)" }],
+        [{ opacity: 0 }, { opacity: 1 }],
         { ...COVER_IN, fill: "forwards" },
       ), COVER_IN.duration);
 
@@ -152,13 +153,13 @@ export function RouteMotion({ children }: { children: ReactNode }) {
       else window.scrollTo({ top: 0, behavior: "instant" });
       leave.cancel();
 
-      // 3. Panel pulls away upward and the new page rises in.
+      // 3. White fades out and the new page settles in.
       main.animate(
-        [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }],
-        { duration: 420, delay: 60, easing: "cubic-bezier(.22, .75, .25, 1)", fill: "backwards" },
+        [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
+        { duration: 620, delay: 80, easing: "cubic-bezier(.22, .75, .25, 1)", fill: "backwards" },
       );
       await settled(panel.animate(
-        [{ transform: "translateY(0)" }, { transform: "translateY(-101%)" }],
+        [{ opacity: 1 }, { opacity: 0 }],
         { ...COVER_OUT, fill: "forwards" },
       ), COVER_OUT.duration);
       panel.getAnimations().forEach((animation) => animation.cancel());

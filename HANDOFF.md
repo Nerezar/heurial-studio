@@ -4,6 +4,16 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Two-page site, branch `two-pages` (2026-11-17), pushed, not merged, not deployed. It sits on top of
+  `tracker-editorial`, so merging it brings the tracker restyle and money chart with it.** The owner asked for
+  three things. Fonts: Newsreader is gone everywhere (site and tracker); headings and labels are Inter Tight again
+  and the font files are deleted. Page change: a fade to white and back (380 ms in, 560 ms out) in place of the
+  wipe. Pages: only the overview (`/`) and Contact remain. Deleted: About, Questions, Demos, Guides, the knowledge
+  assistant and its `/api/ask` route, `lib/retrieval.ts`, `content/knowledge.json`, the FAQ and demo-frame
+  components, and their styles. `/about`, `/services`, `/products` and `/resources` redirect to `/`. The tracker
+  demo file is still at `/demo/tracker` but nothing on the site links to it. Checked in the preview at 1440 and
+  375: both pages, the nav, the redirects, the sitemap (2 addresses) and a page change. Not checked: Safari, a real
+  phone, how the fade feels at full speed (the preview pane throttles timers).
 - **Tracker in the site's look, branch `tracker-editorial` (2026-11-17), pushed, not merged, not deployed:** the
   tracker and its demo now start in a light theme with the website's paper, ink, blue and Newsreader titles
   (`public/tracker/tracker.css`, light is the default in both HTML pages and `tracker.js`). Dark mode is still one

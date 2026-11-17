@@ -146,9 +146,8 @@ html[data-scrolled] .site-header {
   to { transform: translateY(0); clip-path: inset(0 0 -14%); }
 }
 
-/* ---------- Silver: a live canvas. The gradient shows if it can't run. As a ribbon it has no backing. ---------- */
-.silver { display: block; width: 100%; height: 100%; background: linear-gradient(115deg, #f4f4f3, #8f9299 35%, #ececed 55%, #6a6e75 80%, #d6d8db); }
-.silver.is-ribbon { background: none; filter: drop-shadow(0 10px 12px rgb(20 28 90 / .2)); }
+/* ---------- The silver ribbon: a live canvas with nothing behind it. If it can't run, nothing shows. ---------- */
+.silver { display: block; width: 100%; height: 100%; filter: drop-shadow(0 10px 12px rgb(20 28 90 / .2)); }
 .ribbon { height: clamp(120px, 15vw, 200px); pointer-events: none; }
 
 /* ---------- Closing call to action. The ribbon comes in from the right and passes behind the button. ---------- */
@@ -166,27 +165,17 @@ html[data-scrolled] .site-header {
 .closing-panel .closing-copy { display: grid; gap: 34px; justify-items: start; }
 .closing-panel .closing-copy p { max-width: 40ch; color: var(--text); font-size: var(--fs-lead); }
 
-/* ---------- Page change: a panel wipes up over the old page, then pulls away ---------- */
+/* ---------- Page change: the page fades to white, then the new one fades in ---------- */
 .route-cover {
   position: fixed;
   inset: 0;
   z-index: 15;
   pointer-events: none;
-  /* The wipe is the brand blue, with its two lines in white. */
-  --signal: #fff;
-  background: var(--blue);
-  transform: translateY(101%);
+  background: #fff;
+  opacity: 0;
   visibility: hidden;
 }
 .route-cover.is-active { visibility: visible; }
-.route-cover::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: var(--signal);
-  opacity: .7;
-}
 .route-cover::after {
   content: "";
   position: absolute;

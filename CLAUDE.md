@@ -54,21 +54,21 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - Brand is HEURIAL in capitals. Assets are in `public/brand/`; on the light site use the `-ink` logo files (the plain ones are light grey, for dark surfaces). Never use the Curivis brand.
 - Text is Inter Tight (`public/fonts/inter-tight-var.woff2`, the variable file: a single-weight file makes all bold text render regular, chosen 2026-11-13), numbers in sentences included. Standalone figures (prices, totals, counters) carry the `num` class and use Helvetica.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
-- Editorial look, light: warm paper, ink, one blue (`--signal`), mono labels with a blue rule. Tokens are in `app/globals.css`; `--white` is the heading ink (a name left from the dark theme). The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).
-- Headings site-wide use Newsreader (`public/fonts/newsreader-var.woff2`), the closest open match to the serif in the owner's concept art.
+- Editorial look, light: warm paper, ink, one blue (`--signal`), small caps labels with a blue rule. The site is two pages, the overview and Contact (owner's call, 2026-11-17); old page addresses redirect home in `next.config.ts`. Tokens are in `app/globals.css`; `--white` is the heading ink (a name left from the dark theme). The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).
+- The owner tried a serif for headings on 2026-11-17 and reverted it the same day: Inter Tight everywhere, site and tracker.
 
 ## Site design (from the Refero Styles guides for Linear, Ramp and Intercom, 2026-11-14)
 - One accent: the blue is for the primary button and for live states inside demos. Links, headings and labels stay neutral.
 - Flat surfaces separated by hairlines. No glows, drop shadows or decorative gradients (the hero and closing keep one plain floor gradient).
 - Content is 1200px wide at most. Text under headings uses three sizes: `--fs-small`, `--fs-body`, `--fs-lead`.
-- On 2026-11-17 the owner asked for a lively home page: the glass panels drift and follow the pointer, the silver flows (`components/silver.tsx`), and the example flow steps by itself. Everything holds still for reduced motion. Elsewhere: motion is short and has a job. The page-change wipe (the owner asked for it) stays under half a second each way. No animated prices.
+- On 2026-11-17 the owner asked for a lively home page: the glass panels drift and follow the pointer, the silver flows (`components/silver.tsx`), and the example flow steps by itself. Everything holds still for reduced motion. Elsewhere: motion is short and has a job. The page change is a fade to white and back (the owner asked for it on 2026-11-17, replacing the wipe). No animated prices.
 
 ## Tracker
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
 - The money chart's data is worked out in `public/tracker/money.js` (no page code; test: `node --test tracker/money.test.mjs`). Deposits and withdrawals move the balance but are never earnings.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
-- The tracker starts in the website's light look (paper, ink, blue, Newsreader titles; since 2026-11-17) with a dark mode one click away: flat panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
+- The tracker starts in the website's light look (paper, ink, blue; since 2026-11-17) with a dark mode one click away: flat panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
 - Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
 - Setup for Catalyst tables and env vars: `catalyst/TRACKER-SETUP.md`.
 

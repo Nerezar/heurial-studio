@@ -1,5 +1,5 @@
 /* HEURIAL Studio design system.
-   Editorial: warm paper, ink, one blue, serif headings, hairline rules. `--white` is the heading ink
+   Editorial: warm paper, ink, one blue, Inter Tight throughout, hairline rules. `--white` is the heading ink
    (the name is left over from the dark theme). Tokens, base styles, and the shared
    building blocks every page uses: labels, tags, buttons, panels, ruled rows, check lists, forms. */
 
@@ -9,14 +9,6 @@
   font-family: "Inter Tight";
   src: url("/fonts/inter-tight-var.woff2") format("woff2");
   font-weight: 100 900;
-  font-display: swap;
-}
-
-/* Newsreader for headings on the editorial home page. */
-@font-face {
-  font-family: "Newsreader";
-  src: url("/fonts/newsreader-var.woff2") format("woff2");
-  font-weight: 400 500;
   font-display: swap;
 }
 
@@ -58,7 +50,6 @@
   --fs-lead: 1.125rem;
   --masthead-height: 72px;
   --sans: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --ease-out: cubic-bezier(.22, .75, .25, 1);
 }
@@ -80,9 +71,9 @@ body {
 }
 
 h1, h2, h3, h4, p, figure, ul, ol, blockquote { margin: 0; }
-h1, h2, h3 { color: var(--white); font-family: var(--serif); font-weight: 400; text-wrap: balance; }
-h1 { font-size: clamp(2.9rem, 6.4vw, 5.75rem); letter-spacing: -.035em; line-height: .98; }
-h2 { font-size: clamp(2.1rem, 4.2vw, 3.75rem); letter-spacing: -.025em; line-height: 1.02; }
+h1, h2, h3 { color: var(--white); font-weight: 400; text-wrap: balance; }
+h1 { font-size: clamp(2.9rem, 6.4vw, 5.75rem); letter-spacing: -.045em; line-height: .96; }
+h2 { font-size: clamp(2.1rem, 4.2vw, 3.75rem); letter-spacing: -.04em; line-height: 1; }
 h3 { font-size: clamp(1.25rem, 1.8vw, 1.5rem); letter-spacing: -.025em; line-height: 1.15; }
 p { text-wrap: pretty; }
 a { color: inherit; text-decoration: none; transition: color .2s ease; }
@@ -118,11 +109,10 @@ button, select, summary { cursor: pointer; }
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: .75rem;
+  color: var(--muted);
+  font-size: var(--fs-small);
   font-weight: 500;
-  letter-spacing: .16em;
+  letter-spacing: .08em;
   line-height: 1.3;
   text-transform: uppercase;
 }
@@ -297,4 +287,3 @@ main a:not(.button, .text-link):hover, .site-footer a:hover { color: var(--hover
 /* A small line with an icon: how long a step or package takes. */
 .step-time { display: inline-flex; align-items: center; gap: 7px; color: var(--text); font-size: var(--fs-small); }
 .step-time svg { color: var(--signal); }
-.steps-more { margin-top: 36px; }
