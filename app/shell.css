@@ -1,17 +1,17 @@
 /* Site frame: header, footer, page intros, the closing call to action, and page-change motion. */
 
-/* ---------- Header: clear over the page, a dark bar once you scroll ---------- */
+/* ---------- Header: clear over the page, a paper bar once you scroll. The logo file is light grey, so it is darkened. ---------- */
 .site-header {
   position: fixed;
   inset: 0 0 auto;
   z-index: 20;
-  color: var(--paper);
+  color: var(--white);
   border-bottom: 1px solid transparent;
   transition: background-color .35s ease, border-color .35s ease;
 }
 html[data-scrolled] .site-header {
-  background: rgb(12 14 18 / .82);
-  border-bottom-color: rgb(255 255 255 / .08);
+  background: rgb(244 241 234 / .86);
+  border-bottom-color: rgb(0 0 0 / .08);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
 }
@@ -23,7 +23,7 @@ html[data-scrolled] .site-header {
   gap: clamp(18px, 3vw, 44px);
 }
 .brand { display: inline-flex; justify-self: start; }
-.brand img { width: clamp(128px, 13vw, 168px); height: auto; }
+.brand img { width: clamp(128px, 13vw, 168px); height: auto; filter: brightness(0); }
 
 .nav-links { display: flex; align-items: center; gap: clamp(16px, 2.6vw, 38px); }
 .nav-links a {
@@ -31,7 +31,7 @@ html[data-scrolled] .site-header {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: #b0b0a9;
+  color: var(--muted);
   font-size: .87rem;
   white-space: nowrap;
 }
@@ -45,7 +45,7 @@ html[data-scrolled] .site-header {
   transform-origin: left;
   transition: transform .26s var(--ease-out);
 }
-.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--paper); }
+.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--white); }
 .nav-links a:hover::after, .nav-links a[aria-current="page"]::after { transform: scaleX(1); }
 .nav-cta {
   justify-self: end;
@@ -53,7 +53,7 @@ html[data-scrolled] .site-header {
   align-items: center;
   gap: 9px;
   min-height: 44px;
-  color: var(--paper);
+  color: var(--white);
   font-size: .87rem;
   white-space: nowrap;
 }
@@ -68,7 +68,7 @@ html[data-scrolled] .site-header {
   padding: 0 4px;
   border: 0;
   background: transparent;
-  color: var(--paper);
+  color: var(--white);
   font-size: .9rem;
 }
 .nav-close { display: inline-flex; }
@@ -81,7 +81,7 @@ html[data-scrolled] .site-header {
   max-height: none;
   padding: 0 var(--gutter) 24px;
   border: 0;
-  background: #0d0f12;
+  background: var(--bg);
   color: var(--text);
   overscroll-behavior: contain;
 }
@@ -105,10 +105,10 @@ html[data-scrolled] .site-header {
 @keyframes menu-enter { from { opacity: 0; } }
 
 /* ---------- Footer ---------- */
-.site-footer { border-top: 1px solid var(--line); background: var(--ink); color: var(--paper); }
+.site-footer { border-top: 1px solid var(--line); background: var(--paper); color: var(--text); }
 .footer-grid { display: grid; grid-template-columns: 1fr minmax(230px, 34%); gap: 32px; align-items: start; padding-block: clamp(56px, 8vw, 110px) clamp(42px, 6vw, 86px); }
 .footer-identity { display: grid; gap: 12px; justify-items: start; }
-.footer-identity img { width: 176px; height: auto; }
+.footer-identity img { width: 176px; height: auto; filter: brightness(0); }
 .footer-identity p { color: var(--muted); }
 .footer-social { display: flex; flex-wrap: wrap; gap: 16px; }
 .site-footer nav { display: grid; border-bottom: 1px solid var(--line); }
@@ -120,7 +120,7 @@ html[data-scrolled] .site-header {
   min-height: 44px;
   padding-inline: 2px;
   border-top: 1px solid var(--line);
-  color: var(--paper);
+  color: var(--white);
   font-size: .94rem;
 }
 .site-footer nav a svg { color: var(--faint); transition: transform .22s var(--ease-out), color .2s ease; }
@@ -156,7 +156,7 @@ html[data-scrolled] .site-header {
   padding-block: clamp(70px, 10vw, 150px);
 }
 .closing-panel .label { grid-column: 1 / -1; }
-.closing-panel h2 { max-width: 13ch; font-size: clamp(2.4rem, 5.2vw, 4.75rem); letter-spacing: -.045em; }
+.closing-panel h2 { max-width: 13ch; font-size: clamp(2.4rem, 5.2vw, 4.75rem); }
 .closing-panel .closing-copy { display: grid; gap: 22px; justify-items: start; }
 .closing-panel .closing-copy p { max-width: 40ch; color: var(--text); font-size: var(--fs-lead); }
 

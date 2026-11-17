@@ -48,7 +48,7 @@ const organization = {
   sameAs: SOCIAL_LINKS.map((link) => link.href),
 };
 
-export const viewport: Viewport = { themeColor: "#0b0c0e", colorScheme: "dark" };
+export const viewport: Viewport = { themeColor: "#f4f1ea", colorScheme: "light" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en" data-scroll-behavior="smooth"><body id="top">

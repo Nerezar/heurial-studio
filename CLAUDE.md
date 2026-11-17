@@ -54,8 +54,8 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - Brand is HEURIAL in capitals. Assets are in `public/brand/`. Never use the Curivis brand.
 - Text is Inter Tight (`public/fonts/inter-tight-var.woff2`, the variable file: a single-weight file makes all bold text render regular, chosen 2026-11-13), numbers in sentences included. Standalone figures (prices, totals, counters) carry the `num` class and use Helvetica.
 - Copy is first person, with no filler labels and honest claims. Demos are labelled sample data.
-- Editorial look. The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).
-- Headings on the editorial home page use Newsreader (`public/fonts/newsreader-var.woff2`), the closest open match to the serif in the owner's concept art.
+- Editorial look, light: warm paper, ink, one blue (`--signal`), mono labels with a blue rule. Tokens are in `app/globals.css`; `--white` is the heading ink (a name left from the dark theme). The glass style was rejected as looking AI-made, with one exception the owner asked for on 2026-11-17: the tilted glass panels in the home hero (`components/glass-stage.tsx`).
+- Headings site-wide use Newsreader (`public/fonts/newsreader-var.woff2`), the closest open match to the serif in the owner's concept art.
 
 ## Site design (from the Refero Styles guides for Linear, Ramp and Intercom, 2026-11-14)
 - One accent: the blue is for the primary button and for live states inside demos. Links, headings and labels stay neutral.
@@ -67,7 +67,7 @@ Durable rules. Current status lives in `HANDOFF.md`.
 - One shared app: `public/tracker/tracker.js` + `tracker.css`, started with `HeurialTracker.start({mode, api, auth})`.
 - `/admin` (`public/admin/index.html`) uses the real API. `/demo/tracker` uses an in-browser back end.
 - `public/demo/tracker/core.js` is a browser copy of `catalyst/functions/pipeline/core.js`. Keep them in sync.
-- Style matches its preview on the home page: the site's font and colours, flat dark panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
+- The tracker keeps its own dark workspace look (the website went light on 2026-11-17): flat dark panels, three small tiles, cards with a status dot. No glows or gradients. It must stay easy: text 14px or larger, controls 40px or taller.
 - Overview leads with the money line: total earned, stepping up at each paid lead. Every figure and line comes from the leads themselves; nothing decorative.
 - Setup for Catalyst tables and env vars: `catalyst/TRACKER-SETUP.md`.
 

@@ -53,7 +53,7 @@ const promises = [
 
 export default function Home() {
   return <>
-    <section className="hero ed" aria-labelledby="hero-title">
+    <section className="hero" aria-labelledby="hero-title">
       <div className="wrap hero-head">
         <div className="hero-copy">
           <Chip>For small businesses</Chip>

@@ -18,6 +18,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   shader that pauses off screen). "A simple example" (`components/example-flow.tsx`) steps through Inquiry,
   Follow-up, Booking until a visitor picks one. All of it holds still for reduced motion. Not checked: frame rate
   on a slow phone, Safari.
+  **Whole site converted the same day (owner said yes):** the theme moved from the home page into
+  `app/globals.css` and `app/shell.css`, so About, Contact, Demos, Questions, Guides and the 404 page share it. The
+  tracker demo window on Demos stays dark, as does the tracker itself. Deleted as unused: `components/flow-board.tsx`
+  and the board, "watch one run", calculator, demo-card and steps-rail styles. Checked every page in the preview at
+  1440 wide and Contact and Home at 375. Not checked: an assistant answer on Guides (needs the live function), the
+  contact form's thank-you state.
 - **Design pass live 2026-11-14 (website `cf3026f`, branch `refero-direction`):** merged to main and deployed to Slate
   Production, both on the owner's go-ahead. A full design pass on the website,
   guided by the Refero Styles guides for Linear, Ramp and Intercom (rules now in `CLAUDE.md`). Home: the hero is a
