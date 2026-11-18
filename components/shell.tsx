@@ -9,7 +9,7 @@ import { Silver } from "./silver";
 
 const primaryLinks = [
   { href: "/", label: "Overview" },
-  { href: "/products", label: "Demos" },
+  { href: "/products", label: "Tools" },
   { href: "/contact", label: "Contact" },
 ];
 

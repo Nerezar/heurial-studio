@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip Desk by HEURIAL</title>
+<meta name="description" content="Run a short-form clip page on numbers, not vibes: log posts, read metrics at 12, 24 and 72 hours, and review what worked each week.">
+<link rel="icon" href="/brand/mark-icon.png">
+<link rel="apple-touch-icon" href="/brand/mark-touch.png">
+<meta name="theme-color" content="#0b1030">
+<script>
+  // Same release fingerprint as the tracker (?v=...), so a new release is never hidden by the host's long cache.
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/clipdesk/app.css");</script>
+</head>
+<body>
+<noscript>Clip Desk needs JavaScript to run.</noscript>
+<div id="app"></div>
+<!-- Everything runs in this page. Your own data is kept in this browser only (localStorage); sample data
+     (?sample=1, and the copy on the Tools page) lives in memory and is never saved. -->
+<script>__load("js", "/clipdesk/core.js");</script>
+<script>__load("js", "/clipdesk/app.js");</script>
+</body>
+</html>

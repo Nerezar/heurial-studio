@@ -4,6 +4,21 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Clip Desk, branch `clip-desk` (2026-11-18), pushed, not merged, not deployed.** Branched from main
+  `f25edee`, so it does not include `copy-and-sample-fixes`. A second tool on the Demos page, which is now called
+  **Tools** in the nav (same `/products` address). Clip Desk runs a short-form clip page on numbers: a post log, reads
+  due at 12/24/72 hours (type the number or skip it, never guessed), today's one-variable test, a weekly review on
+  24-hour views (top and bottom 3, medians by pillar, time slot, platform and test against the page median), rules,
+  facts with sources that ask to be rechecked after 48 hours, and credits and takedowns. Static files only, in
+  `public/clipdesk/` (`core.js` logic, `app.js` page, `app.css`); no back end. Your own data is kept in the browser's
+  localStorage, with a JSON backup and restore and a `scoreboard.csv` export; sample data (`?sample=1`, and the copy
+  embedded on Tools) is in memory and never saved. `/clipdesk` redirects to the page; its files are in the
+  `?v=` fingerprint list in `next.config.ts`. `DemoFrame` now takes `file`, `title`, `address` and `sample`; the
+  tracker demo uses the defaults, so it is unchanged. Tests: 9 new in `tracker/clipdesk.test.mjs` (19 in `tracker/`,
+  40 pipeline). Checked in the preview: Today, Posts, Review, Sources and the post dialog on sample data; a post
+  logged on your own data survives a reload and its due read saves; a bad number is refused; both demos render on
+  Tools; 375px wide has no sideways scroll. **To go live:** the site only. **Not done:** a signed-in, synced
+  version (data is per browser), pricing, and a dark mode.
 - **Copy and sample fixes, branch `copy-and-sample-fixes` (2026-11-18), pushed, not merged, not deployed.** Live is
   still `c26e8d6`. 1) Home page: the Hand off step promised 14 days of support for every job while the packages
   list 7, 14 and 30; the step now says "7 to 30 days of support ... depending on the package". The AI draft prompt
