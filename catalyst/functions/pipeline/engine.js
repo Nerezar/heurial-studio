@@ -42,7 +42,7 @@ function createEngine({ core, send, check, now = () => new Date() }) {
       const contact = event.contact || {};
       const contactId = contact.ROWID ? String(contact.ROWID) : "";
       const saved = await store.insert(TABLES.events, {
-        trigger: event.trigger, contact_id: contactId, payload: JSON.stringify(event.payload || {}), dedupe_key: key, received_at: iso,
+        trigger_name: event.trigger, contact_id: contactId, payload: JSON.stringify(event.payload || {}), dedupe_key: key, received_at: iso,
       });
       const steps = core.plan(event.trigger, { ...ctx, contact: { optedOut: Boolean(contact.opted_out_at) }, now: at.getTime() });
       const rows = [];
