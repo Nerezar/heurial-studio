@@ -4,6 +4,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Production Catalyst has the workspace pass; the SITE DOES NOT YET (2026-11-17 night).** Console deployment
+  "Workspace pass (6ad05e7)", Serverless and CloudScale ticked, Job Scheduling and Settings unticked. The diff was
+  exactly `pipeline` Updated, `Transactions.lead_id` Added and `LoginAttempts` Added with its six columns;
+  Deployment Successful. Checked in Production: `lead_id` is on `Transactions`; `LoginAttempts` exists with App
+  User given no access; the function answers 401 without a key on `/data`, `/assist` and `/auth/throttle`;
+  www.heurial.studio/admin still redirects and its session API answers. `Transactions` in Production is empty.
+  **The live site is still `a615425`, an older tracker page talking to the newer function. Until the site is
+  deployed from main: adding a transaction there is refused (the old page sends the old kind names), and marking a
+  lead Paid writes a payment row the old page can't draw, which would break its Money screen and count that payment
+  twice. Deploy the site next, or don't mark a lead Paid on the live tracker until it is.** Not checked: any keyed
+  request in Production. (The console's commit message field takes at most 40 characters.)
 - **Development tables are ready for the workspace pass (2026-11-17, main `54a2e3c`).** Through the Catalyst
   connector, Development only: `Transactions.lead_id` added (varchar 20, not mandatory, not unique, no index, no
   audit; column 141722000000019062), and `LoginAttempts` created (table 141722000000019064, GLOBAL, `scope` varchar
