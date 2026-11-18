@@ -32,8 +32,8 @@ period end. An earlier single "Autopilot" product with three prices is archived 
 
 The steps, for a new sandbox or for live later:
 
-1. In Stripe, switch to test mode (or a sandbox). Make one product, "Autopilot", with three monthly prices:
-   Starter, Pro, Business. Placeholder amounts are fine until prices are decided.
+1. In Stripe, switch to test mode (or a sandbox). Make three products (Autopilot Starter, Pro, Business), one monthly price each
+   (the portal needs one product per plan). Placeholder amounts are fine until prices are decided.
 2. Add a webhook endpoint: `https://<function URL>/server/pipeline/stripe/webhook`, events
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`.
