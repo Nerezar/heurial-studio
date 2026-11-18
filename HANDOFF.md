@@ -4,6 +4,14 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Development tables are ready for the workspace pass (2026-11-17, main `54a2e3c`).** Through the Catalyst
+  connector, Development only: `Transactions.lead_id` added (varchar 20, not mandatory, not unique, no index, no
+  audit; column 141722000000019062), and `LoginAttempts` created (table 141722000000019064, GLOBAL, `scope` varchar
+  64, `failed_at` varchar 30). The new table let App User read by default; that was removed, so it matches the
+  others. Checked: a `transfer_out` row with a `lead_id` and a `LoginAttempts` row each saved and read back, then
+  both test rows were deleted. **Not done: `pipeline` is not deployed to Development, Production and the live site
+  are unchanged.** Next: deploy `pipeline` to Development, then the console deployment (CloudScale + Serverless),
+  then the site.
 - **Workspace pass, branch `tracker-next-move` (2026-11-17), merged to main on the owner's go-ahead, nothing
   deployed.** Live is still `a615425`, so main is now ahead of what is live. Reliability first: a draft can only be approved once and an inquiry only becomes one lead (requests for
   the same record run one at a time; a half-finished conversion is finished, not repeated); a slow answer for an old
