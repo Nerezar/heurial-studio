@@ -74,19 +74,19 @@
   }
 
   /** Texts only go out in business hours. Returns when a text triggered at `now` may be sent: now if inside the
-      hours, otherwise the next opening time. Hours are local "HH:MM" strings; days are every day. */
+      hours, otherwise the next opening time. Hours are "HH:MM" strings with an optional timeZone; days are every day. */
   function sendTime(now, hours) {
-    const at = new Date(now);
     const [oh, om] = hours.open.split(":").map(Number);
     const [ch, cm] = hours.close.split(":").map(Number);
-    const mins = at.getHours() * 60 + at.getMinutes();
+    // The business's clock (hours.timeZone), not the server's. Without one, the local clock.
+    const clock = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: hours.timeZone }).formatToParts(new Date(now));
+    const part = (type) => Number(clock.find((p) => p.type === type).value);
+    const mins = part("hour") * 60 + part("minute");
     const open = oh * 60 + om;
     const close = ch * 60 + cm;
     if (mins >= open && mins < close) return now;
-    const next = new Date(at);
-    if (mins >= close) next.setDate(next.getDate() + 1);
-    next.setHours(oh, om, 0, 0);
-    return next.getTime();
+    // shortcut: counts minutes on the clock, so on the two nights a year the clocks change it is an hour off.
+    return now - (now % 60000) + ((open - mins + 1440) % 1440) * 60000;
   }
 
   /** Replies that mean "stop texting me". Carriers require these to be honoured straight away. */

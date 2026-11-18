@@ -72,6 +72,16 @@ function planFromSubscription(sub, prices, deleted) {
   return { plan, billing_status: ["active", "trialing"].includes(sub.status) ? "active" : "paused" };
 }
 
+/** The signed-in user and business the website passed along, or null. The user must still belong to the business. */
+async function signedIn(io, store) {
+  const userId = String(io.headers["x-heurial-user"] || "");
+  const tenantId = String(io.headers["x-heurial-tenant"] || "");
+  const user = ID.test(userId) ? await store.get(T.users, userId) : null;
+  if (!user || String(user.tenant_id) !== tenantId) return null;
+  const tenant = await store.get(T.tenants, tenantId);
+  return tenant ? { user, tenant } : null;
+}
+
 /**
  * Handle app/* and stripe/webhook. Returns { status, body } or null when the path isn't an accounts route.
  * io: { readJson(), readBody(), headers }
@@ -186,12 +196,10 @@ async function route(path, method, io, deps, now) {
   }
 
   // Everything below needs a signed-in user, passed by the website.
-  const userId = String(io.headers["x-heurial-user"] || "");
-  const tenantId = String(io.headers["x-heurial-tenant"] || "");
-  const user = ID.test(userId) ? await store.get(T.users, userId) : null;
-  if (!user || String(user.tenant_id) !== tenantId) return { status: 401, body: { error: "Please sign in." } };
-  const tenant = await store.get(T.tenants, tenantId);
-  if (!tenant) return { status: 401, body: { error: "Please sign in." } };
+  const who = await signedIn(io, store);
+  if (!who) return { status: 401, body: { error: "Please sign in." } };
+  const { user, tenant } = who;
+  const tenantId = String(tenant.ROWID);
 
   if (sub === "me" && method === "GET") {
     return { status: 200, body: { user: publicUser(user), tenant: publicTenant(tenant, stripe) } };
@@ -229,4 +237,4 @@ async function route(path, method, io, deps, now) {
   return { status: 404, body: { error: "Not found." } };
 }
 
-module.exports = { route, scoped, stripeSignatureValid, planFromSubscription, PLANS, TABLES: T };
+module.exports = { route, scoped, signedIn,stripeSignatureValid, planFromSubscription, PLANS, TABLES: T };

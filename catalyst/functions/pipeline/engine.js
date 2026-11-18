@@ -15,18 +15,20 @@ const TABLES = { events: "Events", outbox: "Outbox", contacts: "Contacts" };
 const MAX_ATTEMPTS = 4;
 const RETRY_MINUTES = [5, 30, 120]; // wait after the 1st, 2nd and 3rd failure
 const STUCK_MINUTES = 10; // a row "sending" for longer than this lost its outcome
+const STALE_HOURS = 24; // a queued message this late is dropped, not sent
 const DAY = 86400000;
 
+// One thing at a time per key, so two requests for the same event or message can't both act on it.
+// shortcut: this only holds inside one function instance. Before real traffic, make Events.dedupe_key a unique
+// column in Catalyst so a second instance's insert fails instead.
+const busy = new Map();
+function alone(key, fn) {
+  const run = (busy.get(key) || Promise.resolve()).catch(() => {}).then(fn);
+  busy.set(key, run);
+  return run.finally(() => { if (busy.get(key) === run) busy.delete(key); });
+}
+
 function createEngine({ core, send, check, now = () => new Date() }) {
-  // One thing at a time per key, so two requests for the same event or message can't both act on it.
-  // shortcut: this only holds inside one function instance. Before real traffic, make Events.dedupe_key a unique
-  // column in Catalyst so a second instance's insert fails instead.
-  const busy = new Map();
-  function alone(key, fn) {
-    const run = (busy.get(key) || Promise.resolve()).catch(() => {}).then(fn);
-    busy.set(key, run);
-    return run.finally(() => { if (busy.get(key) === run) busy.delete(key); });
-  }
 
   /** Something happened: { trigger, contact (a Contacts row, or {}), payload, dedupeKey }. Saves the event and one
       Outbox row per automation that listens for it. The same dedupeKey twice does nothing the second time. */
@@ -52,8 +54,9 @@ function createEngine({ core, send, check, now = () => new Date() }) {
         };
         // The rules say "sent" for "send now"; nothing is sent until the tick does it.
         if (step.status === "sent" || step.status === "queued") { row.status = "queued"; row.send_at = new Date(step.at).toISOString(); }
-        if (a.template) {
-          const filled = core.render(a.template, { first_name: contact.first_name, ...ctx.vars, ...event.payload });
+        const template = (ctx.settings[a.id] || {}).message || a.template; // the owner's own wording, if they wrote one
+        if (template) {
+          const filled = core.render(template, { first_name: contact.first_name, ...ctx.vars, ...event.payload });
           row.body = filled.text;
           // Nothing goes out half-filled: the owner finishes it instead.
           if (filled.missing.length && row.status === "queued") { row.status = "approval"; row.send_at = ""; row.reason = `Fill in: ${filled.missing.join(", ")}`; }
@@ -103,10 +106,12 @@ function createEngine({ core, send, check, now = () => new Date() }) {
       await alone(`out:${ctx.tenant}:${stale.ROWID}`, async () => {
         const row = await store.get(TABLES.outbox, stale.ROWID);
         if (!row || row.status !== "queued") return;
+        // After an outage or a paused plan, a day-old reminder does more harm than good.
+        if (row.send_at < ago(STALE_HOURS * 60)) { await save(row.ROWID, { status: "skipped", reason: "Too late to send" }); done.skipped++; return; }
         if (row.channel === "text") {
           // Someone who replied STOP after this was queued still doesn't get it.
           const contact = row.contact_id ? await store.get(TABLES.contacts, row.contact_id) : null;
-          if (contact && contact.opted_out_at) { await save(row.ROWID, { status: "skipped", reason: "Opted out of texts" }); done.skipped++; return; }
+          if (contact && contact.opted_out_at) { await save(row.ROWID, { status: "skipped", reason: "They asked not to be texted" }); done.skipped++; return; }
           if (textsLeft <= 0) { done.held++; return; }
           textsLeft--;
         }

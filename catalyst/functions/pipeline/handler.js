@@ -5,6 +5,7 @@ const crypto = require("node:crypto");
 const core = require("./core");
 const adapters = require("./adapters");
 const accounts = require("./accounts");
+const autopilot = require("./autopilot");
 const { cleanSubscription, short } = require("./push");
 
 const MAX_BODY = 32 * 1024;
@@ -152,11 +153,12 @@ async function handle(req, res, deps) {
       return res.end("<Response></Response>"); // no automatic reply
     }
 
-    // Autopilot accounts and billing (accounts.js). Stripe's webhook checks Stripe's signature; app/* needs the site key.
-    if (path === "stripe/webhook" || path.startsWith("app/")) {
+    // Autopilot accounts and billing (accounts.js) and the engine's routes (autopilot.js). Stripe's webhook checks
+    // Stripe's signature; everything else here needs the site key.
+    if (path === "stripe/webhook" || path.startsWith("app/") || path.startsWith("autopilot/")) {
       if (path !== "stripe/webhook" && !keyMatches(req.headers["x-heurial-key"], deps.expectedKey)) return send(401, { error: "Unauthorized" });
       const io = { readJson: () => readJson(req), readBody: () => readBody(req, 256 * 1024), headers: req.headers };
-      const out = await accounts.route(path, method, io, deps, now);
+      const out = (await autopilot.route(path, method, io, deps, now)) || (await accounts.route(path, method, io, deps, now));
       if (out) return send(out.status, out.body);
     }
 
