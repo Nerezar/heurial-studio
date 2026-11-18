@@ -13,12 +13,9 @@ const { makeDrafter, makeAssistant } = require("./draft");
 const { makePusher } = require("./push");
 
 // With ANTHROPIC_API_KEY set, drafts come from Claude. Without it, a fixed sample draft, so the flow can be tried.
-const draft = makeDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async ({ lead, channel }) => {
+const draft = makeDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async (ask) => {
   await new Promise((r) => setTimeout(r, 600));
-  const first = (lead.name || "there").split(" ")[0];
-  return channel === "sms"
-    ? { subject: "", body: `Hi ${first}, sample draft from the local stand-in. Does Thursday still work for a quick call?` }
-    : { subject: "Next step", body: `Hi ${first},\n\nThis is a sample draft from the local stand-in, not from Claude. Set ANTHROPIC_API_KEY to get real drafts.\n\nDoes Thursday still work for a quick call?` };
+  return core.sampleDraft(ask);
 });
 
 // The same for summaries and task suggestions: Claude with a key, otherwise a fixed reply that says what it is.

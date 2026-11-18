@@ -24,7 +24,7 @@ const problems = [
 const steps = [
   { title: "Talk", time: "20 minutes, free", body: "A free 20-minute call. You tell me what eats your time, and I tell you honestly whether I can help.", get: "A clear yes or no, and a short written scope if it’s a fit." },
   { title: "Build", time: "About one week", body: "I set up one workflow in the tools you already use, test it on real examples, and keep you in the loop.", get: "One working workflow, set up in your own accounts." },
-  { title: "Hand off", time: "14 days of support", body: "I walk you through it, give you a plain-English guide, and stick around for 14 days of questions.", get: "A written guide, and a workflow that’s yours to keep." },
+  { title: "Hand off", time: "7 to 30 days of support", body: "I walk you through it, give you a plain-English guide, and stay on for your questions afterwards: 7, 14 or 30 days, depending on the package.", get: "A written guide, and a workflow that’s yours to keep." },
 ];
 
 const deliverables = [

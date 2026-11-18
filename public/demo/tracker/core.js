@@ -307,9 +307,8 @@ function nextMoves({ all, followups, stale, inbox, tasks, messageRows = [], toda
     items.push({
       key: `followup-${f.id}`, kind: "followup", tier, lead_id: f.id, date: f.follow_up_at, value_cents: lead.value_cents || 0, has_draft: hasDraft.has(f.id),
       title: `Follow up with ${f.name}`,
-      reason: late > 0
-        ? `${worth ? `The ${dollars(lead.value_cents)} proposal` : "This follow-up"} is ${daysWord(late)} overdue.`
-        : `${worth ? `The ${dollars(lead.value_cents)} proposal has a` : "A"} follow-up due today.`,
+      // The date belongs to the follow-up, so the follow-up is what is late. The proposal is context, said apart.
+      reason: `${late > 0 ? `Your follow-up is ${daysWord(late)} overdue.` : "Your follow-up is due today."}${worth ? ` The ${dollars(lead.value_cents)} proposal is still open.` : ""}`,
       evidence: [{ label: `Follow-up set for ${f.follow_up_at}`, text: f.follow_up_note || "Follow up" }, ...quote(f.id)],
     });
   };
@@ -515,6 +514,24 @@ function cleanAssist(kind, out, sources) {
   return { kind, text: summary, tasks, sources };
 }
 
+/**
+ * The stand-in draft for pages with no AI behind them (the sample-data page, the local stand-in). It says what it
+ * is, and it only refers to what the lead's record and thread show: no day, time or promise is made up.
+ */
+function sampleDraft({ lead, thread = [], channel }) {
+  const first = text(lead.name, 120).split(" ")[0] || "there", proposal = lead.status === "proposal";
+  if (channel === "sms") {
+    return { subject: "", body: `Hi ${first}, sample draft. ${proposal ? "Checking in on the proposal I sent. Any questions I can answer?" : "Following up on our last conversation. Is there anything you need from me?"}` };
+  }
+  const lastMail = [...thread].reverse().find((m) => m.channel === "email" && m.subject);
+  return {
+    subject: lastMail ? `Re: ${lastMail.subject.replace(/^(re:\s*)+/i, "")}` : "Following up",
+    body: `Hi ${first},\n\n${proposal
+      ? "I'm checking in on the proposal I sent. Have you had a chance to look it over? I'm happy to answer questions or walk through it."
+      : "I'm following up on our last conversation. Is there anything you need from me to move forward?"}\n\n(Sample draft, not written by AI. On the real tracker, Claude writes this from the thread.)`,
+  };
+}
+
 // ---------- Daily email ----------
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -574,7 +591,7 @@ ${trackerUrl ? `<p style="margin:16px 0 0"><a href="${esc(trackerUrl)}" style="d
 }
 
 module.exports = {
-  Bad, STATUSES, CHANNELS, TX_KINDS, isDate, rangeStart, nextMoves, loginThrottle, assistSources, cleanAssist, cleanTransaction, cleanTransactionKind, transactionFromRow, paymentFromLead, needsPayment, cleanTask, taskFromRow, tasksFromRows, cleanLead, withPaidDate, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
+  Bad, STATUSES, CHANNELS, TX_KINDS, isDate, rangeStart, nextMoves, loginThrottle, assistSources, cleanAssist, sampleDraft, cleanTransaction, cleanTransactionKind, transactionFromRow, paymentFromLead, needsPayment, cleanTask, taskFromRow, tasksFromRows, cleanLead, withPaidDate, cleanTime, cleanMessage, cleanInbound, matchLead, messageFromRow, leadFromRow, summarize,
   inboxFromRows, leadFromInquiry, buildDigest, todayIn, addDays, ID,
 };
 

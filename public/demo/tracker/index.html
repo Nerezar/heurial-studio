@@ -198,10 +198,9 @@ async function api(path, method = "GET", body) {
   if ((m = p.match(/^leads\/(\d+)\/draft$/)) && method === "POST") return wrap(() => {
     const lead = find(demo.leads, m[1]);
     if (!lead) throw bad("Not found.", 404);
-    const first = (lead.name || "there").split(" ")[0], sms = body.channel === "sms";
-    const row = { ...core.cleanMessage({ lead_id: m[1], channel: sms ? "sms" : "email", subject: sms ? "" : "Next step",
-      body: sms ? `Hi ${first}, sample draft: does Thursday still work for a quick call?`
-        : `Hi ${first},\n\nThis is a sample draft. On the real tracker, Claude writes it from this thread.\n\nDoes Thursday still work for a quick call?` }, new Date().toISOString()), status: "draft", ROWID: demo.id() };
+    const channel = body.channel === "sms" ? "sms" : "email";
+    const thread = demo.messages.filter((x) => String(x.lead_id) === m[1] && x.status !== "draft").map((x) => core.messageFromRow(x)).sort((x, y) => x.created_at.localeCompare(y.created_at));
+    const row = { ...core.cleanMessage({ lead_id: m[1], channel, ...core.sampleDraft({ lead, thread, channel }) }, new Date().toISOString()), status: "draft", ROWID: demo.id() };
     demo.messages.push(row);
     return core.messageFromRow(row);
   });

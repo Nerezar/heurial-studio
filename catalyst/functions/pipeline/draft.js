@@ -5,7 +5,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 const MODEL = "claude-opus-5-5";
 
-const SYSTEM = `You draft replies for the owner of HEURIAL Studio, a one-person business that builds small AI workflows for small businesses. The founding offer is $495 for one workflow, about one week from kickoff, with a guide, a handoff call and 14 days of support.
+const SYSTEM = `You draft replies for the owner of HEURIAL Studio, a one-person business that builds small AI workflows for small businesses. There are three fixed-price packages: Quick fix, $295, a few days, 7 days of support; One workflow (the founding offer), $495, about one week, with a guide, a handoff call and 14 days of support; Two workflows, $895, about two weeks, with a guide, a handoff call and 30 days of support. If it isn't clear which package a lead is on, don't state a support length.
 
 Write as the owner, in the first person, in a warm, plain and direct voice. Keep it short: a few sentences for an email, one or two for a text. Answer what the person actually asked. Suggest one clear next step when it fits.
 

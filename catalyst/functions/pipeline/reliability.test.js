@@ -211,7 +211,9 @@ test("your next move: promises first, then people waiting, then calls, then toda
   assert.deepEqual(next.map((n) => n.key), ["followup-5", "followup-2", "task-8", "inquiry-7", "call-4", "followup-3", "proposal-1"]);
   const ben = next[1];
   assert.equal(ben.title, "Follow up with Ben");
-  assert.equal(ben.reason, "The $1,500 proposal is 3 days overdue.");
+  assert.equal(ben.reason, "Your follow-up is 3 days overdue. The $1,500 proposal is still open.");
+  assert.equal(next[0].reason, "Your follow-up is 9 days overdue."); // no proposal: nothing added
+  assert.equal(next[5].reason, "Your follow-up is due today.");
   assert.deepEqual(ben.evidence, [
     { label: "Follow-up set for 2026-11-08", text: "Check on the proposal" },
     { label: "Their last message, 2026-11-06", text: "I'll review it with my partner." },
@@ -240,4 +242,17 @@ test("AI help returns its sources, drops made-up dates, and is off without a key
   assert.equal((await call(deps, "POST", "/assist", { kind: "inquiry_summary", inquiry_id: "4" })).body.sources[0].text, "Same ten questions daily.");
   assert.equal((await call(deps, "POST", "/assist", { kind: "write_poem" })).status, 400);
   assert.equal((await call(deps, "GET", "/data")).body.tasks.length, 0); // suggestions are never added on their own
+});
+
+test("the sample draft only says what the record and thread support", () => {
+  const thread = [{ channel: "email", subject: "Re: Proposal for the intake workflow", body: "Give me until next week." }];
+  const mail = core.sampleDraft({ lead: { name: "Ben Carter", status: "proposal" }, thread, channel: "email" });
+  assert.equal(mail.subject, "Re: Proposal for the intake workflow");
+  assert.match(mail.body, /^Hi Ben,\n\nI'm checking in on the proposal I sent\./);
+  assert.match(mail.body, /Sample draft, not written by AI/);
+  const text = core.sampleDraft({ lead: { name: "Mia", status: "held" }, thread: [], channel: "sms" });
+  assert.equal(text.subject, "");
+  for (const d of [mail, text, core.sampleDraft({ lead: { name: "", status: "held" }, channel: "email" })]) {
+    assert.doesNotMatch(d.body, /monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|\$\d/i); // no made-up day or price
+  }
 });

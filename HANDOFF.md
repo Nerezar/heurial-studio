@@ -4,6 +4,20 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Copy and sample fixes, branch `copy-and-sample-fixes` (2026-11-18), pushed, not merged, not deployed.** Live is
+  still `c26e8d6`. 1) Home page: the Hand off step promised 14 days of support for every job while the packages
+  list 7, 14 and 30; the step now says "7 to 30 days of support ... depending on the package". The AI draft prompt
+  (`draft.js`) had the same single figure and now lists the three packages. 2) The sample draft asked "Does
+  Thursday still work?" though no thread mentions Thursday; `core.sampleDraft` now writes it from the lead's stage
+  and thread (a proposal check-in for a proposal lead, "Re:" the thread's last email subject) and names no day,
+  time or price. Used by the sample-data page and the local stand-in. 3) Your next move said "The $1,500 proposal
+  is 3 days overdue"; the date is the follow-up's, so it now says "Your follow-up is 3 days overdue. The $1,500
+  proposal is still open." Tests: 40 pipeline (1 new). Checked in the preview: the home page step, the next-move
+  line, and the sample draft for Ben Carter. **To go live:** `core.js` and `draft.js` are function code, so
+  `pipeline` to Development, a console deployment (Serverless only), then the site; the home page and sample-data
+  page need only the site. **Not done, waiting on the owner:** a founder introduction and real demo footage on the
+  home page. Both need material only the owner has (what to say about themselves, a photo if wanted, and footage or
+  a go-ahead to record the sample-data tracker).
 - **LIVE 2026-11-17 night: main `c26e8d6`, the four fixes below.** Merged on the owner's go-ahead, then the site
   deployed with `catalyst deploy slate heurial --production -m "Next move fixes main c26e8d6" -ni` from a detached,
   clean checkout after tsc, eslint, 10 money tests, 39 pipeline tests and `next build`. Site only; Catalyst was not
