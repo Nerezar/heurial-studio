@@ -5,7 +5,7 @@ import "../interiors.css";
 
 export const metadata: Metadata = {
   title: "Tools",
-  description: "Try the tools I built, running on sample data: a follow-up tracker for leads, Autopilot with 30 automations for a small business, and Clip Desk for running a short-form clip page.",
+  description: "Try the tools I built, running on sample data: a follow-up tracker for leads, and Autopilot with 30 automations for a small business.",
 };
 
 type Guide = { label: string; title: string; description: string };
@@ -22,11 +22,6 @@ const autopilotGuide: Guide[] = [
   { label: "Plans", title: "Start small, unlock more", description: "Starter covers 8 automations, Pro 19, Business all 30. Each plan includes a monthly allowance of AI drafts." },
 ];
 
-const clipGuide: Guide[] = [
-  { label: "Today", title: "Fill in the numbers when they're due", description: "Each post asks for its views at 12, 24 and 72 hours. Type the number, or skip it if it isn't there. It never guesses." },
-  { label: "Review", title: "See what actually worked", description: "Every post is compared on its 24-hour views. Pillars, time slots, platforms and tests are ranked against your median." },
-  { label: "Sources", title: "Keep facts and credits straight", description: "Each fact keeps its source and asks to be checked again after 48 hours. Credits track who said yes and what was taken down." },
-];
 
 function GuideCards({ items }: { items: Guide[] }) {
   return <div className="card-grid">
@@ -87,26 +82,6 @@ export default function Products() {
             <h2 id="autopilot-guide">How it works.</h2>
           </header>
           <GuideCards items={autopilotGuide} />
-        </div>
-      </section>
-      <section className="section" aria-labelledby="clipdesk-title">
-        <div className="wrap">
-          <header className="section-head">
-            <Chip>Clip Desk</Chip>
-            <h2 id="clipdesk-title">Run a clip page on numbers.</h2>
-            <p>Log every post, fill in its views when they&apos;re due, and see each week which pillars, times, platforms and tests beat your median.</p>
-          </header>
-          <DemoFrame file="clipdesk/index.html" title="Clip Desk demo with sample data" address="heurial.studio/clipdesk" sample />
-          <p className="demo-caption">Sample posts from a made-up gaming page. <a href={`/clipdesk/index.html?v=${process.env.TRACKER_VERSION}`}>Use Clip Desk for your own page</a>: your data stays in your browser.</p>
-        </div>
-      </section>
-      <section className="section is-paper" aria-labelledby="clipdesk-guide">
-        <div className="wrap">
-          <header className="section-head">
-            <Chip>Clip Desk guide</Chip>
-            <h2 id="clipdesk-guide">What it does.</h2>
-          </header>
-          <GuideCards items={clipGuide} />
         </div>
       </section>
       <Closing />

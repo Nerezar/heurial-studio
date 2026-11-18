@@ -1,4 +1,4 @@
-/* HEURIAL tools (Clip Desk, Autopilot): the shared look. The tracker's light look (public/tracker/tracker.css):
+/* HEURIAL tools (Autopilot, and any tool after it): the shared look. The tracker's light look (public/tracker/tracker.css):
    a soft blue page, a navy sidebar, white cards and one bright blue. Green, red and amber mean good, bad and
    needs you. Dense, no glows. Each tool adds its own pieces in its app.css. */
 

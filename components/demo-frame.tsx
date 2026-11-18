@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 type Demo = {
   /** The page under public/, e.g. "demo/tracker/index.html". It loads its own files by absolute path (/tracker/*,
-      /clipdesk/*), so they resolve the same inside this frame as full screen. */
+      /autopilot/*), so they resolve the same inside this frame as full screen. */
   file?: string;
   title?: string;
   /** What the address bar shows. */

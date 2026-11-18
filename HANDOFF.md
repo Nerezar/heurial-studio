@@ -4,6 +4,10 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Clip Desk removed from `autopilot` (2026-11-18).** The owner wants to sell to older small-business owners, not
+  clippers. The Tools page now has the tracker and Autopilot only; `public/clipdesk/` and its test are gone, and
+  `/clipdesk` no longer redirects. Clip Desk is still intact on branch `clip-desk` if it's ever wanted. Don't merge
+  `clip-desk` on its own; merge `autopilot`.
 - **Autopilot demo, branch `autopilot` (2026-11-18), pushed, not merged, not deployed.** Stacked on `clip-desk`
   (merging it brings Clip Desk too). One app with 30 automations for a small business, on the Tools page between
   the tracker and Clip Desk, and at `/autopilot`. Sample data only (a made-up plumbing business, in memory, nothing
