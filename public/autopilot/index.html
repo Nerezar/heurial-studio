@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autopilot by HEURIAL (sample data)</title>
+<meta name="description" content="30 automations for a small business in one app: missed-call text-back, quote follow-ups, reminders, review requests, invoice reminders and more. You approve anything AI writes.">
+<link rel="icon" href="/brand/mark-icon.png">
+<link rel="apple-touch-icon" href="/brand/mark-touch.png">
+<meta name="theme-color" content="#0b1030">
+<script>
+  // Same release fingerprint as the tracker (?v=...), so a new release is never hidden by the host's long cache.
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/tools/base.css"); __load("css", "/autopilot/app.css");</script>
+</head>
+<body>
+<noscript>Autopilot needs JavaScript to run.</noscript>
+<div id="app"></div>
+<!-- A demo with a made-up business. Everything lives in this page's memory: nothing is sent or saved, and a
+     refresh starts over. The rules it follows are the real ones, in core.js. -->
+<script>__load("js", "/autopilot/core.js");</script>
+<script>__load("js", "/autopilot/app.js");</script>
+</body>
+</html>

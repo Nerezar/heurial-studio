@@ -1,0 +1,98 @@
+/* Autopilot's own pieces. The shared look is /tools/base.css. */
+
+.nav small { margin-left: 8px; color: #9aa3d6; font: 12px var(--num); }
+.nav.on small { color: #dfe3ff; }
+.biz { color: var(--text-3); font-size: 13px; }
+.meter { padding: 0 8px 4px; }
+.meter p { display: flex; flex-direction: column; gap: 1px; padding: 0 0 6px; color: #c8cdf2; font-size: 12px; }
+.meter p span:first-child { color: #fff; font-weight: 600; }
+.meter i { display: block; height: 4px; border-radius: 2px; background: rgb(255 255 255 / .14); }
+.meter i::after { content: ""; display: block; width: var(--w); height: 100%; border-radius: 2px; background: #91b6ff; }
+
+.status { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--hover); color: var(--text-3); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.status.up { background: rgb(14 102 34 / .1); color: var(--up); }
+.status.warn { background: rgb(125 79 0 / .1); color: var(--warn); }
+.status.down { background: rgb(173 34 43 / .1); color: var(--down); }
+.status.accent { background: var(--accent-soft); color: #1733c9; }
+.lock { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid var(--line-2); border-radius: 10px; color: var(--text-3); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.lock::before { content: ""; width: 8px; height: 7px; border: 1.5px solid currentColor; border-radius: 2px; box-shadow: 0 -3px 0 -1.5px transparent; }
+
+/* Try it */
+.events { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
+.event { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); text-align: left; }
+.event:hover { border-color: var(--accent); background: var(--accent-soft); }
+.event span { color: var(--text-3); font-size: 12.5px; }
+section.card + .grid { margin-top: 12px; }
+
+/* Activity feed */
+.feed { margin-top: 8px; }
+.feed li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: start; gap: 4px 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.feed-time { color: var(--text-3); font-size: 12px; padding-top: 2px; }
+.feed-text { color: var(--text-2); font-size: 13px; }
+
+/* Automations */
+.auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.auto { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
+.auto.is-on { border-color: rgb(27 63 242 / .35); }
+.auto.locked { background: rgb(255 255 255 / .55); }
+.auto.locked h3, .auto.locked > p { color: var(--text-3); }
+.auto header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.auto h3 { font-size: 14px; font-weight: 650; line-height: 1.35; }
+.auto > p { flex: 1; color: var(--text-2); font-size: 13px; }
+.auto footer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.auto footer .link { margin-left: auto; color: var(--accent); font-size: 13px; }
+.tag { padding: 1px 7px; border-radius: 4px; background: var(--hover); color: var(--text-3); font-size: 11.5px; font-weight: 600; }
+.tag.ai { background: var(--accent-soft); color: #1733c9; }
+.switch { flex: none; position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; background: #c3c9e6; }
+.switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(11 16 48 / .3); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"] i { transform: translateX(16px); }
+
+/* Approvals */
+.approvals { display: grid; gap: 10px; }
+.approval { display: flex; flex-direction: column; gap: 8px; }
+.approval header, .approval footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.approval footer { justify-content: flex-end; }
+.approval textarea { width: 100%; }
+
+/* Connections */
+.conns { margin-top: 6px; }
+.conn { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.conn .muted { font-size: 13px; }
+form.card .fields, form.card .row { margin-top: 10px; }
+form.card label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+form.card label > span { color: var(--text-3); font-size: 12px; }
+form.card input { width: 100%; }
+main > .card + .card, main > section.card + form.card, main > form.card + section.card { margin-top: 12px; }
+
+/* Plans */
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.plan { display: flex; flex-direction: column; gap: 8px; }
+.plan.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.plan h2 { font-size: 18px; }
+.plan-figs { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-2); }
+.plan-figs b { color: var(--text); font-size: 18px; }
+.plan-intro { margin-top: 4px; color: var(--text-3); font-size: 12px; font-weight: 600; }
+.ticks li { position: relative; padding: 3px 0 3px 18px; font-size: 13px; }
+.ticks li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 8px; height: 4px; border-left: 2px solid var(--up); border-bottom: 2px solid var(--up); transform: rotate(-45deg); }
+.plan > .status { align-self: flex-start; }
+.plan > .btn { align-self: flex-start; }
+
+/* Settings dialog extras */
+.preview { padding: 10px 12px; border-radius: 6px; background: var(--hover); }
+.preview p + p { margin-top: 4px; }
+label.check { flex-direction: row !important; align-items: center; gap: 8px !important; }
+label.check input { width: auto; min-height: 0; }
+
+@media (max-width: 860px) {
+  .plans { grid-template-columns: minmax(0, 1fr); }
+  .feed li { grid-template-columns: minmax(0, 1fr) auto; }
+  .feed-time { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .conn { grid-template-columns: minmax(0, 1fr) auto; }
+  .conn .btn { grid-column: 1 / -1; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .switch i { transition: none; } }
+dialog textarea { width: 100%; }
+.plans .card, .approvals .card { margin-top: 0; }

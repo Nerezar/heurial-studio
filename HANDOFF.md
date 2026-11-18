@@ -4,6 +4,21 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Autopilot demo, branch `autopilot` (2026-11-18), pushed, not merged, not deployed.** Stacked on `clip-desk`
+  (merging it brings Clip Desk too). One app with 30 automations for a small business, on the Tools page between
+  the tracker and Clip Desk, and at `/autopilot`. Sample data only (a made-up plumbing business, in memory, nothing
+  sent or saved): Today with a "Try it" panel that fires real triggers (missed call, web inquiry, quote gone quiet,
+  job paid, invoice overdue, new review, a STOP reply), Automations (switches, locked ones show the plan that
+  unlocks them, message settings with a preview), Approvals (AI drafts wait for the owner), Activity, Connections
+  (number, texting registration, forwarding address, links and business hours) and Plan (Starter 8, Pro 19,
+  Business 30; 100/500/2,000 AI drafts a month, placeholder numbers; no prices shown). The rules are in
+  `public/autopilot/core.js` and tested (7 in `tracker/autopilot.test.mjs`): plan unlocking, placeholders that
+  can't be filled are reported, texts wait for business hours, STOP words opt a contact out of texts, AI drafts use
+  a credit and wait for approval, and pause when credits run out. The shared look of both tools moved to
+  `public/tools/base.css`; Clip Desk loads it and looked the same after. Checked in the preview: every screen,
+  every event, plan switching, an edited message used on the next event, approve and discard, hours validation,
+  375px wide, all three demos on Tools. **Not built:** accounts, a back end, real texting or email, Stripe plans,
+  prices.
 - **Clip Desk, branch `clip-desk` (2026-11-18), pushed, not merged, not deployed.** Branched from main
   `f25edee`, so it does not include `copy-and-sample-fixes`. A second tool on the Demos page, which is now called
   **Tools** in the nav (same `/products` address). Clip Desk runs a short-form clip page on numbers: a post log, reads
