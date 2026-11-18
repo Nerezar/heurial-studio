@@ -4,8 +4,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Four fixes from the owner's review, branch `next-move-fixes` (2026-11-17 night), pushed, not merged, not
-  deployed.** Tracker page only (`tracker.js`, `tracker.css`); no back-end change, so the site alone needs a deploy.
+- **LIVE 2026-11-17 night: main `c26e8d6`, the four fixes below.** Merged on the owner's go-ahead, then the site
+  deployed with `catalyst deploy slate heurial --production -m "Next move fixes main c26e8d6" -ni` from a detached,
+  clean checkout after tsc, eslint, 10 money tests, 39 pipeline tests and `next build`. Site only; Catalyst was not
+  touched. Checked live: `/`, `/products`, `/contact` 200; `/admin` redirects to `?v=f621703a06`; the admin API
+  answers "Please sign in." (401); the served `tracker.js` has the fixes and none of the removed code; the
+  sample-data page at its versioned address shows the short card with "Draft follow-up" and "Why this?", $7,445,
+  no console errors. Not checked: the signed-in tracker, a real AI draft.
+- **Four fixes from the owner's review, branch `next-move-fixes` (2026-11-17 night), now merged and live, see
+  above.** Tracker page only (`tracker.js`, `tracker.css`); no back-end change, so the site alone needs a deploy.
   1) The follow-up button on Your next move opened the Messages tab on a blank note. It now opens it on an email
   (a text when the lead only has a phone number); with AI connected it reads "Draft follow-up" and drafts one to
   approve, with a draft already waiting it reads "Review draft", otherwise "Write follow-up". 2) Tasks said 6 while
