@@ -4,8 +4,8 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Workspace pass, branch `tracker-next-move` (2026-11-17), pushed, not merged, nothing deployed.** Live is still
-  `a615425`. Reliability first: a draft can only be approved once and an inquiry only becomes one lead (requests for
+- **Workspace pass, branch `tracker-next-move` (2026-11-17), merged to main on the owner's go-ahead, nothing
+  deployed.** Live is still `a615425`, so main is now ahead of what is live. Reliability first: a draft can only be approved once and an inquiry only becomes one lead (requests for
   the same record run one at a time; a half-finished conversion is finished, not repeated); a slow answer for an old
   date range is dropped; a message is saved as `sending` before it goes out, then `sent` or `failed`; a payment is
   its own `Transactions` row written when a lead becomes Paid, so editing or moving the lead no longer rewrites
