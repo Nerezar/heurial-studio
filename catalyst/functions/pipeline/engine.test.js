@@ -92,7 +92,7 @@ test("a message with a blank left in it goes to the owner instead of out", async
   const t = await setup();
   const { rows } = await t.missedCall("call-2", { ROWID: "8", phone: "+15550111" }); // caller with no name
   assert.equal(rows[0].status, "approval");
-  assert.equal(rows[0].reason, "Fill in: first_name");
+  assert.match(rows[0].reason, /curly brackets/);
   await assert.rejects(t.engine.decide(t.store, t.ctx, rows[0].ROWID, { approve: true }), /Fill in the blanks/);
   await t.engine.decide(t.store, t.ctx, rows[0].ROWID, { approve: true, body: "Hi, sorry I missed your call." });
   await t.engine.tick(t.store, t.ctx);

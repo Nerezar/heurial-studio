@@ -59,7 +59,7 @@ function createEngine({ core, send, check, now = () => new Date() }) {
           const filled = core.render(template, { first_name: contact.first_name, ...ctx.vars, ...event.payload });
           row.body = filled.text;
           // Nothing goes out half-filled: the owner finishes it instead.
-          if (filled.missing.length && row.status === "queued") { row.status = "approval"; row.send_at = ""; row.reason = `Fill in: ${filled.missing.join(", ")}`; }
+          if (filled.missing.length && row.status === "queued") { row.status = "approval"; row.send_at = ""; row.reason = "Replace the words in {curly brackets} before sending."; }
         }
         rows.push(await store.insert(TABLES.outbox, row));
       }

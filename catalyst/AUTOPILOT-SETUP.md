@@ -62,7 +62,7 @@ Tables, with the same permissions as `Leads` (all text unless noted):
 | `Events` | `tenant_id`, `trigger`, `contact_id`, `payload`, `dedupe_key`, `received_at` |
 | `Outbox` | `tenant_id`, `event_id`, `automation`, `contact_id`, `channel`, `body`, `status`, `reason`, `send_at`, `sending_at`, `sent_at`, `attempts` (number), `provider_id`, `error`, `created_at` |
 
-Add to `Tenants`: `hours_open`, `hours_close` (like `08:00`, `20:00`), `booking_link`, `review_link`.
+Add to `Tenants`: `hours_open`, `hours_close` (like `08:00`, `20:00`), `booking_link`, `review_link`, `pay_link`.
 Make `Events.dedupe_key` unique together with `tenant_id` if the console allows it.
 
 Cron: a job every 5 minutes that sends `POST …/server/pipeline/autopilot/tick` with the `X-Heurial-Key` header.
@@ -70,8 +70,10 @@ Cron: a job every 5 minutes that sends `POST …/server/pipeline/autopilot/tick`
 Check (Development): turn an automation on with `POST app/autopilot/settings/missed-call`, send a test event to
 `POST autopilot/events` (`tenant_id`, `trigger`, `contact_id`, `dedupe_key`), run the tick, and the text arrives once.
 
-Not in the Engine step yet: the Autopilot screens still show sample data (the site's `/api/app` doesn't pass the
-`autopilot/*` routes through yet), nothing writes the AI messages (they wait in Approvals empty), time-based
+The signed-in app is `/app/autopilot` (`public/app/autopilot.html`): the demo's screens (`public/autopilot/app.js`)
+started with an `api`, so it shows the business's own data. `/autopilot` stays the sample business.
+
+Not in the Engine step yet: nothing writes the AI messages (they wait in Approvals empty), time-based
 triggers aren't fired by the tick, and every business sends from the one shared number and mail sender.
 
 ## Not in this step

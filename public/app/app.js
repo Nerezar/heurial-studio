@@ -54,7 +54,7 @@
         ${tenant.billing === "test" ? `<p class="hint">Billing is in Stripe test mode. No real card is charged.</p>` : ""}
         ${tenant.billing === "off" ? `<p class="hint">Billing isn't switched on yet.</p>` : ""}
         ${status}
-        <div class="row"><a class="btn" href="/autopilot">See the automations (sample data)</a></div>
+        <div class="row"><a class="btn primary" href="/app/autopilot">Open Autopilot</a><a class="btn" href="/autopilot">See the sample business</a></div>
       </section>
       <div class="grid plans">${plans}</div>
       ${note ? `<p class="msg" role="status">${esc(note)}</p>` : ""}`;

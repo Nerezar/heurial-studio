@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 // Customer (Autopilot) routes → this server → Catalyst "pipeline" function at app/*, with the site key.
 // Signed-out routes ask for and use sign-in links; the rest pass the signed-in user and business along.
 const OPEN: [string, string][] = [["POST", "signup"], ["POST", "login"], ["POST", "verify"]];
-const SIGNED_IN: [string, string][] = [["GET", "me"], ["POST", "billing/checkout"], ["POST", "billing/portal"]];
+const SIGNED_IN: [string, string][] = [["GET", "me"], ["POST", "billing/checkout"], ["POST", "billing/portal"],
+  ["GET", "autopilot/outbox"], ["GET", "autopilot/settings"], ["POST", "autopilot/business"]];
+// The Autopilot app's routes with an id in them: one automation's settings, and approving one message.
+const SIGNED_IN_PATTERNS: [string, RegExp][] = [["POST", /^autopilot\/settings\/[a-z-]{1,40}$/], ["POST", /^autopilot\/outbox\/\d{1,20}\/decide$/]];
 
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
   try {
@@ -26,7 +29,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
 
     const open = OPEN.some(([m, p]) => m === method && p === path);
     const session = open ? null : readAppSession(request);
-    if (!open && !SIGNED_IN.some(([m, p]) => m === method && p === path)) throw new RequestError(404, "Not found.");
+    if (!open && !SIGNED_IN.some(([m, p]) => m === method && p === path) && !SIGNED_IN_PATTERNS.some(([m, p]) => m === method && p.test(path))) throw new RequestError(404, "Not found.");
     if (!open && !session) throw new RequestError(401, "Please sign in.");
 
     const base = pipelineBase();

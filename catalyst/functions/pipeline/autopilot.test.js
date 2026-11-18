@@ -114,3 +114,19 @@ test("business hours follow the business's time zone, not the server's", async (
   await t.call("POST", "/autopilot/tick");
   assert.equal(t.texts.length, 1);
 });
+
+test("the owner saves links and hours, messages use them, and the outbox names the contact", async () => {
+  const t = setup();
+  const save = (body) => t.call("POST", "/app/autopilot/business", body, t.as(1));
+  assert.equal((await save({ review_link: "javascript:alert(1)" })).status, 400);
+  assert.equal((await save({ open: "20:00", close: "08:00" })).status, 400);
+  assert.equal((await save({ review_link: "https://example.com/review", open: "09:00", close: "17:00" })).status, 200);
+  const mine = (await t.call("GET", "/app/autopilot/settings", undefined, t.as(1))).body.business;
+  assert.deepEqual([mine.review_link, mine.open, mine.close], ["https://example.com/review", "09:00", "17:00"]);
+  assert.equal((await t.call("GET", "/app/autopilot/settings", undefined, t.as(2))).body.business.review_link, "");
+  await t.call("POST", "/app/autopilot/settings/review-ask", { on: true }, t.as(1));
+  await t.call("POST", "/autopilot/events", { tenant_id: "1", trigger: "job_paid", contact_id: "21", dedupe_key: "paid-1" });
+  const [row] = (await t.call("GET", "/app/autopilot/outbox", undefined, t.as(1))).body.outbox;
+  assert.equal(row.contact, "Ben");
+  assert.match(row.body, /https:\/\/example\.com\/review/);
+});

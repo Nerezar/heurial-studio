@@ -1,8 +1,12 @@
-/* HEURIAL Autopilot: the demo page. Written for busy owners who aren't techy: plain words, big buttons, four
-   screens (Home, Check messages, My automations, Settings). A made-up plumbing business; the rules are the real ones
-   (core.js), the events and written messages are sample data, and nothing is sent or saved. */
-(function () {
+/* HEURIAL Autopilot: one app, two ways to run it. Written for busy owners who aren't techy: plain words, big
+   buttons, four screens (Home, Check messages, My automations, Settings).
+     AutopilotApp.start()          the demo: a made-up plumbing business, sample data, nothing sent or saved.
+     AutopilotApp.start({ api })   a signed-in business: api(method, path, body) reaches /api/app/autopilot/*.
+   The rules are the same in both (core.js). */
+window.AutopilotApp = { start(opts = {}) {
   const core = window.AutopilotCore;
+  const live = typeof opts.api === "function";
+  const api = opts.api;
   const HOUR = 3600e3;
   const BOOKING_URL = "https://heurial.zohobookings.com/4948260000000038065";
   const VIEWS = [["home", "Home"], ["approve", "Check messages"], ["automations", "My automations"], ["settings", "Settings"]];
@@ -10,6 +14,7 @@
   const STATUS = {
     sent: ["Sent", "up"], queued: ["Sends later", "warn"], approval: ["Waiting for your OK", "accent"], logged: ["Saved", "up"],
     skipped: ["Not sent", "muted"], waiting: ["Paused", "down"], discarded: ["Not sent", "muted"], optout: ["Asked to stop", "muted"],
+    sending: ["Sending", "warn"], failed: ["Didn't send", "down"],
   };
   // Things that happen in a working day. Each one fires a real trigger through core.plan.
   const EVENTS = [
@@ -65,7 +70,8 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const byId = (id) => core.CATALOG.find((a) => a.id === id);
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const plan = () => core.PLANS.find((p) => p.id === state.plan);
+  const plan = () => core.PLANS.find((p) => p.id === state.plan) || { id: "none", name: "No", credits: 0 };
+  const left = () => Math.max(0, plan().credits - state.used);
   const clock = (t) => new Date(t).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   function when(t) {
     const d = new Date(t), today = new Date();
@@ -83,7 +89,7 @@
     clearTimeout(toast.t);
     toast.t = setTimeout(() => el.classList.remove("show"), 4500);
   }
-  const chip = (status, extra = "") => { const [label, tone] = STATUS[status]; return `<span class="status ${tone}">${label}${extra ? ` · ${esc(extra)}` : ""}</span>`; };
+  const chip = (status, extra = "") => { const [label, tone] = STATUS[status] || [status, "muted"]; return `<span class="status ${tone}">${label}${extra ? ` · ${esc(extra)}` : ""}</span>`; };
   const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; };
 
   /* ---------- running an event ---------- */
@@ -126,7 +132,6 @@
   function render() {
     const titles = { home: `${greeting()}.`, approve: "Check messages", automations: "My automations", settings: "Settings" };
     const p = plan();
-    const left = core.creditsLeft(state.plan, state.used);
     app.innerHTML = `<div class="shell">
       <aside class="side">
         <div class="brand"><strong>Autopilot</strong><span>by HEURIAL</span></div>
@@ -135,14 +140,14 @@
           return `<button class="nav${view === k ? " on" : ""}" data-view="${k}"${view === k ? ' aria-current="page"' : ""}>${label}${badge}</button>`;
         }).join("")}</nav>
         <div class="side-foot">
-          <p class="sample"><strong>This is a sample business.</strong> Nothing is really sent.</p>
+          ${live ? `<a class="btn light" href="/app">My account and billing</a>` : `<p class="sample"><strong>This is a sample business.</strong> Nothing is really sent.</p>`}
           <div class="help">
             <p><strong>Want it set up for you?</strong> I'll do it with you on a call.</p>
             <a class="btn light" href="${BOOKING_URL}" target="_blank" rel="noopener noreferrer">Book a free call</a>
           </div>
           <div class="meter" role="group" aria-label="Written messages left this month">
-            <p><span>${esc(p.name)} plan</span><span class="n">${left} of ${p.credits} written messages left</span></p>
-            <i style="--w:${Math.round((left / p.credits) * 100)}%"></i>
+            <p><span>${esc(p.name)} plan</span><span class="n">${left()} of ${p.credits} written messages left</span></p>
+            <i style="--w:${p.credits ? Math.round((left() / p.credits) * 100) : 0}%"></i>
           </div>
         </div>
       </aside>
@@ -160,7 +165,7 @@
   const tile = (label, value, note = "") => `<div class="tile"><p class="tile-label">${label}</p><p class="tile-value n">${value}</p>${note ? `<p class="tile-note">${note}</p>` : ""}</div>`;
 
   function feed(list) {
-    if (!list.length) return `<p class="empty">Nothing yet. Tap something above to see it work.</p>`;
+    if (!list.length) return `<p class="empty">${live ? "Nothing yet. What Autopilot does for you will show here." : "Nothing yet. Tap something above to see it work."}</p>`;
     return `<ul class="feed">${list.map((x) => `<li>
       <div class="feed-head"><strong>${esc(x.name)}</strong>${chip(x.status, x.status === "queued" ? when(x.sendAt) : "")}</div>
       <p class="muted">${esc(x.contact)} · ${CHANNEL[x.channel] || ""} · ${when(x.at)}</p>
@@ -173,20 +178,21 @@
     const done = state.activity.filter((x) => x.at > weekAgo && ["sent", "logged", "queued"].includes(x.status)).length;
     const n = state.approvals.length;
     const list = showAll ? state.activity : state.activity.slice(0, 5);
-    return `<section class="banner${n ? " needs" : ""}" aria-live="polite">
+    const paused = live && state.paused ? `<section class="banner needs"><p><strong>Autopilot is paused.</strong> ${state.plan === "none" ? "Choose a plan to start it." : "Your last payment didn't go through. Your data is kept."}</p><a class="btn primary big" href="/app">${state.plan === "none" ? "Choose a plan" : "Update my card"}</a></section>` : "";
+    return `${paused}<section class="banner${n ? " needs" : ""}" aria-live="polite">
         ${n ? `<p><strong>${n} message${n === 1 ? " is" : "s are"} waiting for your OK.</strong> Nothing goes to a customer until you say so.</p><button class="btn primary big" data-view="approve">Check ${n === 1 ? "it" : "them"} now</button>`
           : `<p><strong>Nothing needs you right now.</strong> Autopilot is handling the rest.</p>`}
       </section>
       <section class="tiles three">
         ${tile("Working for you", core.CATALOG.filter(isOn).length, "automations turned on")}
         ${tile("Done this week", done, "texts, emails and updates")}
-        ${tile("Written messages left", core.creditsLeft(state.plan, state.used), `of ${plan().credits} this month`)}
+        ${tile("Written messages left", left(), `of ${plan().credits} this month`)}
       </section>
-      <section class="card" aria-labelledby="h-try">
+      ${live ? "" : `<section class="card" aria-labelledby="h-try">
         <h2 id="h-try">See it work</h2>
         <p class="hint">Tap something that happens in your day. You'll see what Autopilot does about it below.</p>
         <div class="events">${EVENTS.map((e) => `<button class="event" data-run="${e.trigger}"><strong>${e.label}</strong><span>${e.note}</span></button>`).join("")}</div>
-      </section>
+      </section>`}
       <section class="card" aria-labelledby="h-act">
         <h2 id="h-act">What happened</h2>
         ${feed(list)}
@@ -201,7 +207,8 @@
         const a = byId(x.automation);
         return `<form class="card approval" data-form="approve" data-id="${x.id}">
           <p><strong>To ${esc(x.contact)}</strong> <span class="muted">by ${CHANNEL[a.channel].toLowerCase()} · ${esc(a.name)}</span></p>
-          <textarea name="text" rows="4" aria-label="Message to ${esc(x.contact)}">${esc(x.text)}</textarea>
+          ${x.note ? `<p class="hint">${esc(x.note)}</p>` : ""}
+          <textarea name="text" rows="4" aria-label="Message to ${esc(x.contact)}" placeholder="Write your message here" required>${esc(x.text)}</textarea>
           <footer><button class="btn primary big">Looks good, send it</button><button class="btn big" type="button" data-discard="${x.id}">Don't send</button></footer>
         </form>`;
       }).join("")}</div>`;
@@ -233,11 +240,26 @@
     const row = (title, detail, status, action = "") => `<li class="conn"><div><p><strong>${title}</strong></p><p class="muted">${detail}</p></div><span class="status ${status[1]}">${status[0]}</span>${action}</li>`;
     const proOk = core.unlocked({ plan: "pro" }, state.plan);
     const bizOk = core.unlocked({ plan: "business" }, state.plan);
-    const left = core.creditsLeft(state.plan, state.used);
     let prev = [];
+    const later = ["Not set up yet", "muted"];
+    if (live) return `<section class="card">
+        <h2>My plan</h2>
+        <p class="hint">${state.plan === "none" ? "You don't have a plan yet." : `${esc(plan().name)} plan. ${left()} of ${plan().credits} written messages left this month.`}</p>
+        <div class="row"><a class="btn" href="/app">Change my plan or card</a></div>
+      </section>
+      <section class="card">
+        <h2>My phone and email</h2>
+        <p class="hint">I set these up with you on a call.</p>
+        <ul class="conns">
+          ${row("Business number", "Texts and missed calls come through here.", later)}
+          ${row("Texting approval", "Phone companies approve every business before it can text customers.", later)}
+          ${row("Email forwarding", "Emails you forward are added to your list.", later)}
+        </ul>
+      </section>
+      ${business()}`;
     return `<section class="card">
         <h2>My plan</h2>
-        <p class="hint">${left} of ${plan().credits} written messages left this month. In this sample, changing plans is free and instant.</p>
+        <p class="hint">${left()} of ${plan().credits} written messages left this month. In this sample, changing plans is free and instant.</p>
         <div class="plans">${core.PLANS.map((p) => {
           const list = core.CATALOG.filter((a) => core.unlocked(a, p.id));
           const added = list.filter((a) => !prev.includes(a));
@@ -261,7 +283,18 @@
           ${row("Email forwarding", "Forward emails to northside@in.example.com and they're added to your list.", ["Ready", "up"])}
         </ul>
       </section>
-      <form class="card" data-form="business">
+      ${business()}
+      <section class="card">
+        <h2>Other accounts</h2>
+        <ul class="conns">
+          ${row("Payments (Stripe or QuickBooks)", "Lets Autopilot see bills and payments.", c.money ? ["Connected", "up"] : proOk ? ["Not connected", "muted"] : ["In the Pro plan", "muted"], proOk && !c.money ? `<button class="btn" data-connect="money">Connect</button>` : "")}
+          ${row("Google listing", "For reviews, replies and weekly posts.", c.google ? ["Connected", "up"] : bizOk ? ["Not connected", "muted"] : ["In the Business plan", "muted"], bizOk && !c.google ? `<button class="btn" data-connect="google">Connect</button>` : "")}
+        </ul>
+      </section>`;
+  }
+
+  function business() {
+    return `<form class="card" data-form="business">
         <h2>My links and hours</h2>
         <p class="hint">Messages use these. Texts are only sent between your opening and closing times.</p>
         <div class="fields">
@@ -272,14 +305,7 @@
           <label><span>I close at</span><input name="close" type="time" value="${esc(state.hours.close)}" required></label>
         </div>
         <div class="row"><button class="btn primary big">Save</button></div>
-      </form>
-      <section class="card">
-        <h2>Other accounts</h2>
-        <ul class="conns">
-          ${row("Payments (Stripe or QuickBooks)", "Lets Autopilot see bills and payments.", c.money ? ["Connected", "up"] : proOk ? ["Not connected", "muted"] : ["In the Pro plan", "muted"], proOk && !c.money ? `<button class="btn" data-connect="money">Connect</button>` : "")}
-          ${row("Google listing", "For reviews, replies and weekly posts.", c.google ? ["Connected", "up"] : bizOk ? ["Not connected", "muted"] : ["In the Business plan", "muted"], bizOk && !c.google ? `<button class="btn" data-connect="google">Connect</button>` : "")}
-        </ul>
-      </section>`;
+      </form>`;
   }
 
   function dialog() {
@@ -307,12 +333,13 @@
     const t = e.target.closest("button");
     if (!t) return;
     const d = t.dataset;
-    if (d.view) { view = d.view; render(); app.querySelector(".main")?.focus(); }
+    if (d.view) { view = d.view; render(); app.querySelector(".main")?.focus(); if (live) load(); }
     else if (d.run) run(d.run);
     else if (d.cat) { category = d.cat; render(); }
     else if (d.act === "more") { showAll = !showAll; render(); }
     else if (d.toggle) {
       const a = byId(d.toggle);
+      if (live) { change(`settings/${a.id}`, { on: !state.enabled[a.id] }, `“${a.name}” is ${state.enabled[a.id] ? "off" : "on"}.`); return; }
       state.enabled = { ...state.enabled, [a.id]: !state.enabled[a.id] };
       render();
       app.querySelector(`[data-toggle="${a.id}"]`)?.focus();
@@ -325,6 +352,7 @@
       render();
       toast(`You're on ${plan().name} now: ${core.CATALOG.filter((a) => core.unlocked(a, state.plan)).length} automations.`);
     }
+    else if (d.discard && live) change(`outbox/${d.discard}/decide`, { approve: false }, "OK. That message won't be sent.");
     else if (d.discard) {
       const x = state.approvals.find((y) => y.id === d.discard);
       state.approvals = state.approvals.filter((y) => y.id !== d.discard);
@@ -345,6 +373,7 @@
       const a = byId(x.automation);
       state.approvals = state.approvals.filter((y) => y.id !== x.id);
       const text = String(f.get("text")).trim();
+      if (live) { change(`outbox/${x.id}/decide`, { approve: true, body: text }, "Done. It will be sent in the next few minutes. Texts wait until you're open."); return; }
       const now = Date.now();
       const at = a.channel === "text" ? core.sendTime(now, state.hours) : now;
       state.activity.unshift({ id: uid(), at: now, name: a.name, contact: x.contact, channel: a.channel, text, status: at > now ? "queued" : "sent", sendAt: at });
@@ -354,6 +383,7 @@
       const a = byId(editing);
       const next = { approve: f.get("approve") === "on" };
       if (!a.ai && f.has("template")) next.template = String(f.get("template"));
+      if (live) { editing = null; change(`settings/${a.id}`, { approve: next.approve, ...(next.template == null ? {} : { message: next.template }) }, "Saved."); return; }
       state.settings = { ...state.settings, [a.id]: next };
       editing = null;
       render();
@@ -361,6 +391,7 @@
     } else if (form.dataset.form === "business") {
       const open = String(f.get("open")), close = String(f.get("close"));
       if (open >= close) { toast("Your closing time needs to be after your opening time."); return; }
+      if (live) { change("business", { booking_link: String(f.get("booking_link")).trim(), review_link: String(f.get("review_link")).trim(), pay_link: String(f.get("pay_link")).trim(), open, close }, "Saved. Your messages use these from now on."); return; }
       state.business = { ...state.business, booking_link: String(f.get("booking_link")).trim(), review_link: String(f.get("review_link")).trim(), pay_link: String(f.get("pay_link")).trim() };
       state.hours = { open, close };
       render();
@@ -403,6 +434,40 @@
     };
   }
 
-  state = sample();
-  render();
-})();
+  /* ---------- a signed-in business ---------- */
+  async function load() {
+    try {
+      const [s, o] = await Promise.all([api("GET", "settings"), api("GET", "outbox")]);
+      const enabled = {}, settings = {};
+      for (const a of s.automations) { enabled[a.id] = a.on; settings[a.id] = { approve: a.approve, ...(a.message ? { template: a.message } : {}) }; }
+      const rows = o.outbox.map((r) => {
+        const a = byId(r.automation) || { name: r.automation };
+        const held = r.status === "skipped" || r.status === "waiting";
+        return {
+          id: r.id, at: Date.parse(r.created_at), automation: r.automation, name: a.name, contact: r.contact || "Someone", channel: r.channel, status: r.status,
+          body: r.body, note: r.reason, sendAt: Date.parse(r.send_at) || undefined,
+          text: held ? r.reason : r.error ? `${r.body} (${r.error})` : r.body || "Waiting for you to write it.",
+        };
+      });
+      state = {
+        plan: s.plan, paused: s.paused, used: s.used, enabled, settings, connections: {},
+        hours: { open: s.business.open, close: s.business.close }, business: s.business,
+        approvals: rows.filter((r) => r.status === "approval").map((r) => ({ ...r, text: r.body })), activity: rows,
+      };
+      if (!editing) render(); // a refresh never redraws the window someone is typing in
+    } catch (err) {
+      if (err.status === 401) { location.href = "/app"; return; }
+      if (state) toast(err.message);
+      else app.innerHTML = `<div class="shell"><main class="main"><p class="empty">${esc(err.message)}</p><button class="btn" onclick="location.reload()">Try again</button></main></div>`;
+    }
+  }
+
+  // Send one change, then show what the server now has.
+  async function change(path, body, done) {
+    try { await api("POST", path, body); await load(); toast(done); }
+    catch (err) { if (err.status === 401) location.href = "/app"; else toast(err.message); }
+  }
+
+  if (live) { app.innerHTML = `<div class="shell"><main class="main"><p class="empty">Loading…</p></main></div>`; load(); }
+  else { state = sample(); render(); }
+} };

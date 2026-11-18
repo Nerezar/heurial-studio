@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Autopilot | HEURIAL</title>
+<link rel="icon" href="/brand/mark-icon.png">
+<link rel="apple-touch-icon" href="/brand/mark-touch.png">
+<meta name="theme-color" content="#0b1030">
+<script>
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/tools/base.css"); __load("css", "/autopilot/app.css");</script>
+</head>
+<body>
+<noscript>Autopilot needs JavaScript to run.</noscript>
+<div id="app"></div>
+<!-- The signed-in app: the same screens as the demo at /autopilot, with this business's own data from /api/app. -->
+<script>__load("js", "/autopilot/core.js");</script>
+<script>__load("js", "/autopilot/app.js");</script>
+<script>
+  AutopilotApp.start({
+    async api(method, path, body) {
+      const res = await fetch(`/api/app/autopilot/${path}`, {
+        method, credentials: "same-origin", cache: "no-store",
+        headers: body ? { "Content-Type": "application/json" } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw Object.assign(new Error(data.error || "Something went wrong."), { status: res.status });
+      return data;
+    },
+  });
+</script>
+</body>
+</html>

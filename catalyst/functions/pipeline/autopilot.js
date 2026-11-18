@@ -15,6 +15,8 @@ const TRIGGERS = new Set(rules.CATALOG.map((a) => a.trigger));
 const AI = new Set(rules.CATALOG.filter((a) => a.ai).map((a) => a.id));
 const USES_CREDIT = ["approval", "queued", "sending", "sent", "failed"];
 const TEXTS_PER_HOUR = 60; // per business, so one runaway automation can't burn a bill
+const LINKS = ["booking_link", "review_link", "pay_link"];
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const yes = (v) => v === true || v === "true";
 
 /** Unpaid or no plan: automations pause. Nothing is deleted. */
@@ -34,7 +36,7 @@ async function contextFor(store, tenant, now) {
     // Written messages used this month, counted from the Outbox itself.
     used: outbox.filter((r) => AI.has(r.automation) && USES_CREDIT.includes(r.status) && String(r.created_at).startsWith(month)).length,
     hours: { open: tenant.hours_open || "08:00", close: tenant.hours_close || "20:00", timeZone: tenant.time_zone || undefined },
-    vars: { business: tenant.name, booking_link: tenant.booking_link, review_link: tenant.review_link },
+    vars: { business: tenant.name, booking_link: tenant.booking_link, review_link: tenant.review_link, pay_link: tenant.pay_link },
   };
 }
 
@@ -56,8 +58,9 @@ function sender(deps, store, tenant) {
   };
 }
 
-const publicRow = (r) => ({
-  id: String(r.ROWID), automation: r.automation, contact_id: r.contact_id || "", channel: r.channel, body: r.body || "",
+const contactName = (c) => (c && (c.first_name || c.phone || c.email)) || "";
+const publicRow = (r, contacts) => ({
+  id: String(r.ROWID), contact: contacts ? contactName(contacts.get(String(r.contact_id))) : "", automation: r.automation, contact_id: r.contact_id || "", channel: r.channel, body: r.body || "",
   status: r.status, reason: r.reason || "", error: r.error || "", created_at: r.created_at, send_at: r.send_at || "", sent_at: r.sent_at || "",
 });
 
@@ -97,7 +100,7 @@ async function route(path, method, io, deps, now) {
     const out = await engineFor(store, tenant).ingest(store, await contextFor(store, tenant, now), {
       trigger: b.trigger, contact, payload: b.payload || {}, dedupeKey: b.dedupe_key,
     });
-    return { status: out.duplicate ? 200 : 201, body: { duplicate: out.duplicate, outbox: out.rows.map(publicRow) } };
+    return { status: out.duplicate ? 200 : 201, body: { duplicate: out.duplicate, outbox: out.rows.map((r) => publicRow(r)) } };
   }
 
   if (!path.startsWith("app/autopilot/")) return null;
@@ -111,7 +114,8 @@ async function route(path, method, io, deps, now) {
   // Approvals and Activity both read this: newest first.
   if (sub === "outbox" && method === "GET") {
     const rows = (await store.list(T.outbox)).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 200);
-    return { status: 200, body: { outbox: rows.map(publicRow) } };
+    const contacts = new Map((await store.list(T.contacts)).map((c) => [String(c.ROWID), c]));
+    return { status: 200, body: { outbox: rows.map((r) => publicRow(r, contacts)) } };
   }
 
   if ((m = sub.match(/^outbox\/(\d{1,20})\/decide$/)) && method === "POST") {
@@ -128,12 +132,31 @@ async function route(path, method, io, deps, now) {
       status: 200,
       body: {
         plan: plan ? plan.id : "none", paused: !active(tenant), used: ctx.used, credits: plan ? plan.credits : 0,
+        business: { name: tenant.name, ...Object.fromEntries(LINKS.map((k) => [k, tenant[k] || ""])), open: ctx.hours.open, close: ctx.hours.close },
         automations: rules.CATALOG.map((a) => ({
           id: a.id, on: Boolean(ctx.enabled[a.id]), unlocked: Boolean(plan) && rules.unlocked(a, plan.id),
           approve: (ctx.settings[a.id] || {}).approve ?? a.ai, message: (ctx.settings[a.id] || {}).message || "",
         })),
       },
     };
+  }
+
+  // The links messages use, and the hours texts may go out.
+  if (sub === "business" && method === "POST") {
+    const b = await io.readJson();
+    const changes = {};
+    for (const k of LINKS) {
+      if (b[k] == null) continue;
+      if (typeof b[k] !== "string" || b[k].length > 300 || (b[k] && !/^https?:\/\/\S+$/.test(b[k]))) throw new core.Bad("Links need to start with https://");
+      changes[k] = b[k];
+    }
+    if (b.open != null || b.close != null) {
+      if (!HHMM.test(b.open) || !HHMM.test(b.close) || b.open >= b.close) throw new core.Bad("Your closing time needs to be after your opening time.");
+      changes.hours_open = b.open;
+      changes.hours_close = b.close;
+    }
+    await deps.store.update(T.tenants, { ROWID: String(tenant.ROWID), ...changes });
+    return { status: 200, body: { ok: true } };
   }
 
   // Turn one automation on or off, choose approve-first, or write its message.
