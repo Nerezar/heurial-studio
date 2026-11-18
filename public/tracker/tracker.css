@@ -601,11 +601,11 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
   html, body { height: auto; }
   body { overflow: auto; }
   .app { display: block; height: auto; min-height: 100dvh; padding-bottom: 76px; }
-  .rail { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; flex-direction: row; gap: 0; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg-1) 88%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-right: 0; border-top: 1px solid var(--line); }
+  .rail { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; flex-direction: row; gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--bg-1); view-transition-name: rail; border-right: 0; border-top: 1px solid var(--line); }
   .rail-mark, .rail-btn[data-m="hide"], .rail-status { display: none !important; }
-  .rail-nav, .rail-foot { grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; padding: 0; }
-  .rail-nav { flex: 5; }
-  .rail-foot { flex: 1.25; margin: 0; border-top: 0; }
+  .rail-nav, .rail-foot { grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; padding: 0; }
+  .rail-nav { flex: 1; }
+  .rail-foot { display: none; } /* everything in it is hidden at this size, so it only left a gap */
   .rail-btn { flex-direction: column; justify-content: center; gap: 3px; height: 56px; padding: 0; border: 0; border-radius: 12px; font-size: 12px; }
   .rail-btn > span { display: block !important; }
   .rail-btn[aria-current="page"] { background: var(--accent-soft); box-shadow: none; }
@@ -633,12 +633,17 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 @media (max-width: 560px) { .insp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- Motion ---------- */
-/* Changing section: the old page lifts away, the new one rises in, and the highlight in the menu slides across. */
+/* Changing section: the old page fades out, then the new one rises in. The menu and heading change at once. */
 #view { view-transition-name: view; }
-.rail-btn[aria-current="page"] { view-transition-name: rail-current; }
-::view-transition-old(view) { animation: vt-out .16s var(--ease) both; }
-::view-transition-new(view) { animation: vt-in .3s var(--ease) both; }
-@keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
+/* One at a time: the old page is gone before the new one shows, so the two never show through each other. The bar under
+   a phone screen is its own layer (view-transition-name: rail) so the moving page stays beneath it. */
+::view-transition-old(view) { animation: vt-out .12s var(--ease) both; }
+::view-transition-new(view) { animation: vt-in .26s var(--ease) .12s both; }
+::view-transition-group(rail), ::view-transition-group(view) { animation: none; }
+/* Everything outside the page (heading, background, menu) swaps at once; left to cross-fade, the old ghosts through the new. */
+::view-transition-old(root), ::view-transition-old(rail) { display: none; }
+::view-transition-new(root), ::view-transition-new(rail) { animation: none; }
+@keyframes vt-out { to { opacity: 0; } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(16px); } }
 @supports (view-transition-name: none) { .vw { animation: none; } }
 
