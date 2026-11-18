@@ -17,9 +17,9 @@ const trackerGuide: Guide[] = [
 ];
 
 const autopilotGuide: Guide[] = [
-  { label: "Automations", title: "30 jobs, one switch each", description: "Missed-call text-back, quote follow-ups, reminders, review requests, invoice reminders, reports. Turn on what you need." },
-  { label: "Approvals", title: "Nothing AI writes goes out without you", description: "AI drafts wait in one queue. Edit, approve or discard. Texts outside your business hours wait until you open." },
-  { label: "Plans", title: "Start small, unlock more", description: "Starter covers 8 automations, Pro 19, Business all 30. Each plan includes a monthly allowance of AI drafts." },
+  { label: "My automations", title: "30 jobs, one switch each", description: "Text back missed calls, follow up on quotes, remind customers, ask for reviews, chase unpaid bills. Turn on what you need." },
+  { label: "Check messages", title: "Nothing goes out without your OK", description: "Messages written for you wait until you've read them. Texts are only sent during your business hours." },
+  { label: "Set up for you", title: "No tech skills needed", description: "Book a free call and I'll set it up with you: your number, your messages and your hours." },
 ];
 
 
@@ -69,7 +69,7 @@ export default function Products() {
           <header className="section-head">
             <Chip>Autopilot</Chip>
             <h2 id="autopilot-title">Thirty jobs your business does on its own.</h2>
-            <p>One app for the follow-ups, reminders and requests that slip when you&apos;re busy. Pick an event under Try it and watch what happens.</p>
+            <p>One app for the follow-ups, reminders and requests that slip when you&apos;re busy. Tap something under “See it work” and watch what happens.</p>
           </header>
           <DemoFrame file="autopilot/index.html" title="Autopilot demo with a sample business" address="heurial.studio/autopilot" sample />
           <p className="demo-caption">A made-up plumbing business. Nothing is sent. Refresh to start over.</p>

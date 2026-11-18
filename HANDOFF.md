@@ -4,6 +4,12 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Autopilot demo made for older owners (2026-11-18, branch `autopilot`).** Plain words everywhere (all 30
+  automations and the 8 categories renamed, e.g. "Text back when I miss a call"), four sections instead of six
+  (Home, Check messages, My automations, Settings), 17px text and 44px+ buttons, On/Off written next to each switch,
+  a "waiting for your OK" banner on Home, and "Book a free call" (the site's booking link) in the sidebar for
+  done-with-you setup. No help phone number is shown because the business doesn't have one listed. Checked in the
+  preview at desktop and 375px.
 - **Clip Desk removed from `autopilot` (2026-11-18).** The owner wants to sell to older small-business owners, not
   clippers. The Tools page now has the tracker and Autopilot only; `public/clipdesk/` and its test are gone, and
   `/clipdesk` no longer redirects. Clip Desk is still intact on branch `clip-desk` if it's ever wanted. Don't merge
