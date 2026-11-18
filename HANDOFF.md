@@ -4,6 +4,17 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Four fixes from the owner's review, branch `next-move-fixes` (2026-11-17 night), pushed, not merged, not
+  deployed.** Tracker page only (`tracker.js`, `tracker.css`); no back-end change, so the site alone needs a deploy.
+  1) The follow-up button on Your next move opened the Messages tab on a blank note. It now opens it on an email
+  (a text when the lead only has a phone number); with AI connected it reads "Draft follow-up" and drafts one to
+  approve, with a draft already waiting it reads "Review draft", otherwise "Write follow-up". 2) Tasks said 6 while
+  its review button said 7: the number is now only what needs attention, and a sentence says the review also covers
+  transactions to categorise. 3) The card's rules text and evidence moved behind "Why this?". 4) The balance no
+  longer counts up from another number; it shows its value at once and only the chart draws in. Checked on the
+  sample-data page: the balance only ever read $7,445 from first paint, Why this? opens and closes, the button
+  lands on Email with a sample draft, the Tasks bar and sidebar both say 6. Not checked: the signed-in tracker,
+  a real AI draft.
 - **LIVE 2026-11-17 night: main `6ad05e7`, the workspace pass, site and Catalyst together.** Site deployed with
   `catalyst deploy slate heurial --production -m "Workspace pass main 6ad05e7" -ni` from a detached, clean checkout
   of `origin/main` after tsc, eslint, 10 money tests, 39 pipeline tests and `next build`. This closes the gap noted

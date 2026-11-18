@@ -495,26 +495,6 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   /** What a client has actually paid, from the payment records (and the lead itself where none exists yet). */
   const receivedFrom = (lead) => moneyEntries().filter((e) => e.kind === "income" && e.lead_id === lead.id && e.date <= state.data.today);
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
-  /** Roll the headline figures to their values on first view and whenever they change. */
-  const shownStats = {};
-  function rollStats() {
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.querySelectorAll(".stat, .money-head").forEach((card) => {
-      const el = card.querySelector(".stat-v"), key = card.querySelector(".stat-l").textContent, text = el.textContent;
-      const to = Number(text.replace(/[^0-9.]/g, "")), from = shownStats[key] ?? 0;
-      if (!/\d/.test(text) || /[−-]/.test(text)) return; // a balance below zero is shown as it is, not rolled
-      shownStats[key] = to;
-      if (still || from === to) return;
-      const prefix = text.startsWith("$") ? "$" : "", t0 = performance.now();
-      const step = (now) => {
-        if (!el.isConnected) return;
-        const p = Math.min(1, (now - t0) / 700);
-        el.textContent = p === 1 ? text : prefix + Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))).toLocaleString("en-US");
-        if (p < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    });
-  }
   function renderStatus() {
     const demo = cfg.mode === "demo";
     const dot = demo ? "warn" : state.data && state.online ? "" : state.data ? "off" : "warn";
@@ -557,7 +537,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (el.tagName === "INPUT" && el.type === "search") el.setSelectionRange(el.value.length, el.value.length);
       }
     }
-    if (d && (state.view === "overview" || state.view === "money")) { drawChart(); rollStats(); }
+    if (d && (state.view === "overview" || state.view === "money")) drawChart(); // the figures are shown as they are; only the line draws itself in
     if (was.size && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       for (const el of view.querySelectorAll(".board .card[data-id]")) {
         const a = was.get(el.dataset.id), b = el.getBoundingClientRect();
@@ -596,7 +576,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const b = (cls, attrs, label, fk) => `<button class="btn ${cls}" type="button" ${attrs} data-fk="nx-${fk}">${label}</button>`;
     const open = n.lead_id ? b("", `data-action="open" data-id="${n.lead_id}"`, "Open client", "open") : "";
     switch (n.kind) {
-      case "followup": return b("primary", `data-action="open" data-id="${n.lead_id}" data-tab="messages"`, n.has_draft ? "Review draft" : "Write follow-up", "a")
+      // Opens the client's Messages tab on an email (a text if there is only a phone number). A draft that is
+      // already waiting is shown for review; otherwise, with AI connected, one is drafted for you to approve.
+      case "followup": return b("primary", `data-action="next-write" data-id="${n.lead_id}"${!n.has_draft && has("ai") ? ` data-draft="1"` : ""}`, n.has_draft ? "Review draft" : has("ai") ? "Draft follow-up" : "Write follow-up", "a")
         + b("", `data-action="fu" data-days="1" data-id="${n.lead_id}"`, "Tomorrow", "b") + b("", `data-action="fu" data-days="done" data-id="${n.lead_id}"`, "Mark done", "c") + open;
       case "task": return b("primary", `data-action="task-toggle" data-done="1" data-id="${n.task_id}"`, "Mark done", "a") + b("", `data-action="task-due" data-days="1" data-id="${n.task_id}"`, "Tomorrow", "b")
         + b("", `data-action="view" data-view="tasks"`, "Open Tasks", "c");
@@ -617,10 +599,12 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     return `<section class="pane next" aria-labelledby="nextTitle"><p class="eyebrow">Your next move</p>
     <h2 id="nextTitle">${esc(n.title)}</h2>
     <p class="next-why">${esc(n.reason)}</p>
-    <ul class="next-ev" aria-label="What this is based on">${n.evidence.map((e) => `<li><span>${esc(prettyDates(e.label))}</span>${esc(e.text)}</li>`).join("")}</ul>
     <div class="next-acts">${nextButtons(n)}</div>
-    <p class="next-rule">${list.length > 1 ? `${i + 1} of ${list.length}. ` : ""}Picked by fixed rules: overdue promises first, then new inquiries, calls to record, what is due today, and proposals with no next step.
+    <p class="next-rule">${list.length > 1 ? `<span>${i + 1} of ${list.length}</span>` : ""}
+      <button class="more" type="button" data-action="next-why" data-fk="nx-why" aria-expanded="${Boolean(state.nextWhy)}" aria-controls="nextWhy">Why this?</button>
       ${list.length > 1 ? `<button class="more" type="button" data-action="next-skip" data-fk="nx-skip">Show the next one</button>` : ""}</p>
+    ${state.nextWhy ? `<div class="next-whybox" id="nextWhy"><ul class="next-ev" aria-label="What this is based on">${n.evidence.map((e) => `<li><span>${esc(prettyDates(e.label))}</span>${esc(e.text)}</li>`).join("")}</ul>
+      <p>Picked by fixed rules, not AI: overdue promises first, then new inquiries, calls to record, what is due today, and proposals with no next step.</p></div>` : ""}
   </section>`;
   }
   function viewOverview() {
@@ -747,11 +731,13 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const later = d.followups.filter((f) => f.follow_up_at > addDays(d.today, 7));
     const mine = state.tasks || [], tab = state.taskTab, shown = mine.filter((t) => (tab === "done") === Boolean(t.done_at));
     const tabs = [["open", "Open", mine.filter((t) => !t.done_at).length], ["done", "Completed", mine.filter((t) => t.done_at).length]];
-    const parts = [urgentParts(d), sort && plural(sort, "transaction to categorise", "transactions to categorise")].filter(Boolean).join(" · ");
+    // The number is what needs attention today, the same one as on the sidebar and Overview. Transactions waiting
+    // for a category are not due, so they are named apart instead of being folded into a second, larger number.
+    const parts = [urgentParts(d) || "Nothing is overdue or due today.", sort && `The review also covers ${plural(sort, "transaction", "transactions")} to categorise.`].filter(Boolean).join(" ");
     return `<div class="vw tk">
   <section class="pane review-bar" aria-labelledby="needTitle">
-    <div><h2 id="needTitle">Needs attention${urgent ? ` <span class="count hot">${urgent}</span>` : ""}</h2><p>${parts || "Nothing is overdue or due today."}</p></div>
-    <button class="btn primary" type="button" data-action="review-start" data-fk="review" ${queue.length ? "" : "disabled"}>${queue.length ? `Start daily review · ${queue.length}` : "Nothing to review"}</button>
+    <div><h2 id="needTitle">Needs attention${urgent ? ` <span class="count hot">${urgent}</span>` : ""}</h2><p>${parts}</p></div>
+    <button class="btn primary" type="button" data-action="review-start" data-fk="review" ${queue.length ? "" : "disabled"}>${queue.length ? "Start daily review" : "Nothing to review"}</button>
   </section>
   <div class="tk-main">
   <section class="pane" aria-labelledby="mineTitle">
@@ -1498,7 +1484,18 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (field) { field.scrollIntoView({ block: "center" }); field.focus(); }
         return;
       }
-      case "next-skip": state.nextAt = (state.nextAt + 1) % Math.max(1, state.next.length); return renderView();
+      case "next-skip": state.nextAt = (state.nextAt + 1) % Math.max(1, state.next.length); state.nextWhy = false; return renderView();
+      case "next-why": state.nextWhy = !state.nextWhy; return renderView();
+      case "next-write": {
+        await openById(id, "messages");
+        const lead = state.lead, c = $("composeForm");
+        if (!lead || lead.id !== id || state.isNew) return;
+        c.channel.value = lead.email || !lead.phone ? "email" : "sms";
+        c.direction.value = "out";
+        paintComposer();
+        if (el.dataset.draft && !$("draftBtn").hidden) return $("draftBtn").click();
+        return c.body.focus();
+      }
       case "pick-clear": pickDay(null); return $("chart") && $("chart").focus();
       case "tx-show": return showTx(el.dataset.key);
       case "review-start": return startReview();

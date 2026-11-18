@@ -738,8 +738,10 @@ dialog::backdrop { background: rgb(3 4 10 / .6); backdrop-filter: blur(4px); }
 .next-ev span { margin-right: 8px; color: var(--text-3); font-weight: 600; }
 .next-acts, .rv-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .next-acts .btn.primary, .rv-acts .btn.primary { padding-inline: 18px; }
-.next-rule { margin-top: 8px; color: var(--text-3); font-size: 14px; }
-.next-rule .more { min-height: 0; margin: 0 0 0 6px; font-size: 14px; }
+.next-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin-top: 10px; color: var(--text-3); font-size: 14px; }
+.next-rule .more { min-height: 32px; margin: 0; font-size: 14px; }
+.next-whybox { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 14px; }
+.next-whybox .next-ev { margin-top: 0; }
 .ov .chart { height: 190px; }
 .ov .ov-money .pick { grid-column: 1 / -1; }
 .mn .ov-tabs { grid-area: auto; } /* the reports live on Money now, in its single column */
