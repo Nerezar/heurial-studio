@@ -9,9 +9,13 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   audit; column 141722000000019062), and `LoginAttempts` created (table 141722000000019064, GLOBAL, `scope` varchar
   64, `failed_at` varchar 30). The new table let App User read by default; that was removed, so it matches the
   others. Checked: a `transfer_out` row with a `lead_id` and a `LoginAttempts` row each saved and read back, then
-  both test rows were deleted. **Not done: `pipeline` is not deployed to Development, Production and the live site
-  are unchanged.** Next: deploy `pipeline` to Development, then the console deployment (CloudScale + Serverless),
-  then the site.
+  both test rows were deleted. `pipeline` was then deployed to Development from `6ad05e7`
+  (`catalyst deploy --only functions:pipeline`, 39 tests passing first). Checked: `/data`, `/assist`,
+  `/auth/throttle` and `/payments/backfill` each answer 401 without a key, so the function loads with its new
+  code. **Not checked: any keyed request** (Development has no `PIPELINE_KEY`), so the new routes have not run
+  against real tables. **Production and the live site are unchanged.** Next: the console deployment (CloudScale +
+  Serverless; expect `pipeline` Updated, `Transactions.lead_id` Added, `LoginAttempts` Added and nothing else),
+  check App User has no access on Production `LoginAttempts`, then the site.
 - **Workspace pass, branch `tracker-next-move` (2026-11-17), merged to main on the owner's go-ahead, nothing
   deployed.** Live is still `a615425`, so main is now ahead of what is live. Reliability first: a draft can only be approved once and an inquiry only becomes one lead (requests for
   the same record run one at a time; a half-finished conversion is finished, not repeated); a slow answer for an old
