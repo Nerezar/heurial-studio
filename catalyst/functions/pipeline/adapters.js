@@ -83,4 +83,20 @@ function emailInbound(p) {
   return { channel: "email", from, subject, body };
 }
 
-module.exports = { twilioSignature, twilioValid, twilioInbound, twilioSender, e164, emailInbound, stripQuoted };
+/** Stripe's REST API with a secret key: POST form fields, JSON back. No SDK needed for the few calls made. */
+function stripeApi(secretKey, fetchImpl = fetch) {
+  if (!secretKey) return undefined;
+  return async (path, params) => {
+    const res = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(params).toString(),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { console.error("pipeline: Stripe error", res.status, body.error && body.error.message); throw new Error(`Stripe answered ${res.status}`); }
+    return body;
+  };
+}
+
+module.exports = { stripeApi, twilioSignature, twilioValid, twilioInbound, twilioSender, e164, emailInbound, stripQuoted };

@@ -11,6 +11,7 @@ const { memoryStore } = require("./store");
 const core = require("./core");
 const { makeDrafter, makeAssistant } = require("./draft");
 const { makePusher } = require("./push");
+const { stripeApi } = require("./adapters");
 
 // With ANTHROPIC_API_KEY set, drafts come from Claude. Without it, a fixed sample draft, so the flow can be tried.
 const draft = makeDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async (ask) => {
@@ -42,6 +43,9 @@ const store = memoryStore({
   Tasks: [],
   Messages: [],
   LoginAttempts: [],
+  Tenants: [],
+  Users: [],
+  LoginTokens: [],
   Leads: [
     lead("Dana Whitfield", "Whitfield Plumbing", "Personal network", "paid", 44, 495),
     lead("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 36, 495),
@@ -76,7 +80,14 @@ store.list("Leads").then(async (rows) => {
 const sent = [];
 http.createServer((req, res) => handle(req, res, {
   expectedKey: key, store, timeZone: "America/Chicago", digestTo: "owner@example.com", trackerUrl: "http://127.0.0.1:3007/admin",
-  sendMail: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject}`); },
+  // Autopilot sign-in links are printed in full, so you can sign in locally by opening them.
+  sendMail: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject}${/#token=/.test(m.text || "") ? `\n${m.text.match(/https?:\S+/)[0]}` : ""}`); },
+  appUrl: process.env.APP_URL || "http://127.0.0.1:3007/app",
+  // With a Stripe test key (sk_test_…) and test price ids, plans go through real Stripe test mode. Live keys are refused.
+  stripe: (process.env.STRIPE_SECRET_KEY || "").startsWith("sk_test_") ? {
+    api: stripeApi(process.env.STRIPE_SECRET_KEY), testMode: true, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+    prices: { starter: process.env.STRIPE_PRICE_STARTER || "", pro: process.env.STRIPE_PRICE_PRO || "", business: process.env.STRIPE_PRICE_BUSINESS || "" },
+  } : undefined,
   // Email "sends" by printing, so the send path can be tried locally. Texts stay unconnected to show that state.
   sendMessage: { email: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject || "(no subject)"}`); } },
   inboundKey: process.env.INBOUND_KEY || "",

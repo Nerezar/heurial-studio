@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Autopilot account | HEURIAL</title>
+<link rel="icon" href="/brand/mark-icon.png">
+<link rel="apple-touch-icon" href="/brand/mark-touch.png">
+<meta name="theme-color" content="#0b1030">
+<script>
+  window.__TV = window.__TV || new URLSearchParams(location.search).get("v") || String(Date.now());
+  window.__load = (tag, url) => document.write(tag === "css"
+    ? `<link rel="stylesheet" href="${url}?v=${encodeURIComponent(window.__TV)}">`
+    : `<script src="${url}?v=${encodeURIComponent(window.__TV)}"><\/script>`);
+</script>
+<script>__load("css", "/tools/base.css");</script>
+<style>
+  body { background: var(--page); }
+  .account { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  .account header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .account header img { height: 22px; }
+  .account form { display: grid; gap: 10px; margin-top: 12px; }
+  .account label { display: grid; gap: 4px; color: var(--text-2); font-size: 13px; }
+  .account input { min-height: 36px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--field); color: var(--text); font: inherit; }
+  .account form .btn { justify-self: start; }
+  .account .welcome { max-width: none; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  .plans .card { display: grid; gap: 8px; align-content: start; }
+  .plans .card.current { border-color: var(--accent); }
+  .msg { margin-top: 10px; }
+  .msg.err { color: var(--down); }
+  @media (max-width: 640px) { .two, .plans { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<noscript>This page needs JavaScript.</noscript>
+<main class="account" id="app" aria-live="polite"></main>
+<script>__load("js", "/app/app.js");</script>
+</body>
+</html>

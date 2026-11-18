@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 // are loaded with ?v=<fingerprint of their contents>, which changes whenever they do and makes browsers fetch them again.
 const TRACKER_FILES = ["tracker/tracker.css", "tracker/tracker.js", "tracker/money.js", "demo/tracker/core.js", "demo/tracker/index.html", "admin/index.html",
   "tools/base.css",
-  "autopilot/index.html", "autopilot/core.js", "autopilot/app.js", "autopilot/app.css"];
+  "autopilot/index.html", "autopilot/core.js", "autopilot/app.js", "autopilot/app.css", "app/index.html", "app/app.js"];
 const trackerVersion = createHash("sha256")
   .update(TRACKER_FILES.map((f) => readFileSync(`public/${f}`)).join("\0"))
   .digest("hex").slice(0, 10);
@@ -22,6 +22,7 @@ const config: NextConfig = {
       // The demo is a file, so its folder address needs pointing at it.
       { source: "/demo/tracker", destination: "/demo/tracker/index.html", permanent: false },
       { source: "/autopilot", destination: "/autopilot/index.html", permanent: false },
+      { source: "/app", destination: "/app/index.html", permanent: false },
     ];
   },
   async headers() {
@@ -54,6 +55,9 @@ const config: NextConfig = {
     { source: "/admin", headers: privateArea },
     { source: "/admin/:path*", headers: privateArea },
     { source: "/api/admin/:path*", headers: privateArea },
+    // Customer accounts: the same.
+    { source: "/app/:path*", headers: privateArea },
+    { source: "/api/app/:path*", headers: privateArea },
     // The tracker's notification helper: always fetched fresh, so an update reaches installed apps.
     { source: "/admin-sw.js", headers: privateArea }];
   },

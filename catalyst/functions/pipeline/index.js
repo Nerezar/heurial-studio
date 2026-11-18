@@ -24,13 +24,18 @@
 //                        node scripts/make-vapid-keys.mjs). VAPID_SUBJECT: optional mailto: contact for push services.
 //   ANTHROPIC_API_KEY    turns on "Draft with AI", summaries and task suggestions. Drafts are saved for you to
 //                        approve; nothing is sent or added on its own.
+// Autopilot accounts (accounts.js). Sign-in links go out through DIGEST_FROM's Catalyst Mail sender.
+//   APP_URL              the customer app's address, e.g. https://www.heurial.studio/app
+//   STRIPE_SECRET_KEY    sk_test_… while testing; turns on plans
+//   STRIPE_WEBHOOK_SECRET  whsec_… of the webhook pointing at …/server/pipeline/stripe/webhook
+//   STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, STRIPE_PRICE_BUSINESS   the monthly price ids (price_…)
 
 const { zcAuth } = require("@zcatalyst/auth");
 const { Datastore } = require("@zcatalyst/datastore");
 const { Mail } = require("@zcatalyst/mail");
 const { handle } = require("./handler");
 const { catalystStore } = require("./store");
-const { twilioSender } = require("./adapters");
+const { twilioSender, stripeApi } = require("./adapters");
 const { makeDrafter, makeAssistant } = require("./draft");
 const { makePusher } = require("./push");
 
@@ -68,6 +73,13 @@ module.exports = async (req, res) => {
     draft: drafter,
     assist: assistant,
     push: pusher,
+    appUrl: env("APP_URL"),
+    stripe: env("STRIPE_SECRET_KEY") ? {
+      api: stripeApi(env("STRIPE_SECRET_KEY")),
+      testMode: env("STRIPE_SECRET_KEY").startsWith("sk_test_"),
+      webhookSecret: env("STRIPE_WEBHOOK_SECRET"),
+      prices: { starter: env("STRIPE_PRICE_STARTER"), pro: env("STRIPE_PRICE_PRO"), business: env("STRIPE_PRICE_BUSINESS") },
+    } : undefined,
     sendMessage: {
       email: process.env.MESSAGES_FROM
         ? async ({ to, subject, body }) => {

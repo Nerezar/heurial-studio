@@ -4,6 +4,7 @@
 const crypto = require("node:crypto");
 const core = require("./core");
 const adapters = require("./adapters");
+const accounts = require("./accounts");
 const { cleanSubscription, short } = require("./push");
 
 const MAX_BODY = 32 * 1024;
@@ -80,6 +81,8 @@ async function readFields(req, limit) {
  *   draft?: ({ lead, thread, channel, instructions }) => Promise<{ subject, body }>,   // AI reply drafts
  *   assist?: ({ kind, sources }) => Promise<{ text, tasks }>,   // AI summaries and task suggestions
  *   push?: { publicKey: string, send(subscription, payload): Promise<"sent" | "gone"> },   // notifications
+ *   appUrl?: string,   // the customer app's address, for sign-in links and Stripe's return pages
+ *   stripe?: { api(path, params): Promise<object>, webhookSecret: string, prices: { starter, pro, business }, testMode: boolean },
  * }
  */
 async function handle(req, res, deps) {
@@ -147,6 +150,14 @@ async function handle(req, res, deps) {
       await saveInbound(adapters.twilioInbound(params));
       res.writeHead(200, { "Content-Type": "text/xml" });
       return res.end("<Response></Response>"); // no automatic reply
+    }
+
+    // Autopilot accounts and billing (accounts.js). Stripe's webhook checks Stripe's signature; app/* needs the site key.
+    if (path === "stripe/webhook" || path.startsWith("app/")) {
+      if (path !== "stripe/webhook" && !keyMatches(req.headers["x-heurial-key"], deps.expectedKey)) return send(401, { error: "Unauthorized" });
+      const io = { readJson: () => readJson(req), readBody: () => readBody(req, 256 * 1024), headers: req.headers };
+      const out = await accounts.route(path, method, io, deps, now);
+      if (out) return send(out.status, out.body);
     }
 
     if (!keyMatches(req.headers["x-heurial-key"], deps.expectedKey)) return send(401, { error: "Unauthorized" });
