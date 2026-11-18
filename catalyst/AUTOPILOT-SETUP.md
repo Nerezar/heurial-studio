@@ -17,6 +17,21 @@ Give each table the same permissions as `Leads`. Only hashes of sign-in links ar
 
 ## 2. Stripe (test mode)
 
+**Done 2026-11-18** in the Stripe sandbox "Autopilot test" (`acct_1UdHF9Ay2bctLMlY`), not in live mode. Placeholder
+prices until real ones are decided:
+
+| Plan | Product | Price (monthly, placeholder) |
+| --- | --- | --- |
+| Starter | `prod_VeaSbrHZgDjnM5` | `price_1UdHHLAy2bctLMlYEn9ocOBb` ($49) |
+| Pro | `prod_VeaSSzgNgnkCCb` | `price_1UdHHMAy2bctLMlYjo1MdlW8` ($99) |
+| Business | `prod_VeaSnqZbf0sRoe` | `price_1UdHHNAy2bctLMlYyJc4enPU` ($199) |
+
+Webhook `we_1UdHH5Ay2bctLMlYKbWNdchq` points at the Development function with the four events below. Customer
+portal `bpc_1UdHHYAy2bctLMlYbob9GtyB` allows switching between the three plans, card updates, invoices and cancel at
+period end. An earlier single "Autopilot" product with three prices is archived (the portal needs one product per plan).
+
+The steps, for a new sandbox or for live later:
+
 1. In Stripe, switch to test mode (or a sandbox). Make one product, "Autopilot", with three monthly prices:
    Starter, Pro, Business. Placeholder amounts are fine until prices are decided.
 2. Add a webhook endpoint: `https://<function URL>/server/pipeline/stripe/webhook`, events
