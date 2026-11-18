@@ -4,6 +4,21 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Autopilot Engine, branch `engine`, merged into `foundation` (2026-11-18). On Catalyst Development; not on
+  main, not in Production.** Code: `engine.js` (events with a dedupe key, the Outbox, the tick with retries),
+  `autopilot.js` (routes `app/autopilot/*` for a signed-in business, `autopilot/events` and `autopilot/tick` behind
+  the site key), `autopilot-core.js` (copy of `public/autopilot/core.js`; a test fails if they differ). The app
+  `public/autopilot/app.js` runs two ways: `/autopilot` is the sample business, `/app/autopilot` is the signed-in
+  business's own data. Tests: 65 pipeline, 17 tracker. Checked in the local preview with a test business: switch
+  on, missed call, approve, text sent once. **Development:** tables `Contacts` (141722000000036004),
+  `AutomationSettings` (141722000000043001), `Events` (141722000000037015), `Outbox` (141722000000037374), all
+  GLOBAL with no App User access; `Tenants` gained `hours_open`, `hours_close`, `booking_link`, `review_link`,
+  `pay_link`. `pipeline` and `daily-digest` deployed from `6a8538f`; the three new routes answer 401 without a
+  key. Cron `autopilot_tick` (141722000000044003, every 5 minutes, `daily-digest` with job param
+  `path=autopilot/tick`) exists and is **off**: one run by hand failed, most likely because Development has no
+  `PIPELINE_KEY` on both functions. **Not done:** a keyed request on Catalyst, real Twilio, AI-written messages
+  (they wait in Check messages blank), time-based triggers, per-business numbers (Connections step). `daily-digest`
+  had to be added to the local, untracked `catalyst/catalyst.json` targets to deploy it.
 - **Autopilot Foundation, branch `foundation` (2026-11-18), pushed, not merged, not deployed.** Stacked on
   `autopilot`. Customer accounts inside the existing `pipeline` function (`accounts.js`, routes `app/*`): sign up
   with a business name and email, sign in by a one-time emailed link (15 minutes, only its hash stored), a store
