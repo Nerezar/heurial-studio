@@ -4,7 +4,15 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
-- **Audit pass, branch `audit-fixes` (2026-11-17), pushed, not merged, not deployed.** Fixed: entries dated after
+- **Live 2026-11-17: main `a615425` (transactions, tasks, audit fixes, solid tab switch).** Production Catalyst:
+  console deployment "Transactions and tasks (a615425)" with only Serverless and Cloud Scale ticked: `pipeline`
+  updated, tables `Transactions` and `Tasks` added (App User has no access on either, checked). Then the site went
+  to Slate from the same commit. Checked live: the three pages, the demo, the new tracker stylesheet, and the admin
+  API refusing unsigned requests (401). **Not checked: the signed-in tracker in Production**, so the first real
+  save of a transaction or task is the first end-to-end test. The earlier draft "(2578fc8)" was aborted, never run.
+  Tab switch (`tracker-tab-switch`): heading and menu swap at once, the page fades out then in; the bar under a
+  phone screen is solid, its own layer, tabs spread evenly; the sliding menu highlight was removed.
+- **Audit pass, branch `audit-fixes` (2026-11-17), now merged and live, see above.** Fixed: entries dated after
   today were counted in the balance (now left out until their day, and listed on Money as "scheduled"); amounts
   with cents were rounded to whole dollars; the Money and Tasks screens were squeezed instead of scrolling;
   tapping the chart showed nothing (only dragging did); number keys 7 and 8 were shown in the command bar but did
@@ -17,9 +25,7 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
   dialogs and Escape; the command bar; 1440, 768 and 375 wide. Website: every link, the contact form's validation
   and success state, the sign-in API's refusals. **Blocked: testing the tracker signed in** (a local sign-in needs
   throwaway test values and preview settings that the permission system refused to create), so persistence after
-  refresh and sign-back-in is untested. **Open in the Catalyst console: a deployment draft** "Transactions and
-  tasks (2578fc8)" whose diff was generated with all four default services ticked. It was never initiated. Abort
-  it, or regenerate it with only Serverless and Cloud Scale, before any Production deploy.
+  refresh and sign-back-in is untested. (The deployment draft noted here earlier was aborted.)
 - **Development is ready for transactions and tasks (2026-11-17, main `2578fc8`).** In Catalyst Development: the
   `Transactions` (table 141722000000014664) and `Tasks` (141722000000020458) tables exist with the columns from
   `catalyst/TRACKER-SETUP.md`, GLOBAL scope, and the App User role given no access (new tables default to letting it
