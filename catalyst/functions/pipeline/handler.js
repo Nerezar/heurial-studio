@@ -8,7 +8,21 @@ const { cleanSubscription, short } = require("./push");
 
 const MAX_BODY = 32 * 1024;
 const MAX_EMAIL = 4 * 1024 * 1024; // provider posts can include HTML and attachments; only the text is kept
-const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages", push: "PushSubscriptions", tx: "Transactions", tasks: "Tasks" };
+const TABLES = { leads: "Leads", time: "TimeEntries", inquiries: "Inquiries", messages: "Messages", push: "PushSubscriptions", tx: "Transactions", tasks: "Tasks", attempts: "LoginAttempts" };
+
+// One request at a time per record. Two approvals of the same draft, or two conversions of the same inquiry,
+// arriving together are run one after the other, so the second sees what the first did and stops.
+// shortcut: this holds inside one running copy of the function; two copies could still overlap for a moment.
+// The Data Store has no compare-and-set, so closing that needs a unique column or a lock table.
+const queues = new Map();
+async function alone(key, fn) {
+  const before = queues.get(key) || Promise.resolve();
+  let release;
+  const mine = before.then(() => new Promise((r) => { release = r; }));
+  queues.set(key, mine);
+  await before;
+  try { return await fn(); } finally { release(); if (queues.get(key) === mine) queues.delete(key); }
+}
 
 function keyMatches(given, expected) {
   if (!expected || typeof given !== "string") return false;
@@ -64,6 +78,7 @@ async function readFields(req, limit) {
  *   inboundKey?: string,   // lets an outside service post incoming messages to /inbound and /inbound/email
  *   twilio?: { authToken: string, webhookUrl: string },   // checks the signature on texts posted to /twilio/sms
  *   draft?: ({ lead, thread, channel, instructions }) => Promise<{ subject, body }>,   // AI reply drafts
+ *   assist?: ({ kind, sources }) => Promise<{ text, tasks }>,   // AI summaries and task suggestions
  *   push?: { publicKey: string, send(subscription, payload): Promise<"sent" | "gone"> },   // notifications
  * }
  */
@@ -155,20 +170,36 @@ async function handle(req, res, deps) {
       inbound: Boolean(deps.inboundKey),
       twilio: Boolean(deps.twilio && deps.twilio.authToken && deps.twilio.webhookUrl),
       ai: Boolean(deps.draft),
+      assist: Boolean(deps.assist),
       push: Boolean(deps.push),
     });
-    // Send an email or text through the connected service. Throws if it can't, so callers save nothing.
-    const deliver = async (row, lead) => {
+    // Whether an email or text can go out at all. Throws before anything is saved or sent.
+    const sendable = (row, lead) => {
       if (row.direction !== "out" || (row.channel !== "email" && row.channel !== "sms")) throw new core.Bad("Only your own emails and texts can be sent.");
       const service = deps.sendMessage && deps.sendMessage[row.channel];
       if (!service) throw new core.Bad(row.channel === "email" ? "Email sending isn't connected yet." : "Text sending isn't connected yet.", 503);
       const to = row.channel === "email" ? lead.email : lead.phone;
       if (!to) throw new core.Bad(row.channel === "email" ? "This lead has no email address." : "This lead has no phone number.");
+      return { service, to };
+    };
+    // Send a message whose row is already saved as "sending", then write down how it went. The record comes
+    // first, so there is always a trace: "failed" can be retried, and a row left on "sending" means the outcome
+    // is unknown and must be checked by a person before anything is sent again.
+    const deliverSaved = async (id, row, lead) => {
+      const { service, to } = sendable(row, lead);
       try {
         await service({ to, subject: row.subject, body: row.body, lead: { id: String(lead.ROWID), name: lead.name || "" } });
       } catch (err) {
         console.error("pipeline: sending failed", err && err.message);
-        throw new core.Bad("The message couldn't be sent. Nothing was saved, so you can try again.", 502);
+        try { await store.update(TABLES.messages, { ROWID: id, status: "failed" }); } catch (e) { console.error("pipeline: failure not recorded", e && e.message); }
+        throw new core.Bad("The message wasn't sent. It's kept as failed, so you can retry it or discard it.", 502);
+      }
+      try {
+        await store.update(TABLES.messages, { ROWID: id, status: "sent", created_at: now.toISOString() });
+        return { status: "sent" };
+      } catch (err) {
+        console.error("pipeline: sent, but the record wasn't updated", err && err.message);
+        return { status: "sent", recorded: false }; // it went out; the row still says "sending"
       }
     };
     const getLead = async (id) => {
@@ -189,11 +220,41 @@ async function handle(req, res, deps) {
       }
     };
 
+    // Write the payment for a paid lead, once. `date` is the paid date just saved (or tried). Returns
+    // { payment_saved: false } when the Transactions table can't take it, so the tracker can say so.
+    const recordPayment = (id, date) => alone(`pay:${id}`, async () => {
+      const [lead, txRows] = await Promise.all([store.get(TABLES.leads, id), listOptional(TABLES.tx)]);
+      if (!lead || lead.status !== "paid" || !(Number(lead.value_cents) > 0)) return {};
+      if (txRows === null) return { payment_saved: false };
+      const day = lead.paid_at || date;
+      if (!core.needsPayment(lead, id, day, txRows)) return {};
+      try {
+        await store.insert(TABLES.tx, core.paymentFromLead(lead, id, day));
+        return { payment_saved: true };
+      } catch (err) {
+        console.error("pipeline: payment not recorded", err && err.message);
+        return { payment_saved: false };
+      }
+    });
+
+    // Sign-in attempts, counted for the website. See core.loginThrottle.
+    if (path === "auth/throttle" && method === "POST") {
+      const b = await readJson(req);
+      if (typeof b.scope !== "string" || !/^[a-f0-9]{16,64}$/.test(b.scope) || !["check", "fail", "ok"].includes(b.event)) throw new core.Bad("Invalid request.");
+      let rows;
+      try { rows = await store.list(TABLES.attempts); } catch { return send(200, { persistent: false }); } // table not created yet
+      if (b.event === "fail") rows.push(await store.insert(TABLES.attempts, { scope: b.scope, failed_at: now.toISOString() }));
+      const state = core.loginThrottle(rows, b.scope, now.getTime());
+      const done = b.event === "ok" ? rows.filter((r) => r.scope === b.scope) : [];
+      for (const r of [...state.stale, ...done].slice(0, 100)) await store.remove(TABLES.attempts, String(r.ROWID)).catch(() => {});
+      return send(200, { persistent: true, blocked: state.blocked, retry_after_s: state.retry_after_s });
+    }
+
     if (method === "GET" && path === "data") {
       const range = url.searchParams.get("range") || "30";
       const [{ messagesReady, ...rows }, txRows, taskRows] = await Promise.all([loadAll(), listOptional(TABLES.tx), listOptional(TABLES.tasks)]);
       return send(200, {
-        ...core.summarize({ ...rows, range, today }),
+        ...core.summarize({ ...rows, taskRows: taskRows || [], range, today }),
         transactions: (txRows || []).map(core.transactionFromRow),
         tasks: core.tasksFromRows(taskRows || []),
         services: { ...services(messagesReady), money: txRows !== null, tasks: taskRows !== null },
@@ -202,12 +263,35 @@ async function handle(req, res, deps) {
 
     // Money entries typed in by hand, and your own tasks.
     if (path === "transactions" && method === "POST") {
-      const saved = await store.insert(TABLES.tx, core.cleanTransaction(await readJson(req), today));
+      const row = core.cleanTransaction(await readJson(req), today);
+      if (row.lead_id) await getLead(row.lead_id);
+      const saved = await store.insert(TABLES.tx, row);
       return send(201, { id: String(saved.ROWID) });
+    }
+    if ((m = path.match(/^transactions\/(\d{1,20})$/)) && method === "PATCH") {
+      const existing = await store.get(TABLES.tx, m[1]);
+      if (!existing) throw new core.Bad("That entry no longer exists.", 404);
+      const { kind } = core.cleanTransactionKind(await readJson(req));
+      if (existing.lead_id && kind !== "income") throw new core.Bad("A client's payment stays income. Delete it if it was entered by mistake.");
+      await store.update(TABLES.tx, { ROWID: m[1], kind });
+      return send(200, { ok: true });
     }
     if ((m = path.match(/^transactions\/(\d{1,20})$/)) && method === "DELETE") {
       await store.remove(TABLES.tx, m[1]);
       return send(200, { ok: true });
+    }
+    // Paid leads from before payments were kept as their own records: write the missing ones. Only leads with a
+    // real paid date get one. A lead with no paid date is left alone and counted, never given a made-up day.
+    if (path === "payments/backfill" && method === "POST") {
+      const leads = await store.list(TABLES.leads);
+      let created = 0, undated = 0, failed = 0;
+      for (const lead of leads) {
+        if (lead.status !== "paid" || !(Number(lead.value_cents) > 0)) continue;
+        if (!core.isDate(lead.paid_at || "")) { undated++; continue; }
+        const r = await recordPayment(String(lead.ROWID), lead.paid_at);
+        if (r.payment_saved === true) created++; else if (r.payment_saved === false) failed++;
+      }
+      return send(200, { created, undated, failed });
     }
     if (path === "tasks" && method === "POST") {
       const saved = await store.insert(TABLES.tasks, core.cleanTask(await readJson(req), today));
@@ -224,7 +308,8 @@ async function handle(req, res, deps) {
       const { paid_at, ...lead } = core.withPaidDate(core.cleanLead(await readJson(req), false, today), null, today);
       if (!lead.phone) delete lead.phone; // a Leads table made before the phone column existed still accepts this row
       const row = await store.insert(TABLES.leads, { ...lead, inquiry_id: "" });
-      return send(201, { id: String(row.ROWID), ...(await savePaidDate(String(row.ROWID), paid_at)) });
+      const dated = await savePaidDate(String(row.ROWID), paid_at);
+      return send(201, { id: String(row.ROWID), ...dated, ...(await recordPayment(String(row.ROWID), paid_at)) });
     }
     if ((m = path.match(/^leads\/(\d{1,20})$/))) {
       const id = m[1];
@@ -238,7 +323,10 @@ async function handle(req, res, deps) {
         const { paid_at, ...changes } = core.withPaidDate(core.cleanLead(await readJson(req), true, today), existing, today);
         if (changes.phone === "" && !existing.phone) delete changes.phone; // same reason as above
         if (Object.keys(changes).length) await store.update(TABLES.leads, { ...changes, ROWID: id });
-        return send(200, { ok: true, ...(await savePaidDate(id, paid_at)) });
+        const dated = await savePaidDate(id, paid_at);
+        // A lead that is paid gets its payment written once. After that the payment is its own record: changing
+        // the lead's value or moving it back a stage leaves what was received exactly as it was.
+        return send(200, { ok: true, ...dated, ...(await recordPayment(id, paid_at || existing.paid_at)) });
       }
       if (method === "DELETE") {
         await getLead(id);
@@ -246,7 +334,7 @@ async function handle(req, res, deps) {
         for (const t of entries) await store.remove(TABLES.time, String(t.ROWID));
         const thread = ((await listMessages()) || []).filter((x) => String(x.lead_id) === id);
         for (const x of thread) await store.remove(TABLES.messages, String(x.ROWID));
-        await store.remove(TABLES.leads, id);
+        await store.remove(TABLES.leads, id); // its payments stay on Money: the money was still received
         return send(200, { ok: true });
       }
     }
@@ -275,19 +363,20 @@ async function handle(req, res, deps) {
         .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
       return send(200, rows);
     }
-    // Add to a thread. With send: true, an email or text goes out through the connected service first;
-    // if that fails nothing is saved, so the log never claims something was sent when it wasn't.
+    // Add to a thread. With send: true the message is saved as "sending" first, then sent, then marked "sent" or
+    // "failed". The log never claims a send that didn't happen, and never loses one that did.
     if (path === "messages" && method === "POST") {
       const body = await readJson(req);
       const row = core.cleanMessage(body, now.toISOString());
       const lead = await getLead(row.lead_id);
       if ((await listMessages()) === null) throw new core.Bad("Messages aren't set up yet. Create the Messages table first.", 503);
-      if (body.send === true) {
-        await deliver(row, lead);
-        row.status = "sent";
+      if (body.send !== true) {
+        const saved = await store.insert(TABLES.messages, row);
+        return send(201, { id: String(saved.ROWID), status: row.status });
       }
-      const saved = await store.insert(TABLES.messages, row);
-      return send(201, { id: String(saved.ROWID), status: row.status });
+      sendable(row, lead);
+      const saved = await store.insert(TABLES.messages, { ...row, status: "sending" });
+      return send(201, { id: String(saved.ROWID), ...(await deliverSaved(String(saved.ROWID), row, lead)) });
     }
     // AI draft: Claude writes the next email or text and it's saved with status "draft". It is never sent
     // until you approve it below.
@@ -313,40 +402,82 @@ async function handle(req, res, deps) {
       const saved = await store.insert(TABLES.messages, row);
       return send(201, core.messageFromRow(saved));
     }
-    // Approve a draft, with any edits. send: true delivers it first; otherwise it's kept as logged
-    // (for when you sent it yourself).
+    // Approve a draft, with any edits, or retry a message that failed. send: true delivers it; otherwise it's
+    // kept as logged (for when you sent it yourself). A message can only be approved once: the row is moved to
+    // "sending" before anything goes out, and a second request finds it there and stops.
     if ((m = path.match(/^messages\/(\d{1,20})\/approve$/)) && method === "POST") {
-      const body = await readJson(req);
-      const existing = await store.get(TABLES.messages, m[1]);
-      if (!existing) throw new core.Bad("Not found.", 404);
-      if (existing.status !== "draft") throw new core.Bad("This message was already handled.", 409);
-      const row = core.cleanMessage({
-        lead_id: existing.lead_id, channel: existing.channel,
-        subject: body.subject ?? existing.subject, body: body.body ?? existing.body,
-      }, existing.created_at || now.toISOString());
-      const lead = await getLead(row.lead_id);
-      if (body.send === true) await deliver(row, lead);
-      const status = body.send === true ? "sent" : "logged";
-      await store.update(TABLES.messages, { ROWID: m[1], subject: row.subject, body: row.body, status, created_at: now.toISOString() });
-      return send(200, { ok: true, status });
+      const body = await readJson(req), id = m[1];
+      return send(200, await alone(`msg:${id}`, async () => {
+        const existing = await store.get(TABLES.messages, id);
+        if (!existing) throw new core.Bad("Not found.", 404);
+        const wantsSend = body.send === true;
+        if (existing.status === "sending" && wantsSend) throw new core.Bad("This message is already being sent. Check whether it arrived before sending again.", 409);
+        if (!["draft", "failed", "sending"].includes(existing.status)) throw new core.Bad("This message was already handled.", 409);
+        const row = core.cleanMessage({
+          lead_id: existing.lead_id, channel: existing.channel,
+          subject: body.subject ?? existing.subject, body: body.body ?? existing.body,
+        }, existing.created_at || now.toISOString());
+        const lead = await getLead(row.lead_id);
+        if (!wantsSend) {
+          await store.update(TABLES.messages, { ROWID: id, subject: row.subject, body: row.body, status: "logged", created_at: now.toISOString() });
+          return { ok: true, status: "logged" };
+        }
+        sendable(row, lead);
+        await store.update(TABLES.messages, { ROWID: id, subject: row.subject, body: row.body, status: "sending" });
+        return { ok: true, ...(await deliverSaved(id, row, lead)) };
+      }));
     }
     if ((m = path.match(/^messages\/(\d{1,20})$/)) && method === "DELETE") {
       await store.remove(TABLES.messages, m[1]);
       return send(200, { ok: true });
     }
 
-    // Inbox: website inquiries waiting for a person to decide.
+    // Inbox: website inquiries waiting for a person to decide. One inquiry becomes one lead, however many times
+    // the button is pressed: requests for the same inquiry run one at a time, a lead that already carries the
+    // inquiry's id is reused, and if two copies of this function both add one, the later lead is taken out again.
     if ((m = path.match(/^inbox\/(\d{1,20})\/(convert|dismiss)$/)) && method === "POST") {
-      const inquiry = await store.get(TABLES.inquiries, m[1]);
-      if (!inquiry) throw new core.Bad("Not found.", 404);
-      if ((inquiry.status || "new") !== "new") throw new core.Bad("This inquiry was already handled.", 409);
-      let leadId;
-      if (m[2] === "convert") {
-        const row = await store.insert(TABLES.leads, core.leadFromInquiry(inquiry, today));
-        leadId = String(row.ROWID);
+      const id = m[1], action = m[2];
+      return send(200, await alone(`inq:${id}`, async () => {
+        const inquiry = await store.get(TABLES.inquiries, id);
+        if (!inquiry) throw new core.Bad("Not found.", 404);
+        if ((inquiry.status || "new") !== "new") throw new core.Bad("This inquiry was already handled.", 409);
+        if (action === "dismiss") {
+          await store.update(TABLES.inquiries, { ROWID: id, status: "dismissed" });
+          return { ok: true };
+        }
+        const ref = String(inquiry.inquiry_id || "");
+        const same = async () => (ref ? (await store.list(TABLES.leads)).filter((l) => String(l.inquiry_id || "") === ref) : []);
+        const first = (rows) => rows.map((l) => String(l.ROWID)).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1))[0];
+        let leadId = first(await same()); // an earlier attempt added the lead and stopped before marking the inquiry
+        if (!leadId) {
+          const mine = String((await store.insert(TABLES.leads, core.leadFromInquiry(inquiry, today))).ROWID);
+          leadId = first(await same()) || mine;
+          if (leadId !== mine) await store.remove(TABLES.leads, mine);
+        }
+        await store.update(TABLES.inquiries, { ROWID: id, status: "converted" });
+        return { ok: true, leadId };
+      }));
+    }
+
+    // AI help inside the work: a summary of an inquiry, a catch-up on a client, or tasks suggested from call notes.
+    // The reply always carries the records it was written from, and nothing is saved or sent: suggested tasks are
+    // only added when the owner adds them.
+    if (path === "assist" && method === "POST") {
+      const body = await readJson(req);
+      if (!["inquiry_summary", "catch_up", "extract_tasks"].includes(body.kind)) throw new core.Bad("Unknown request.");
+      if (!deps.assist) throw new core.Bad("AI help isn't connected yet (ANTHROPIC_API_KEY).", 503);
+      const sources = await core.assistSources(body, {
+        inquiry: (id) => store.get(TABLES.inquiries, id), lead: getLead, messages: async () => (await listMessages()) || [],
+      });
+      let out;
+      try {
+        out = await deps.assist({ kind: body.kind, sources });
+      } catch (err) {
+        if (err && err.status) throw new core.Bad(err.message, err.status);
+        console.error("pipeline: assist failed", err && err.message);
+        throw new core.Bad("The AI couldn't do that just now. Try again.", 502);
       }
-      await store.update(TABLES.inquiries, { ROWID: m[1], status: m[2] === "convert" ? "converted" : "dismissed" });
-      return send(200, { ok: true, leadId });
+      return send(200, core.cleanAssist(body.kind, out, sources));
     }
 
     // Notifications: the browser's public key, subscribing a device, a test, and alerts from the website.
@@ -393,8 +524,9 @@ async function handle(req, res, deps) {
 
     // Daily email. ?preview=1 returns it without sending.
     if (path === "digest" && method === "POST") {
-      const data = core.summarize({ ...(await loadAll()), range: "7", today });
-      const digest = core.buildDigest(data, { trackerUrl: deps.trackerUrl });
+      const [{ messagesReady: _ready, ...rows }, taskRows] = await Promise.all([loadAll(), listOptional(TABLES.tasks)]);
+      const data = core.summarize({ ...rows, taskRows: taskRows || [], range: "7", today });
+      const digest = core.buildDigest(data, { trackerUrl: deps.trackerUrl, tasks: core.tasksFromRows(taskRows || []) });
       if (url.searchParams.get("preview") === "1") return send(200, { ...digest, sent: false });
       if (!deps.sendMail || !deps.digestTo) throw new core.Bad("Daily email isn't configured (DIGEST_TO and DIGEST_FROM).", 503);
       await deps.sendMail({ to: deps.digestTo, subject: digest.subject, text: digest.text, html: digest.html });

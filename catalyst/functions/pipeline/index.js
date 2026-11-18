@@ -22,7 +22,8 @@
 //                        /server/pipeline/twilio/sms. Needed to check Twilio's signature on incoming texts.
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY   turn on phone and desktop notifications (make them with
 //                        node scripts/make-vapid-keys.mjs). VAPID_SUBJECT: optional mailto: contact for push services.
-//   ANTHROPIC_API_KEY    turns on "Draft with AI". Drafts are saved for you to approve; nothing is sent on its own.
+//   ANTHROPIC_API_KEY    turns on "Draft with AI", summaries and task suggestions. Drafts are saved for you to
+//                        approve; nothing is sent or added on its own.
 
 const { zcAuth } = require("@zcatalyst/auth");
 const { Datastore } = require("@zcatalyst/datastore");
@@ -30,11 +31,12 @@ const { Mail } = require("@zcatalyst/mail");
 const { handle } = require("./handler");
 const { catalystStore } = require("./store");
 const { twilioSender } = require("./adapters");
-const { makeDrafter } = require("./draft");
+const { makeDrafter, makeAssistant } = require("./draft");
 const { makePusher } = require("./push");
 
 const env = (name) => (process.env[name] || "").trim();
 const drafter = makeDrafter({ apiKey: env("ANTHROPIC_API_KEY") }); // one client for the life of the instance
+const assistant = makeAssistant({ apiKey: env("ANTHROPIC_API_KEY") });
 const pusher = makePusher({ publicKey: env("VAPID_PUBLIC_KEY"), privateKey: env("VAPID_PRIVATE_KEY"), subject: env("VAPID_SUBJECT") });
 
 module.exports = async (req, res) => {
@@ -64,6 +66,7 @@ module.exports = async (req, res) => {
       ? { authToken: env("TWILIO_AUTH_TOKEN"), webhookUrl: env("TWILIO_WEBHOOK_URL") }
       : undefined,
     draft: drafter,
+    assist: assistant,
     push: pusher,
     sendMessage: {
       email: process.env.MESSAGES_FROM

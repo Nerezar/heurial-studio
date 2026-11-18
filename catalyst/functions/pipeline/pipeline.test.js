@@ -199,19 +199,19 @@ test("messages: log, send through a connected service, and delete with the lead"
   // Texts aren't connected here: sending is refused, logging still works.
   assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "sms", body: "On my way", send: true })).status, 503);
   assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "sms", body: "On my way" })).body.status, "logged");
-  // A failed delivery saves nothing.
+  // A failed delivery is kept, marked failed, so it can be retried or discarded.
   deps.sendMessage.email = async () => { throw new Error("mail down"); };
   assert.equal((await call(deps, "POST", "/messages", { lead_id: id, channel: "email", body: "Lost", send: true })).status, 502);
 
   const thread = await call(deps, "GET", `/leads/${id}/messages`);
-  assert.deepEqual(thread.body.map((x) => x.channel), ["note", "call", "email", "sms"]);
+  assert.deepEqual(thread.body.map((x) => [x.channel, x.status]), [["note", "logged"], ["call", "received"], ["email", "sent"], ["sms", "logged"], ["email", "failed"]]);
   const data = await call(deps, "GET", "/data?range=30");
-  assert.equal(data.body.messages.length, 4);
+  assert.equal(data.body.messages.length, 5);
   assert.equal(data.body.messages[0].lead_name, "Thread Co");
-  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false, twilio: false, ai: false, push: false, money: true, tasks: true });
+  assert.deepEqual(data.body.services, { messages: true, digest: true, email: true, sms: false, inbound: false, twilio: false, ai: false, assist: false, push: false, money: true, tasks: true });
 
   await call(deps, "DELETE", `/messages/${thread.body[0].id}`);
-  assert.equal((await call(deps, "GET", `/leads/${id}/messages`)).body.length, 3);
+  assert.equal((await call(deps, "GET", `/leads/${id}/messages`)).body.length, 4);
   await call(deps, "DELETE", `/leads/${id}`);
   assert.equal((await store.list("Messages")).length, 0);
 });
@@ -263,14 +263,14 @@ test("paid date: stamped when a lead becomes paid, editable, and cleared when it
 
   const { body: { id } } = await call(deps, "POST", "/leads", { name: "Pay Co", booked_at: "2026-10-20", value: 495 });
   assert.equal(await paidAt(id), "");
-  assert.deepEqual((await patch(id, { status: "paid" })).body, { ok: true });
+  assert.deepEqual((await patch(id, { status: "paid" })).body, { ok: true, payment_saved: true });
   assert.equal(await paidAt(id), "2026-11-11"); // today in Chicago, not the booked date
 
   assert.equal((await patch(id, { paid_at: "2026-11-03" })).status, 200);
   assert.equal(await paidAt(id), "2026-11-03");
   await patch(id, { notes: "Paid by card" }); // other edits leave it alone
   assert.equal(await paidAt(id), "2026-11-03");
-  assert.equal((await patch(id, { paid_at: "11/03/2026" })).body.error, "Paid date must be YYYY-MM-DD.");
+  assert.equal((await patch(id, { paid_at: "11/03/2026" })).body.error, "Paid date must be a real date (YYYY-MM-DD).");
 
   await patch(id, { status: "proposal" }); // no longer paid: no paid date
   assert.equal(await paidAt(id), "");
@@ -300,7 +300,7 @@ test("a Leads table with no paid_at column still saves the lead, and the reply s
   assert.equal(made.status, 201);
   assert.equal(made.body.paid_at_saved, false);
   const { id } = (await call(deps, "POST", "/leads", { name: "Later Co" })).body;
-  assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "paid", value: 495 })).body, { ok: true, paid_at_saved: false });
+  assert.deepEqual((await call(deps, "PATCH", `/leads/${id}`, { status: "paid", value: 495 })).body, { ok: true, paid_at_saved: false, payment_saved: true });
   const lead = (await call(deps, "GET", `/leads/${id}`)).body;
   assert.deepEqual([lead.status, lead.value_cents, lead.paid_at], ["paid", 49500, ""]);
   // Nothing about the paid date is written when it doesn't change, so every other save is untouched.
@@ -311,15 +311,15 @@ test("a Leads table with no paid_at column still saves the lead, and the reply s
 
 test("transactions: saved by hand, listed in full, kept apart by kind", async () => {
   const { deps } = setup();
-  assert.equal((await call(deps, "POST", "/transactions", { kind: "deposit", amount: 0, label: "x" })).body.error, "Amount must be more than 0.");
-  assert.equal((await call(deps, "POST", "/transactions", { kind: "gift", amount: 5, label: "x" })).body.error, "Choose income, expense or transfer.");
-  assert.equal((await call(deps, "POST", "/transactions", { kind: "deposit", amount: 5 })).body.error, "Add a short description.");
-  const made = await call(deps, "POST", "/transactions", { kind: "withdrawal", amount: 45.5, date: "2026-11-10", label: "Software" });
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "transfer_in", amount: 0, label: "x" })).body.error, "Amount must be more than 0.");
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "gift", amount: 5, label: "x" })).body.error, "Choose income, expense, transfer in or transfer out.");
+  assert.equal((await call(deps, "POST", "/transactions", { kind: "transfer_in", amount: 5 })).body.error, "Add a short description.");
+  const made = await call(deps, "POST", "/transactions", { kind: "expense", amount: 45.5, date: "2026-11-10", label: "Software" });
   assert.equal(made.status, 201);
-  await call(deps, "POST", "/transactions", { kind: "deposit", amount: 500, label: "Owner deposit" });
+  await call(deps, "POST", "/transactions", { kind: "transfer_in", amount: 500, label: "Owner deposit" });
   const data = await call(deps, "GET", "/data?range=7");
-  assert.deepEqual(data.body.transactions.find((t) => t.id === made.body.id), { id: made.body.id, date: "2026-11-10", amount_cents: 4550, kind: "withdrawal", label: "Software" });
-  assert.equal(data.body.transactions.find((t) => t.kind === "deposit").date, "2026-11-11"); // no date given: today
+  assert.deepEqual(data.body.transactions.find((t) => t.id === made.body.id), { id: made.body.id, date: "2026-11-10", amount_cents: 4550, kind: "expense", label: "Software", lead_id: "" });
+  assert.equal(data.body.transactions.find((t) => t.kind === "transfer_in").date, "2026-11-11"); // no date given: today
   assert.equal((await call(deps, "DELETE", `/transactions/${made.body.id}`)).status, 200);
   assert.equal((await call(deps, "GET", "/data")).body.transactions.length, 1);
 });
@@ -327,7 +327,7 @@ test("transactions: saved by hand, listed in full, kept apart by kind", async ()
 test("tasks: add, finish, reopen and delete, with open ones first by due date", async () => {
   const { deps } = setup();
   assert.equal((await call(deps, "POST", "/tasks", { title: "  " })).body.error, "Say what the task is.");
-  assert.equal((await call(deps, "POST", "/tasks", { title: "x", due_at: "soon" })).body.error, "Date must be YYYY-MM-DD.");
+  assert.equal((await call(deps, "POST", "/tasks", { title: "x", due_at: "soon" })).body.error, "Date must be a real date (YYYY-MM-DD).");
   const later = await call(deps, "POST", "/tasks", { title: "Later", due_at: "2026-11-20" });
   const undated = await call(deps, "POST", "/tasks", { title: "Whenever" });
   const soon = await call(deps, "POST", "/tasks", { title: "Soon", due_at: "2026-11-12" });

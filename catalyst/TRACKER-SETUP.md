@@ -85,7 +85,7 @@ Development. Production is read-only, so the column gets there with a console de
 | `channel`    | Var Char 10   | `note`, `email`, `sms` or `call`                             |
 | `subject`    | Var Char 200  | Emails only                                                  |
 | `body`       | Text          |                                                              |
-| `status`     | Var Char 12   | `logged`, `sent`, `received`, or `draft` (an AI draft waiting for you) |
+| `status`     | Var Char 12   | `logged`, `sent`, `received`, `draft` (an AI draft waiting for you), `sending` or `failed` |
 | `sender`     | Var Char 254  | Who an incoming message came from                            |
 | `created_at` | Var Char 30   | ISO date and time                                            |
 
@@ -110,18 +110,51 @@ itself, so a lead still saves and can still be moved to Paid; only the date is d
 
 For all of these tables, check **Scopes & Permissions**: no end-user role may read or write.
 
-**`Transactions`**: money entries added by hand on the Money screen (optional; without it, Money shows paid leads only
-and the Add transaction bar is replaced by a note):
+A message that is sent from the tracker is saved as `sending` before it goes out, then marked `sent` or `failed`.
+A `failed` one stays in the thread and can be retried. One left on `sending` means the send went out but the record
+could not be updated: the tracker refuses to send it again and asks you to check and mark it sent.
 
-| Column         | Type         |
-| -------------- | ------------ |
-| `tx_date`      | Var Char 10  |
-| `amount_cents` | BigInt       |
-| `kind`         | Var Char 12  |
-| `label`        | Var Char 120 |
+**`Transactions`**: every money entry, including each client payment (optional; without it, Money shows paid leads
+only and the Add transaction bar is replaced by a note):
 
-`kind` is `earning` (income that didn't come from a lead), `deposit` (money put in: a transfer, never counted as
-earned) or `withdrawal` (an expense). `amount_cents` is always positive; the kind decides the sign.
+| Column         | Type         | Notes                                                       |
+| -------------- | ------------ | ----------------------------------------------------------- |
+| `tx_date`      | Var Char 10  |                                                             |
+| `amount_cents` | BigInt       | Always positive; the kind decides the sign                  |
+| `kind`         | Var Char 12  | `income`, `expense`, `transfer_in` or `transfer_out`        |
+| `label`        | Var Char 120 |                                                             |
+| `lead_id`      | Var Char 20  | **New.** The paying lead's ROWID as text, on client payments |
+
+`income` is money a customer paid. `expense` is business spending. `transfer_in` and `transfer_out` are money you put
+in or took out: they change the balance and never the profit.
+
+**Payments are their own rows.** When a lead becomes Paid, the function writes one `income` row with the lead's id,
+its value and its paid date. After that, changing the lead (its value, its stage, even deleting it) leaves that row
+alone, so past earnings can't be rewritten by an edit. A wrong payment is deleted on Money and added again.
+
+**Adding `lead_id` to an existing table:** Data Store → `Transactions` → **Schema View** → **+ New Column** → Column
+Name `lead_id`, Data Type **Var Char**, Max Length `20`, everything else off or empty → **Create**. Do it in
+Development; it reaches Production with a console deployment that includes CloudScale. Until the column exists the
+tracker still works: plain entries save as before, and each time a lead is marked Paid it says "The payment wasn't
+recorded on Money" and goes on showing that lead's value from the lead itself.
+
+**Rows saved before this change need nothing done to them.** `earning` is read as income and `deposit` as a transfer
+in. An old `withdrawal` never said whether it was an expense or a transfer out, so it shows as "Needs a category"
+and is counted on its own until you pick one (on Money, or in the daily review). Paid leads from before payments were
+rows keep showing from the lead, marked "read from the lead". Money has a **Record them** button that writes a
+payment for each one that has a paid date, using that date and the lead's value. A paid lead with no paid date is
+left as it is and never given a made-up date: open it and fill in **Paid on**.
+
+**`LoginAttempts`**: wrong sign-in attempts, so the limit survives restarts and is shared by every copy of the site
+(optional; without it each copy of the site counts on its own, in memory):
+
+| Column      | Type         | Notes                                                              |
+| ----------- | ------------ | ------------------------------------------------------------------ |
+| `scope`     | Var Char 64  | A keyed hash of the visitor's address. No address is stored        |
+| `failed_at` | Var Char 30  | ISO date and time. Rows older than 15 minutes are removed as it runs |
+
+A visitor is stopped after 8 wrong passwords in 15 minutes; 60 across all visitors stops everyone for that window.
+A correct sign-in clears that visitor's rows. No end-user role may read or write this table either.
 
 **`Tasks`**: your own tasks on the Tasks screen (optional; without it, Tasks shows only what the tracker raises from leads):
 
@@ -131,12 +164,13 @@ earned) or `withdrawal` (an expense). `amount_cents` is always positive; the kin
 | `due_at`  | Var Char 10  |
 | `done_at` | Var Char 10  |
 
-`done_at` is the day a task was ticked off, and empty while it is open. Tasks of your own are not in the daily email yet.
+`done_at` is the day a task was ticked off, and empty while it is open. Tasks that are due or overdue are in the daily email.
 
 The same rule applies to these two: under **Scopes & Permissions**, no end-user role may read or write.
 
-Both need the current `pipeline` function (it adds `/transactions` and `/tasks`, and reports `money` and `tasks` under
-`services`) and the current site (its `/api/admin` proxy lets those routes through).
+All of these need the current `pipeline` function and the current site (its `/api/admin` proxy lets the routes
+through). Deploy the function before the site: the newer tracker page expects `next` in `/data` and the
+`/assist`, `/payments/backfill` and `/auth/throttle` routes.
 
 ## 2. Deploy the two functions (from `catalyst/`)
 

@@ -9,7 +9,7 @@ const http = require("node:http");
 const { handle } = require("./handler");
 const { memoryStore } = require("./store");
 const core = require("./core");
-const { makeDrafter } = require("./draft");
+const { makeDrafter, makeAssistant } = require("./draft");
 const { makePusher } = require("./push");
 
 // With ANTHROPIC_API_KEY set, drafts come from Claude. Without it, a fixed sample draft, so the flow can be tried.
@@ -20,6 +20,12 @@ const draft = makeDrafter({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async (
     ? { subject: "", body: `Hi ${first}, sample draft from the local stand-in. Does Thursday still work for a quick call?` }
     : { subject: "Next step", body: `Hi ${first},\n\nThis is a sample draft from the local stand-in, not from Claude. Set ANTHROPIC_API_KEY to get real drafts.\n\nDoes Thursday still work for a quick call?` };
 });
+
+// The same for summaries and task suggestions: Claude with a key, otherwise a fixed reply that says what it is.
+const assist = makeAssistant({ apiKey: process.env.ANTHROPIC_API_KEY }) || (async ({ kind, sources }) => ({
+  text: `Sample reply from the local stand-in, not from Claude. It was given ${sources.length} record${sources.length === 1 ? "" : "s"}.`,
+  tasks: kind === "extract_tasks" ? [{ title: "Sample task from the local stand-in", due_at: "" }] : [],
+}));
 
 const key = process.env.PIPELINE_KEY;
 if (!key || key.length < 16) { console.error("Set PIPELINE_KEY (16+ characters)."); process.exit(1); }
@@ -35,6 +41,10 @@ const lead = (name, business, source, status, ago, value, extra = {}) => ({
 // Made-up sample people.
 const store = memoryStore({
   PushSubscriptions: [],
+  Transactions: [],
+  Tasks: [],
+  Messages: [],
+  LoginAttempts: [],
   Leads: [
     lead("Dana Whitfield", "Whitfield Plumbing", "Personal network", "paid", 44, 495),
     lead("Marcus Bell", "Bell Fitness Studio", "Referral", "paid", 36, 495),
@@ -74,6 +84,7 @@ http.createServer((req, res) => handle(req, res, {
   sendMessage: { email: async (m) => { sent.push(m); console.log(`[dev] would email ${m.to}: ${m.subject || "(no subject)"}`); } },
   inboundKey: process.env.INBOUND_KEY || "",
   draft,
+  assist,
   // With VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY set, notifications really go out through the browser's push service.
   push: makePusher({ publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY }),
 })).listen(4600, "127.0.0.1", () => console.log("pipeline dev server on http://127.0.0.1:4600/"));

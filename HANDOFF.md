@@ -4,6 +4,34 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Workspace pass, branch `tracker-next-move` (2026-11-17), pushed, not merged, nothing deployed.** Live is still
+  `a615425`. Reliability first: a draft can only be approved once and an inquiry only becomes one lead (requests for
+  the same record run one at a time; a half-finished conversion is finished, not repeated); a slow answer for an old
+  date range is dropped; a message is saved as `sending` before it goes out, then `sent` or `failed`; a payment is
+  its own `Transactions` row written when a lead becomes Paid, so editing or moving the lead no longer rewrites
+  earnings; kinds are `income`, `expense`, `transfer_in`, `transfer_out` (an old `withdrawal` reads as "needs a
+  category"); the chart makes room for a balance below zero; dates must be real days; a range of N days is today and
+  the N-1 before it (1D is today); the daily email counts your own due tasks; sign-in attempts are counted per
+  visitor in a `LoginAttempts` table. Then the screens: Overview leads with **Your next move** (fixed rules in
+  `core.nextMoves`, with its reason and evidence), then the balance and chart, Today and Active leads; the reports
+  moved to Money; chart points can be chosen (click, tap, arrow keys) and show the entry, client and a way to its
+  table row; Money shows the four kinds, Balance change and Profit apart, a reconciling line and a Scheduled list;
+  the client panel opens on a **Timeline** tab (proposed against received, next action, an editable context note,
+  everything in date order); Tasks has **Start daily review**; AI help (`POST /assist`: summarize an inquiry, catch
+  me up, tasks from notes) shows its sources and adds nothing on its own; Settings is compact rows; the header's
+  main button fits the section. Tests: 39 pipeline (15 new in `reliability.test.js`), 10 money (5 new).
+  Browser-checked on the sample-data page at 1440, 768 and 375: next-move buttons, chart picking by keyboard, touch
+  and click, every range against the table's sums, add income with a client / transfer out, categorise an old entry,
+  mark a lead Paid then edit and move it back (payment unchanged), the timeline and context save, AI boxes, a full
+  daily review, Settings. **Not checked: the signed-in tracker, real sending, real AI replies.**
+  **Before this can go live, in this order:** 1) in Development add `lead_id` (Var Char 20) to `Transactions` and
+  create `LoginAttempts` (`scope` Var Char 64, `failed_at` Var Char 30, no App User access), 2) deploy `pipeline`
+  to Development and test signed in, 3) console deployment to Production with Data Store and Functions, 4) deploy
+  the site. Function before site: the new page needs `next` in `/data`. Without `lead_id` the tracker still works
+  and says the payment wasn't recorded; without `LoginAttempts` each copy of the site counts attempts in memory.
+  Known limits: the one-at-a-time guard holds inside one running copy of the function (the Data Store has no
+  compare-and-set); the lead-based reports and the daily email's "worth" line still read paid leads' values, not
+  payment rows; tasks are not linked to a client; a payment's amount or date is changed by deleting and re-adding.
 - **Live 2026-11-17: main `a615425` (transactions, tasks, audit fixes, solid tab switch).** Production Catalyst:
   console deployment "Transactions and tasks (a615425)" with only Serverless and Cloud Scale ticked: `pipeline`
   updated, tables `Transactions` and `Tasks` added (App User has no access on either, checked). Then the site went

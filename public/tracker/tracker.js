@@ -27,7 +27,8 @@
   };
   // When a lead reaches one of these stages and has no follow-up, suggest one.
   const FOLLOW_PLAN = { held: [3, "Send a follow-up after the call"], proposal: [3, "Check in on the proposal"], paid: [14, "Ask for a testimonial"] };
-  const RANGES = [["1", "1D", "last day"], ["7", "1W", "last 7 days"], ["30", "1M", "last 30 days"], ["90", "3M", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "ALL", "all time"]];
+  // A range of N days is today and the N-1 days before it, on every screen and in the chart.
+  const RANGES = [["1", "1D", "today"], ["7", "1W", "last 7 days"], ["30", "1M", "last 30 days"], ["90", "3M", "last 90 days"], ["365", "1Y", "last 12 months"], ["all", "ALL", "all time"]];
   // Every screen. The first five lead the sidebar's five sections, so the number keys 1 to 5 open them.
   const VIEWS = {
     overview: ["Overview", "overview"], money: ["Money", "wallet"], pipeline: ["Lead board", "leads"], tasks: ["Tasks", "tasks"],
@@ -40,6 +41,8 @@
   ];
   const sectionOf = (view) => SECTIONS.find((sec) => sec[2].includes(view));
   const TAB_NAME = { pipeline: "Board", leads: "List", time: "Time", messages: "Messages" };
+  // The client panel's tabs: key, name, and the panel each one shows.
+  const TABS = [["timeline", "Timeline", "linePanel"], ["details", "Details", "leadForm"], ["messages", "Messages", "msgPanel"], ["time", "Time", "timePanel"]];
   const CHANNEL = { note: ["Note", "note"], email: ["Email", "mail"], sms: ["Text", "sms"], call: ["Call", "phone"] };
   const DUE_BUCKETS = [["late", "Overdue", "--down"], ["today", "Due today", "--warn"], ["week", "Next 7 days", "--accent"], ["later", "Later", "--mute"], ["none", "None set", "--mute"]];
   const ICONS = {
@@ -68,6 +71,7 @@
     refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
+    arrow: '<path d="M5 12h14m0 0-5-5m5 5-5 5"/>',
     out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l4-4-4-4M14 12H4"/>',
   };
   const icon = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -128,7 +132,8 @@
     view: "overview", range: "30", loadedRange: "", ovTab: "conversion", moneyTab: "all", taskTab: "open",
     query: "", facets: { stage: new Set(), source: new Set(), due: new Set() }, sort: { key: "booked_at", dir: "desc" },
     time: null, timeLoading: false,
-    lead: null, isNew: false, tab: "details", dirty: false, thread: null, leadTime: null,
+    lead: null, isNew: false, tab: "timeline", dirty: false, thread: null, leadTime: null,
+    next: [], nextAt: 0, pick: null, txFocus: "", review: null, ai: {},
   };
   const stored = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } };
   const store = (key, value) => {
@@ -136,11 +141,16 @@
     try { localStorage.setItem(key, value); } catch { /* private mode */ }
   };
   const rangeText = () => RANGES.find((r) => r[0] === state.range)[2];
-  /** "in the last 30 days", or "across all time". */
-  const inPeriod = () => (state.range === "all" ? "across all time" : `in the ${rangeText()}`);
+  /** "in the last 30 days", "today", or "across all time". */
+  const inPeriod = () => (state.range === "all" ? "across all time" : state.range === "1" ? "today" : `in the ${rangeText()}`);
   /** Your own tasks that are due today or overdue. */
   const dueTasks = (d) => (state.tasks || []).filter((t) => !t.done_at && t.due_at && t.due_at <= d.today);
   const urgentCount = (d) => d.inbox.length + d.stale.length + d.followups.filter((f) => f.follow_up_at <= d.today).length + dueTasks(d).length;
+  /** What makes up that count, as words: "2 follow-ups · 1 inquiry". */
+  const urgentParts = (d) => [
+    [d.followups.filter((f) => f.follow_up_at <= d.today).length, "follow-up"], [d.inbox.length, "inquiry", "inquiries"],
+    [d.stale.length, "call to record", "calls to record"], [dueTasks(d).length, "task"],
+  ].filter(([n]) => n).map(([n, one, many]) => plural(n, one, many)).join(" · ");
   /** Whether a part of the back end is there. The sample-data page has everything. */
   const has = (part) => cfg.mode === "demo" || Boolean(services() && services()[part]);
   const matches = (lead, q) => !q || [lead.name, lead.business, lead.email, lead.phone, lead.source].some((v) => String(v || "").toLowerCase().includes(q));
@@ -200,20 +210,27 @@
     }
   }
 
+  // Each load is numbered. If the range changes while one is on its way, the older answer is dropped when it
+  // arrives, so a slow reply for 30 days can never overwrite the 7 days chosen after it.
+  let loadSeq = 0;
   async function load() {
+    const seq = ++loadSeq, range = state.range;
     try {
       // The chosen period, and every lead there has ever been: the money line starts from what was earned before the period.
-      const [data, ever] = await Promise.all([call("/api/data?range=" + state.range), state.range === "all" ? null : call("/api/data?range=all")]);
+      const [data, ever] = await Promise.all([call("/api/data?range=" + range), range === "all" ? null : call("/api/data?range=all")]);
+      if (seq !== loadSeq) return;
       state.data = data;
       state.all = (ever || data).leads;
-      state.tx = (ever || data).transactions || []; // money entries added by hand
+      state.tx = (ever || data).transactions || []; // every money entry, client payments included
       state.tasks = (ever || data).tasks || [];
-      state.loadedRange = state.range;
+      state.next = (ever || data).next || [];
+      state.loadedRange = range;
       state.error = "";
       state.online = true;
       state.lastSync = Date.now();
       state.time = Array.isArray(state.data.time) ? state.data.time : null;
     } catch (err) {
+      if (seq !== loadSeq) return;
       state.error = err.message || "Couldn't load the tracker.";
       state.online = false;
       // Keep the range control honest: it should name the period the figures on screen cover.
@@ -234,7 +251,7 @@
     const p = new URLSearchParams(hash);
     try { history.replaceState(null, "", location.pathname); } catch { /* not important */ }
     if (p.get("view") && VIEWS[p.get("view")]) setView(p.get("view"));
-    if (/^\d{1,20}$/.test(p.get("lead") || "")) openById(p.get("lead"), ["details", "messages", "time"].includes(p.get("tab")) ? p.get("tab") : "details");
+    if (/^\d{1,20}$/.test(p.get("lead") || "")) openById(p.get("lead"), TABS.some(([key]) => key === p.get("tab")) ? p.get("tab") : "timeline");
   }
 
   // This device: installed app and notifications. Checked when Connections is shown.
@@ -263,8 +280,8 @@
   <header class="top">
     <div class="top-id"><span class="mark word" role="img" aria-label="HEURIAL"></span><div><h1 id="viewTitle">Overview</h1><p id="viewSub"></p></div></div>
     <button class="cmd" type="button" data-action="palette" aria-haspopup="dialog">${icon("search")}<span>Search leads or run a command</span><kbd>${CMD_KEY}</kbd></button>
-    <div class="seg" id="rangeSeg" role="group" aria-label="Date range">${RANGES.map(([value, label, long]) => `<button type="button" data-action="range" data-range="${value}" title="${long[0].toUpperCase() + long.slice(1)}">${label}</button>`).join("")}</div>
-    <button class="btn primary" type="button" id="newBtn" data-action="new-lead" aria-label="New lead">${icon("plus")}<span>New lead</span></button>
+    <div class="seg" id="rangeSeg" role="group" aria-label="Date range">${RANGES.map(([value, label, long]) => `<button type="button" data-action="range" data-range="${value}" title="${long[0].toUpperCase() + long.slice(1)}${value === "1" || value === "all" ? "" : ", today included"}">${label}</button>`).join("")}</div>
+    <button class="btn primary" type="button" id="newBtn" data-action="main">${icon("plus")}<span>New lead</span></button>
   </header>
   <main class="main" id="view" tabindex="-1"></main>
 
@@ -275,10 +292,24 @@
     </header>
     <dl class="insp-stats" id="inspStats"></dl>
     <div class="tabs" id="inspTabs" role="tablist" aria-label="Lead sections">
+      <button class="tab" type="button" role="tab" id="tab-timeline" data-action="tab" data-tab="timeline" aria-controls="linePanel">Timeline</button>
       <button class="tab" type="button" role="tab" id="tab-details" data-action="tab" data-tab="details" aria-controls="leadForm">Details</button>
       <button class="tab" type="button" role="tab" id="tab-messages" data-action="tab" data-tab="messages" aria-controls="msgPanel">Messages<span class="count" id="msgCount" hidden></span></button>
       <button class="tab" type="button" role="tab" id="tab-time" data-action="tab" data-tab="time" aria-controls="timePanel">Time<span class="count" id="timeCount" hidden></span></button>
     </div>
+
+    <section class="insp-panel" id="linePanel" role="tabpanel" aria-labelledby="tab-timeline" hidden>
+      <div class="insp-scroll">
+        <dl class="tl-facts" id="tlFacts"></dl>
+        <form class="tl-ctx" id="ctxForm" novalidate>
+          <label class="field"><span>What matters to this client</span><textarea name="notes" rows="3" maxlength="4000" placeholder="What they need, who decides, how they like to be reached…"></textarea></label>
+          <div class="tl-ctx-foot"><span class="form-note" id="ctxNote" role="status"></span><button class="btn sm" type="submit" id="ctxSave" disabled>Save</button></div>
+        </form>
+        <div class="tl-ai" id="tlAi"></div>
+        <h3 class="sub-head">Everything with this client, oldest first</h3>
+        <ol class="tl" id="tl"></ol>
+      </div>
+    </section>
 
     <form class="insp-panel" id="leadForm" role="tabpanel" aria-labelledby="tab-details" novalidate>
       <div class="insp-scroll">
@@ -301,8 +332,9 @@
           <div class="fields">
             <label class="field"><span>Date booked</span><input name="booked_at" type="date"></label>
             <label class="field"><span>Call date</span><input name="call_at" type="date"></label>
-            <label class="field wide"><span>Value paid or quoted (USD)</span><input name="value" type="number" min="0" step="1" inputmode="decimal" aria-describedby="e-value"><small class="field-err" id="e-value" hidden></small></label>
+            <label class="field wide"><span>Proposed value (USD)</span><input name="value" type="number" min="0" step="1" inputmode="decimal" aria-describedby="e-value"><small class="field-err" id="e-value" hidden></small></label>
             <label class="field" id="paidField" hidden><span>Paid on</span><input name="paid_at" type="date"></label>
+            <p class="field-hint wide" id="paidHint" hidden>The payment is already recorded on Money with its own date and amount. Changing the value or the date here won't change it.</p>
           </div>
         </fieldset>
         <fieldset class="fs">
@@ -319,8 +351,8 @@
           </div>
         </fieldset>
         <fieldset class="fs">
-          <legend>Notes</legend>
-          <label class="field"><span class="sr">Notes</span><textarea name="notes" rows="4" maxlength="4000" placeholder="What they need, what you discussed…"></textarea></label>
+          <legend>What matters to this client</legend>
+          <label class="field"><span class="sr">What matters to this client</span><textarea name="notes" rows="4" maxlength="4000" placeholder="What they need, what you discussed…"></textarea></label>
         </fieldset>
       </div>
       <div class="insp-foot">
@@ -377,6 +409,12 @@
   <div class="dlg-foot"><button class="btn" type="button" data-close>Close</button><button class="btn primary" type="button" id="digestSend">${demo ? "Send (sample)" : "Send now"}</button></div>
 </dialog>
 
+<dialog class="modal review" id="reviewDlg" aria-labelledby="reviewTitle">
+  <div class="dlg-head"><div><h2 id="reviewTitle">Daily review</h2><p id="reviewStep"></p></div><button class="btn ghost icon" type="button" data-action="review-close" aria-label="Close the review">${icon("x")}</button></div>
+  <div class="rv-track" aria-hidden="true"><i id="reviewBar"></i></div>
+  <div class="dlg-body" id="reviewBody"></div>
+</dialog>
+
 <dialog class="modal" id="confirmDlg" aria-labelledby="confirmTitle" aria-describedby="confirmText">
   <div class="dlg-head"><div><h2 id="confirmTitle"></h2></div></div>
   <div class="dlg-body"><p id="confirmText" class="muted"></p></div>
@@ -411,11 +449,17 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("viewTitle").textContent = title;
     $("viewSub").textContent = sub;
     document.querySelectorAll("#rangeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === state.range)));
+    // One main action, the one that fits the section. Tasks and Settings don't depend on the date range.
+    const main = MAIN[sectionOf(state.view)[0]];
+    $("newBtn").hidden = !main;
+    if (main) { $("newBtn").querySelector("span").textContent = main; $("newBtn").setAttribute("aria-label", main); }
+    $("rangeSeg").hidden = state.view === "tasks" || state.view === "connections";
     renderStatus();
   }
 
+  const MAIN = { Overview: "New lead", Leads: "New lead", Money: "Add transaction", Tasks: "Add task" };
   const SUBTITLE = {
-    pipeline: "Every lead by stage. Drag a card to move it.", leads: "Everyone who booked a call, with filters.",
+    pipeline: "Every lead by stage. Drag a card to move it, and scroll sideways for more stages.", leads: "Everyone who booked a call, with filters.",
     time: "Hours logged on each lead.", messages: "Notes, calls, emails and texts.", connections: "Appearance, and what the tracker is connected to.",
     money: "What came in, what went out, and what is left.", tasks: "Everything waiting on you.",
   };
@@ -426,35 +470,30 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const hello = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
     if (!d) return ["Overview", hello + "."];
     const n = urgentCount(d);
-    return ["Overview", `${hello}. ${n ? `${plural(n, "thing needs", "things need")} you today.` : "You're all caught up."}`];
+    return ["Overview", `${hello}. ${n ? `${plural(n, "thing needs", "things need")} you today.` : "Nothing is waiting on you."}`];
   }
 
-  /** Change against the period just before, from the same data. Nothing is shown when there's no such period. */
-  function delta(cur, prev, fmt, neutral) {
-    if (!state.data.previous || state.range === "all" || cur == null || prev == null) return "";
-    const diff = cur - prev, title = `Compared with the ${plural(Number(state.range), "day")} before`;
-    if (Math.abs(diff) < 1e-9) return `<span class="delta flat" title="${title}">0</span>`;
-    return `<span class="delta ${neutral ? "flat" : diff > 0 ? "up" : "down"}" title="${title}">${diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(diff))}</span>`;
-  }
-  /** The day a lead's money came in. A lead paid before paid dates were recorded only has the day its call was booked. */
-  const paidDay = (l) => l.paid_at || l.booked_at;
   /**
-   * What feeds the money chart: every paid lead, on the day it was paid, and the entries added by hand on the
-   * Money screen (`transactions`: { id, date, amount_cents, kind, label }).
+   * What feeds the money chart, worked out in money.js: every saved entry (a client's payment is one of them, with
+   * its own date and amount), plus any paid lead that has no payment record yet. Each carries its lead when it has one.
    */
   function moneyEntries() {
-    const paid = (state.all || []).filter((l) => l.status === "paid" && paidDay(l) && l.value_cents > 0)
-      .map((l) => ({ date: paidDay(l), cents: l.value_cents, kind: "earning", label: l.name, lead: l }));
-    return paid.concat((state.tx || []).map((t) => ({ id: t.id, date: t.date, cents: t.amount_cents, kind: t.kind, label: t.label })));
+    const byId = Object.fromEntries((state.all || []).map((l) => [l.id, l]));
+    return HeurialMoney.entries(state.all || [], state.tx || []).map((e) => ({ ...e, key: e.id || "lead-" + e.lead_id, lead: byId[e.lead_id] || null }));
   }
   /**
-   * The money line for the chosen period, worked out in money.js. Built from the entries themselves, so the line,
-   * the total, the Won so far tile and the list under the chart always agree.
+   * The money line for the chosen period. Built from the entries themselves, so the line, the sums under it and
+   * the table always agree.
    */
   const moneyPath = () => HeurialMoney.series(moneyEntries(), { today: state.data.today, days: state.range === "all" ? null : Number(state.range) });
-  const TRANSFER = { deposit: "Transfer", withdrawal: "Expense" };
-  /** An entry's amount with its sign: money in is +, a withdrawal is −. */
-  const signed = (entry) => `${entry.kind === "withdrawal" ? "−" : "+"}${money(entry.cents)}`;
+  const KIND = {
+    income: ["Income", "--up", "↑"], expense: ["Expense", "--down", "↓"], transfer_in: ["Transfer in", "--accent", "→"],
+    transfer_out: ["Transfer out", "--mute", "←"], out: ["Needs a category", "--warn", "?"],
+  };
+  /** An entry's amount with its sign: money in is +, money out is −. */
+  const signed = (entry) => `${HeurialMoney.SIGN[entry.kind] < 0 ? "−" : "+"}${money(entry.cents)}`;
+  /** What a client has actually paid, from the payment records (and the lead itself where none exists yet). */
+  const receivedFrom = (lead) => moneyEntries().filter((e) => e.kind === "income" && e.lead_id === lead.id && e.date <= state.data.today);
   const sentence = (text) => text[0].toUpperCase() + text.slice(1);
   /** Roll the headline figures to their values on first view and whenever they change. */
   const shownStats = {};
@@ -463,7 +502,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     document.querySelectorAll(".stat, .money-head").forEach((card) => {
       const el = card.querySelector(".stat-v"), key = card.querySelector(".stat-l").textContent, text = el.textContent;
       const to = Number(text.replace(/[^0-9.]/g, "")), from = shownStats[key] ?? 0;
-      if (!/\d/.test(text)) return;
+      if (!/\d/.test(text) || /[−-]/.test(text)) return; // a balance below zero is shown as it is, not rolled
       shownStats[key] = to;
       if (still || from === to) return;
       const prefix = text.startsWith("$") ? "$" : "", t0 = performance.now();
@@ -475,21 +514,6 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       };
       requestAnimationFrame(step);
     });
-  }
-  /** Three headline figures for Overview, set out like the tracker's preview on the website. */
-  function statCards() {
-    const d = state.data, m = moneyPath(), won = m.earned;
-    const urgent = urgentCount(d);
-    const overdue = d.followups.filter((f) => f.follow_up_at < d.today).length;
-    const why = [overdue && `${overdue} overdue`, d.inbox.length && plural(d.inbox.length, "inquiry", "inquiries"), d.stale.length && plural(d.stale.length, "call", "calls"), dueTasks(d).length && plural(dueTasks(d).length, "task")].filter(Boolean).join(" · ");
-    const open = d.leads.filter((l) => OPEN.includes(l.status));
-    const cards = [
-      ["Open leads", String(open.length), `${money(open.reduce((a, l) => a + l.value_cents, 0))} in play`, ""],
-      ["Due today", String(urgent), why || "Nothing due", urgent ? "hot" : "calm"],
-      ["Won so far", money(won), delta(won, m.before, money) || sentence(rangeText()), ""],
-    ];
-    return `<div class="stats">${cards.map(([label, value, sub, cls]) => `<div class="stat ${cls}">
-      <b class="stat-v">${esc(value)}</b><span class="stat-l">${label}</span><span class="stat-s">${sub}</span></div>`).join("")}</div>`;
   }
   function renderStatus() {
     const demo = cfg.mode === "demo";
@@ -552,112 +576,183 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const open = (id) => `data-action="open" data-id="${id}"`;
     return [
       ...d.inbox.map((i) => ({ key: "i" + i.id, when: ago(i.created_at), cls: "new", title: `Reply to ${i.name}`, sub: i.source, act: `data-action="view" data-view="tasks"` })),
-      ...d.stale.map((x) => ({ key: "s" + x.id, when: niceDate(x.call_at), cls: "late", title: `Update the call with ${x.name}`, sub: "Still marked as booked", act: open(x.id) })),
+      ...d.stale.map((x) => ({ key: "s" + x.id, when: niceDate(x.call_at), cls: "late", title: `Record the call with ${x.name}`, sub: "Still marked as booked", act: open(x.id) })),
       ...dueTasks(d).map((t) => ({ key: "t" + t.id, ...due(t.due_at), when: due(t.due_at).text, title: t.title, sub: "Your task", act: `data-action="view" data-view="tasks"` })),
       ...d.followups.filter((f) => f.follow_up_at <= d.today).map((f) => ({ key: "f" + f.id, ...due(f.follow_up_at), when: due(f.follow_up_at).text, title: f.follow_up_note || "Follow up", sub: f.name, act: open(f.id) })),
     ];
   }
-  /** Open leads and what they are worth, as two large figures. */
-  function leadSum(d, note) {
-    const open = d.leads.filter((l) => OPEN.includes(l.status));
-    return `<div class="lead-sum"><p><b>${open.length}</b>open ${open.length === 1 ? "lead" : "leads"}</p><p><b>${money(open.reduce((a, l) => a + l.value_cents, 0))}</b>potential</p>${note ? `<span>${note}</span>` : ""}</div>`;
+  /** Dates inside a sentence from the back end ("2026-11-08") read the way the rest of the tracker writes them. */
+  const prettyDates = (s) => String(s).replace(/\b\d{4}-\d{2}-\d{2}\b/g, (x) => niceDate(x));
+  /** The soonest thing with a date after today: a follow-up or one of your tasks. */
+  function nextCommitment(d) {
+    const items = [
+      ...d.followups.filter((f) => f.follow_up_at > d.today).map((f) => ({ date: f.follow_up_at, text: `${f.follow_up_note || "Follow up"} (${f.name})` })),
+      ...(state.tasks || []).filter((t) => !t.done_at && t.due_at > d.today).map((t) => ({ date: t.due_at, text: t.title })),
+    ].sort((a, b) => a.date.localeCompare(b.date));
+    return items[0] ? `Next commitment: ${at(items[0].date).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}, ${items[0].text}.` : "";
+  }
+  /** The buttons that finish a suggestion. Each one is an action the tracker already had. */
+  function nextButtons(n) {
+    const b = (cls, attrs, label, fk) => `<button class="btn ${cls}" type="button" ${attrs} data-fk="nx-${fk}">${label}</button>`;
+    const open = n.lead_id ? b("", `data-action="open" data-id="${n.lead_id}"`, "Open client", "open") : "";
+    switch (n.kind) {
+      case "followup": return b("primary", `data-action="open" data-id="${n.lead_id}" data-tab="messages"`, n.has_draft ? "Review draft" : "Write follow-up", "a")
+        + b("", `data-action="fu" data-days="1" data-id="${n.lead_id}"`, "Tomorrow", "b") + b("", `data-action="fu" data-days="done" data-id="${n.lead_id}"`, "Mark done", "c") + open;
+      case "task": return b("primary", `data-action="task-toggle" data-done="1" data-id="${n.task_id}"`, "Mark done", "a") + b("", `data-action="task-due" data-days="1" data-id="${n.task_id}"`, "Tomorrow", "b")
+        + b("", `data-action="view" data-view="tasks"`, "Open Tasks", "c");
+      case "inquiry": return b("primary", `data-action="inbox-convert" data-id="${n.inquiry_id}"`, "Add to pipeline", "a") + b("", `data-action="view" data-view="tasks"`, "Read it in Tasks", "b");
+      case "call": return b("primary", `data-action="stale" data-status="held" data-id="${n.lead_id}"`, "Call held", "a") + b("", `data-action="stale" data-status="no_show" data-id="${n.lead_id}"`, "No-show", "b") + open;
+      default: return b("primary", `data-action="prop-fu" data-id="${n.lead_id}"`, "Follow up in 3 days", "a") + open;
+    }
+  }
+  /** One thing to do next, picked by fixed rules in the back end (core.nextMoves), with why and what it is based on. */
+  function nextPane() {
+    const list = state.next || [], d = state.data;
+    if (!list.length) {
+      return `<section class="pane next is-clear" aria-labelledby="nextTitle"><p class="eyebrow">Your next move</p>
+    <h2 id="nextTitle">Nothing is waiting on you</h2>
+    <p class="next-why">No overdue follow-ups or tasks, no unanswered inquiries, no calls to record and nothing due today. ${esc(nextCommitment(d))}</p></section>`;
+    }
+    const i = Math.min(state.nextAt, list.length - 1), n = list[i];
+    return `<section class="pane next" aria-labelledby="nextTitle"><p class="eyebrow">Your next move</p>
+    <h2 id="nextTitle">${esc(n.title)}</h2>
+    <p class="next-why">${esc(n.reason)}</p>
+    <ul class="next-ev" aria-label="What this is based on">${n.evidence.map((e) => `<li><span>${esc(prettyDates(e.label))}</span>${esc(e.text)}</li>`).join("")}</ul>
+    <div class="next-acts">${nextButtons(n)}</div>
+    <p class="next-rule">${list.length > 1 ? `${i + 1} of ${list.length}. ` : ""}Picked by fixed rules: overdue promises first, then new inquiries, calls to record, what is due today, and proposals with no next step.
+      ${list.length > 1 ? `<button class="more" type="button" data-action="next-skip" data-fk="nx-skip">Show the next one</button>` : ""}</p>
+  </section>`;
   }
   function viewOverview() {
     const d = state.data, urgent = urgentCount(d), today = todayItems(d);
-    const tabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
-    const report = { conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]();
+    const late = (l) => l.follow_up_at || "9999";
+    const open = (state.all || []).filter((l) => OPEN.includes(l.status)).sort((a, b) => late(a).localeCompare(late(b)) || b.value_cents - a.value_cents);
     return `<div class="vw ov">
-  ${moneyPane()}
-  ${statCards()}
+  ${nextPane()}
+  ${moneyPane(false)}
   <section class="pane ov-today" aria-labelledby="todayTitle">
-    <div class="pane-head"><h2 id="todayTitle">Today</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
-      <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
-    <div class="pane-body">${today.length ? `<ul class="todo">${today.slice(0, 4).map((x) => `<li><button class="todo-row" type="button" ${x.act} data-fk="td-${x.key}">
+    <div class="pane-head"><h2 id="todayTitle">Today</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}<span class="pane-meta">${urgentParts(d)}</span></div>
+    <div class="pane-body">${today.length ? `<ul class="todo">${today.slice(0, 5).map((x) => `<li><button class="todo-row" type="button" ${x.act} data-fk="td-${x.key}">
         <span class="q-when ${x.cls}">${esc(x.when)}</span><span class="todo-t">${esc(x.title)}<small>${esc(x.sub || "")}</small></span></button></li>`).join("")}</ul>`
-      : `<div class="empty"><b>Nothing needs you today.</b>No new inquiries, no calls to update, and no follow-ups due.</div>`}
-      <button class="more" type="button" data-action="view" data-view="tasks" data-fk="all-tasks">View all tasks →</button></div>
+      : `<div class="empty"><b>Nothing needs you today.</b>No new inquiries, no calls to record, and no follow-ups or tasks due.</div>`}
+      <button class="more" type="button" data-action="view" data-view="tasks" data-fk="all-tasks">${today.length > 5 ? `All ${today.length} in Tasks` : "Open Tasks"} →</button></div>
   </section>
   <section class="pane ov-leads" aria-labelledby="leadsTitle">
-    <div class="pane-head"><h2 id="leadsTitle">Leads</h2></div>
-    <div class="pane-body">${leadSum(d)}
-      <button class="more" type="button" data-action="view" data-view="pipeline" data-fk="all-leads">View all leads →</button></div>
-  </section>
-  <section class="pane ov-tabs" aria-label="Reports">
-    <div class="pane-head"><div class="tabs" role="tablist" aria-label="Reports">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div>
-    <div class="pane-body" role="tabpanel">${report}</div>
+    <div class="pane-head"><h2 id="leadsTitle">Active leads</h2><span class="pane-meta">${open.length} open · ${money(open.reduce((a, l) => a + l.value_cents, 0))} proposed, not received</span></div>
+    <div class="pane-body">${open.length ? `<ul class="todo">${open.slice(0, 5).map((l) => `<li><button class="todo-row is-lead" type="button" data-action="open" data-id="${l.id}" data-fk="ol-${l.id}">
+        <span class="todo-t">${esc(l.business || l.name)}<small>${esc(l.follow_up_at ? l.follow_up_note || "Follow up" : "No next step set")}</small></span>
+        <span class="num">${l.value_cents ? money(l.value_cents) : ""}</span>${l.follow_up_at ? dueTag(l.follow_up_at) : `<span class="due">–</span>`}</button></li>`).join("")}</ul>`
+      : `<div class="empty">No open leads.</div>`}
+      <button class="more" type="button" data-action="view" data-view="pipeline" data-fk="all-leads">Open the lead board →</button></div>
   </section>
 </div>`;
   }
-  /** The money card: the balance, what the chosen period changed, the line, and income beside expenses. */
-  function moneyPane() {
-    const m = moneyPath(), gain = m.total - m.start;
-    const title = m.transfers ? "Total balance" : "Total earned";
-    const spent = m.steps.reduce((sum, x) => sum + (x.entry.kind === "withdrawal" ? x.entry.cents : 0), 0);
-    // A percentage only means something against a real starting balance; from almost nothing it is just a huge number.
-    const share = m.start > 0 ? Math.round((Math.abs(gain) / m.start) * 100) : 0, pct = share > 0 && share < 1000 ? ` (${share}%)` : "";
-    const change = !m.steps.length && !m.start ? "Nothing has been marked Paid yet"
+  /**
+   * The money card: the balance, how the chosen period changed it, the line, and the entries behind a chosen point.
+   * `full` (the Money screen) adds the period's sums by kind. "Balance change" includes transfers; profit doesn't.
+   */
+  function moneyPane(full) {
+    const m = moneyPath(), gain = m.total - m.start, profit = m.earned - m.spent;
+    const title = m.transfers ? "Balance" : "Total received";
+    const change = !m.steps.length && !m.start ? "No money recorded yet"
       : !m.steps.length ? `No change ${inPeriod()}`
-      : `<b${gain < 0 ? ` class="is-down"` : ""}>${gain < 0 ? "▼" : "▲"} ${money(Math.abs(gain))}${pct}</b> ${inPeriod()}${m.transfers ? ` · ${money(m.earned)} earned` : ""}`;
-    const label = `${title} ${money(m.total)}. ${m.steps.length ? `${gain < 0 ? "Down" : "Up"} ${money(Math.abs(gain))} ${inPeriod()}, ${money(m.earned)} of it earned` : `No change ${inPeriod()}`}`;
+      : `<span class="money-k">Balance change</span><b${gain < 0 ? ` class="is-down"` : ""}>${gain < 0 ? "▼" : "▲"} ${money(Math.abs(gain))}</b> ${inPeriod()}`;
+    const earned = m.steps.length && m.transfers ? `<p class="money-d"><span class="money-k">Profit</span><b class="${profit < 0 ? "is-down" : ""}">${money(profit)}</b> income minus expenses</p>` : "";
+    const label = `${title} ${money(m.total)}. ${m.steps.length ? `Balance ${gain < 0 ? "down" : "up"} ${money(Math.abs(gain))} ${inPeriod()}. Profit ${money(profit)}` : `No change ${inPeriod()}`}`;
+    const cell = (kind, name, cents) => `<div><i style="--c:var(${KIND[kind][1]})" aria-hidden="true">${KIND[kind][2]}</i><span>${name}</span><b>${money(cents)}</b></div>`;
+    const flow = full && m.steps.length ? `<div class="flow">${cell("income", "Income", m.earned)}${cell("expense", "Expenses", m.spent)}${cell("transfer_in", "Transfers in", m.moved_in)}${cell("transfer_out", "Transfers out", m.moved_out)}${m.unsorted ? cell("out", "Needs a category", m.unsorted) : ""}</div>
+    <p class="recon">${niceDate(m.first)} closed at ${money(m.start)}. Plus ${money(m.earned)} income, minus ${money(m.spent)} expenses, plus ${money(m.moved_in)} in, minus ${money(m.moved_out)} out${m.unsorted ? `, minus ${money(m.unsorted)} not yet categorised` : ""}: ${money(m.total)} today. Transfers change the balance, not the profit.</p>` : "";
     return `<section class="pane ov-money" aria-labelledby="moneyTitle">
     <div class="money-head">
-      <div><h2 class="stat-l" id="moneyTitle">${title}</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p></div>
+      <div><h2 class="stat-l" id="moneyTitle">${title}</h2><b class="stat-v">${money(m.total)}</b><p class="money-d">${change}</p>${earned}</div>
       <div class="read" id="chartRead"></div>
     </div>
-    <div class="chart" id="chart" tabindex="0" role="img" aria-label="${esc(label)}. Use the left and right arrow keys to step through the entries."></div>
-    ${m.transfers ? `<div class="flow"><div><i class="in" aria-hidden="true">↑</i><span>Income</span><b>${money(m.earned)}</b></div><div><i class="out" aria-hidden="true">↓</i><span>Expenses</span><b>${money(spent)}</b></div></div>` : ""}
+    <div class="chart" id="chart" tabindex="0" role="group" aria-label="${esc(label)}. Left and right arrow keys step through the entries; Escape clears the choice."></div>
+    <div class="pick" id="chartPick" aria-live="polite"></div>
+    ${flow}
   </section>`;
   }
 
   // ----- Money -----
-  /** The balance and chart again, then every entry behind the line as a table, with a filter by type. */
+  /** The balance and chart, the add bar, every entry behind the line with its client, what is scheduled, and the reports. */
   function viewMoney() {
-    const m = moneyPath(), tab = state.moneyTab;
-    const rows = m.steps.slice().reverse().filter((x) => tab === "all" || x.entry.kind === tab);
-    const tabs = [["all", "All"], ["earning", "Income"], ["withdrawal", "Expenses"], ["deposit", "Transfers"]];
-    const KIND = { earning: ["Income", "--up", "↑"], withdrawal: ["Expense", "--down", "↓"], deposit: ["Transfer", "--accent", "↔"] };
-    const undated = m.steps.filter((x) => x.entry.lead && !x.entry.lead.paid_at).length;
-    // Entries dated after today are not in the balance yet. They are still listed, first, so they can be seen and removed.
-    const ahead = moneyEntries().filter((e) => e.date > state.data.today && (tab === "all" || e.kind === tab)).sort((a, b) => a.date.localeCompare(b.date));
-    const line = (entry, future) => `<tr${future ? ` class="is-future"` : ""}><td class="n">${niceDate(entry.date)}</td><td>${what(entry)}${future ? `<span> · scheduled, not in the balance yet</span>` : ""}</td>
-        <td><span class="kind" style="--c:var(${future ? "--mute" : KIND[entry.kind][1]})">${KIND[entry.kind][2]} ${KIND[entry.kind][0]}</span></td>
-        <td class="r amt${entry.kind === "withdrawal" ? " out" : ""}">${signed(entry)}</td>
-        <td class="r">${entry.id ? `<button class="btn ghost sm icon" type="button" data-action="tx-del" data-id="${entry.id}" data-fk="xd-${entry.id}" aria-label="Delete ${esc(entry.label)}, ${signed(entry)}">${icon("x")}</button>` : ""}</td></tr>`;
-    const what = ({ lead, label, kind }) => lead
-      ? `<button class="who" type="button" data-action="open" data-id="${lead.id}" data-fk="tx-${lead.id}">${esc(lead.name)}${lead.business ? `<span> · ${esc(lead.business)}</span>` : ""}</button>`
-      : esc(label || KIND[kind][0]);
+    const d = state.data, m = moneyPath(), tab = state.moneyTab, all = moneyEntries();
+    const inTab = (e) => tab === "all" || (tab === "transfers" ? e.kind === "transfer_in" || e.kind === "transfer_out" : tab === "expense" ? e.kind === "expense" || e.kind === "out" : e.kind === tab);
+    const rows = m.steps.slice().reverse().map((x) => x.entry).filter(inTab);
+    const tabs = [["all", "All"], ["income", "Income"], ["expense", "Expenses"], ["transfers", "Transfers"]];
+    // Entries dated after today are not in the balance, the chart or the sums. They get a list of their own.
+    const ahead = all.filter((e) => e.date > d.today).sort((a, b) => a.date.localeCompare(b.date));
+    const derived = all.filter((e) => e.derived), undated = derived.filter((e) => e.undated).length, dated = derived.length - undated;
+    const client = (e) => (e.lead
+      ? `<button class="who" type="button" data-action="open" data-id="${e.lead.id}" data-fk="tx-${e.key}">${esc(e.lead.name)}${e.lead.business ? `<span> · ${esc(e.lead.business)}</span>` : ""}</button>`
+      : `<span class="faint">${e.lead_id ? "Client removed" : "–"}</span>`);
+    const kind = (e, future) => (e.kind === "out" && e.id && has("money")
+      ? `<select class="in sm" data-change="tx-kind" data-id="${e.id}" data-fk="xk-${e.id}" aria-label="Category for ${esc(e.label)}"><option value="">Needs a category…</option><option value="expense">Expense</option><option value="transfer_out">Transfer out</option></select>`
+      : `<span class="kind" style="--c:var(${future ? "--mute" : KIND[e.kind][1]})">${KIND[e.kind][2]} ${KIND[e.kind][0]}</span>`);
+    const line = (e, future) => `<tr id="tx-${e.key}" class="${future ? "is-future" : ""}${state.txFocus === e.key ? " is-touched" : ""}"><td class="n">${niceDate(e.date)}</td>
+        <td>${esc(e.label)}${e.derived ? `<span class="faint"> · read from the lead${e.undated ? ", no paid date" : ""}</span>` : ""}</td><td>${client(e)}</td><td>${kind(e, future)}</td>
+        <td class="r amt${HeurialMoney.SIGN[e.kind] < 0 ? " out" : ""}">${signed(e)}</td>
+        <td class="r">${e.id ? `<button class="btn ghost sm icon" type="button" data-action="tx-del" data-id="${e.id}" data-fk="xd-${e.id}" aria-label="Delete ${esc(e.label)}, ${signed(e)}">${icon("x")}</button>` : ""}</td></tr>`;
+    const head = `<thead><tr><th>Date</th><th>Description</th><th>Client</th><th>Type</th><th class="r">Amount</th><th><span class="sr">Delete</span></th></tr></thead>`;
+    const leads = [...(state.all || [])].sort((a, b) => a.name.localeCompare(b.name));
     const add = has("money") ? `<form class="pane tm-add" data-submit="tx-add" novalidate aria-label="Add a transaction">
     <div class="time-row is-tx">
-      <label class="field"><span>Type</span><select name="kind" data-keep="x-kind" data-fk="x-kind"><option value="earning">Income</option><option value="withdrawal">Expense</option><option value="deposit">Transfer in</option></select></label>
-      <label class="field"><span>Date</span><input type="date" name="date" data-keep="x-date" data-fk="x-date" value="${state.data.today}"></label>
+      <label class="field"><span>Type</span><select name="kind" data-keep="x-kind" data-fk="x-kind"><option value="income">Income</option><option value="expense">Expense</option><option value="transfer_in">Transfer in</option><option value="transfer_out">Transfer out</option></select></label>
+      <label class="field"><span>Date</span><input type="date" name="date" data-keep="x-date" data-fk="x-date" value="${d.today}"></label>
       <label class="field"><span>Amount</span><input type="number" name="amount" min="0.01" step="0.01" inputmode="decimal" data-keep="x-amt" data-fk="x-amt"></label>
       <label class="field"><span>Description</span><input type="text" name="label" maxlength="120" data-keep="x-label" data-fk="x-label"></label>
-      <button class="btn primary" type="submit" data-fk="x-submit">${icon("plus")}Add transaction</button>
+      <label class="field"><span>Client (income only)</span><select name="lead_id" data-keep="x-lead" data-fk="x-lead"><option value="">No client</option>${leads.map((l) => `<option value="${l.id}">${esc(l.name)}${l.business ? ` · ${esc(l.business)}` : ""}</option>`).join("")}</select></label>
+      <button class="btn primary" type="submit" data-fk="x-submit">${icon("plus")}Add</button>
     </div>
     <p class="field-err foot-note" id="txAddErr" role="alert" hidden></p>
   </form>` : `<p class="foot-note setup-note">Adding transactions is off until the Transactions table exists. The steps are in catalyst/TRACKER-SETUP.md.</p>`;
+    const rtabs = [["conversion", "Conversion"], ["sources", "Sources"], ["rates", "Earned per hour"]];
     return `<div class="vw mn">
-  ${moneyPane()}
+  ${moneyPane(true)}
   ${add}
   <section class="pane" aria-labelledby="txTitle">
-    <div class="pane-head"><h2 id="txTitle">Transactions</h2><span class="pane-meta">${sentence(inPeriod())}</span>
+    <div class="pane-head"><h2 id="txTitle">Received and spent</h2><span class="pane-meta">${sentence(inPeriod())}${m.steps.length ? ` · ${plural(m.steps.length, "entry", "entries")}` : ""}</span>
       <div class="pane-tools"><div class="tabs" role="tablist" aria-label="Type">${tabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="moneytab" data-tab="${key}" data-fk="mt-${key}" aria-selected="${tab === key}">${name}</button>`).join("")}</div></div></div>
-    <div class="pane-body">${rows.length || ahead.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="r">Amount</th><th><span class="sr">Delete</span></th></tr></thead><tbody>
-      ${ahead.map((entry) => line(entry, true)).join("")}${rows.map(({ entry }) => line(entry, false)).join("")}</tbody></table>`
-      : `<div class="empty"><b>Nothing here ${inPeriod()}.</b>When you move a lead to Paid, its value shows up as income.</div>`}
-    ${undated ? `<p class="foot-note">Payments with no paid date (${undated}) sit on the day their call was booked. Open one and fill in Paid on to move it.</p>` : ""}</div>
+    ${dated && has("money") ? `<div class="strip"><span>${plural(dated, "payment")} from before payments were kept as records still ${dated === 1 ? "follows its" : "follow their"} lead, so editing the lead changes ${dated === 1 ? "it" : "them"}. Recording ${dated === 1 ? "it" : "them"} uses each lead's own paid date and value.</span>
+      <button class="btn sm" type="button" data-action="backfill" data-fk="backfill">Record ${dated === 1 ? "it" : `all ${dated}`}</button></div>` : ""}
+    <div class="pane-body">${rows.length ? `<table class="tbl">${head}<tbody>${rows.map((e) => line(e, false)).join("")}</tbody></table>`
+      : `<div class="empty"><b>Nothing here ${inPeriod()}.</b>When you move a lead to Paid, its payment is recorded here as income.</div>`}
+    ${undated ? `<p class="foot-note">${plural(undated, "paid lead has", "paid leads have")} no paid date, so ${undated === 1 ? "it sits" : "they sit"} on the day the call was booked and ${undated === 1 ? "is" : "are"} not recorded as ${undated === 1 ? "a payment" : "payments"}. Open the lead and fill in Paid on: nothing is dated for you.</p>` : ""}</div>
+  </section>
+  ${ahead.length ? `<section class="pane" aria-labelledby="schedTitle">
+    <div class="pane-head"><h2 id="schedTitle">Scheduled</h2><span class="pane-meta">Dated after today. Not in the balance, the chart or the sums until the day comes.</span></div>
+    <div class="pane-body"><table class="tbl">${head}<tbody>${ahead.map((e) => line(e, true)).join("")}</tbody></table></div>
+  </section>` : ""}
+  <section class="pane ov-tabs" aria-label="Reports">
+    <div class="pane-head"><h2>Reports</h2><span class="pane-meta">Leads booked ${inPeriod()}</span><div class="pane-tools"><div class="tabs" role="tablist" aria-label="Reports">${rtabs.map(([key, name]) => `<button class="tab" type="button" role="tab" data-action="ovtab" data-tab="${key}" data-fk="ov-${key}" aria-selected="${state.ovTab === key}">${name}</button>`).join("")}</div></div></div>
+    <div class="pane-body" role="tabpanel">${{ conversion: reportFunnel, sources: reportSources, rates: reportRates }[state.ovTab]()}</div>
   </section>
 </div>`;
   }
 
   // ----- Tasks -----
+  /** Everything a daily review walks through, in order. Each item is looked up fresh when its turn comes. */
+  function reviewQueue(d) {
+    return [
+      ...d.inbox.map((i) => ({ type: "inquiry", id: i.id })),
+      ...d.stale.map((s) => ({ type: "call", id: s.id })),
+      ...d.followups.filter((f) => f.follow_up_at <= d.today).map((f) => ({ type: "followup", id: f.id })),
+      ...dueTasks(d).map((t) => ({ type: "task", id: t.id })),
+      ...(has("money") ? (state.tx || []).filter((t) => t.kind === "out").map((t) => ({ type: "tx", id: t.id })) : []),
+    ];
+  }
   /** Everything waiting on you, with its buttons, beside the follow-ups that are further out. */
   function viewTasks() {
-    const d = state.data, urgent = urgentCount(d);
+    const d = state.data, urgent = urgentCount(d), queue = reviewQueue(d), sort = queue.filter((q) => q.type === "tx").length;
     const later = d.followups.filter((f) => f.follow_up_at > addDays(d.today, 7));
     const mine = state.tasks || [], tab = state.taskTab, shown = mine.filter((t) => (tab === "done") === Boolean(t.done_at));
     const tabs = [["open", "Open", mine.filter((t) => !t.done_at).length], ["done", "Completed", mine.filter((t) => t.done_at).length]];
+    const parts = [urgentParts(d), sort && plural(sort, "transaction to categorise", "transactions to categorise")].filter(Boolean).join(" · ");
     return `<div class="vw tk">
+  <section class="pane review-bar" aria-labelledby="needTitle">
+    <div><h2 id="needTitle">Needs attention${urgent ? ` <span class="count hot">${urgent}</span>` : ""}</h2><p>${parts || "Nothing is overdue or due today."}</p></div>
+    <button class="btn primary" type="button" data-action="review-start" data-fk="review" ${queue.length ? "" : "disabled"}>${queue.length ? `Start daily review · ${queue.length}` : "Nothing to review"}</button>
+  </section>
   <div class="tk-main">
   <section class="pane" aria-labelledby="mineTitle">
     <div class="pane-head"><h2 id="mineTitle">Your tasks</h2>
@@ -666,7 +761,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       <div class="time-row is-task">
         <label class="field"><span>Task</span><input type="text" name="title" maxlength="200" data-keep="k-title" data-fk="k-title"></label>
         <label class="field"><span>Due (optional)</span><input type="date" name="due_at" data-keep="k-due" data-fk="k-due"></label>
-        <button class="btn primary" type="submit" data-fk="k-submit">${icon("plus")}Add task</button>
+        <button class="btn" type="submit" data-fk="k-submit">${icon("plus")}Add task</button>
       </div>
       <p class="field-err foot-note" id="taskAddErr" role="alert" hidden></p>
     </form>` : `<p class="foot-note setup-note">Adding tasks is off until the Tasks table exists. The steps are in catalyst/TRACKER-SETUP.md.</p>`}
@@ -678,7 +773,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       : `<div class="empty">${tab === "done" ? "Nothing finished yet." : has("tasks") ? "No tasks of your own. Add one above." : "No tasks of your own."}</div>`}</div>
   </section>
   <section class="pane" aria-labelledby="queueTitle">
-    <div class="pane-head"><h2 id="queueTitle">From your leads</h2>${urgent ? `<span class="count hot">${urgent}</span>` : ""}
+    <div class="pane-head"><h2 id="queueTitle">From your leads</h2>
       <div class="pane-tools"><button class="btn ghost sm" type="button" data-action="digest" data-fk="digest">${icon("mail")}Daily email</button></div></div>
     <div class="pane-body" data-scroll="queue">${queueHtml()}</div>
   </section>
@@ -693,6 +788,112 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 </div>`;
   }
 
+  // ----- AI help, inside the work -----
+  // Each request is kept under a key ("inq-ID", "lead-ID-catch_up"), so its answer shows where it was asked for.
+  // Without AI connected the buttons aren't shown, and nothing else depends on them.
+  const aiButton = (key, kind, id, label) => (has("assist")
+    ? `<button class="btn ghost sm" type="button" data-action="assist" data-key="${key}" data-kind="${kind}" data-id="${id}" data-fk="ai-${key}" ${state.ai[key] && state.ai[key].loading ? "disabled" : ""}>${icon("spark")}${label}</button>` : "");
+  function aiBox(key) {
+    const a = state.ai[key];
+    if (!a) return "";
+    if (a.loading) return `<div class="ai-box" role="status">Reading the records…</div>`;
+    if (a.error) return `<div class="ai-box err" role="alert"><p class="ai-t">${esc(a.error)} Everything here works without it.</p></div>`;
+    const r = a.result;
+    return `<div class="ai-box"><p class="ai-h">${icon("spark")}<span>${cfg.mode === "demo" ? "Sample output, not written by AI" : "Written by AI from your records. Check it against them."}</span>
+        <button class="btn ghost sm icon" type="button" data-action="assist-close" data-key="${key}" aria-label="Close">${icon("x")}</button></p>
+      ${r.text ? `<p class="ai-t">${esc(r.text)}</p>` : ""}
+      ${r.tasks.length ? `<ul class="ai-tasks">${r.tasks.map((t, i) => `<li><span>${esc(t.title)}${t.due_at ? ` · due ${niceDate(t.due_at)}` : ""}</span>
+        ${t.added ? `<span class="due">Added</span>` : has("tasks") ? `<button class="btn sm" type="button" data-action="assist-add" data-key="${key}" data-i="${i}">Add task</button>` : ""}</li>`).join("")}</ul>` : ""}
+      <details class="ai-src"><summary>Based on ${plural(r.sources.length, "record")}</summary><ul>${r.sources.map((s) => `<li><b>${esc(prettyDates(s.label))}</b>${esc(s.text)}</li>`).join("")}</ul></details></div>`;
+  }
+  /** Redraw wherever an AI answer can be showing. */
+  function paintAi() {
+    renderView();
+    if (!$("insp").hidden && state.tab === "timeline") paintTimeline();
+    if (state.review) paintReview();
+  }
+  async function runAssist(key, kind, id) {
+    state.ai[key] = { loading: true };
+    paintAi();
+    try {
+      state.ai[key] = { result: await call("/api/assist", "POST", kind === "inquiry_summary" ? { kind, inquiry_id: id } : { kind, lead_id: id }) };
+    } catch (err) {
+      state.ai[key] = { error: err.message || "The AI couldn't do that just now." };
+    }
+    paintAi();
+  }
+
+  // ----- Daily review: one item at a time, then an honest count of what happened -----
+  const REVIEW = {
+    inquiry: ["New inquiry", (d, id) => d.inbox.find((x) => x.id === id)], call: ["Call needing an outcome", (d, id) => d.stale.find((x) => x.id === id)],
+    followup: ["Follow-up due", (d, id) => d.followups.find((x) => x.id === id)], task: ["Your task", (d, id) => (state.tasks || []).find((x) => x.id === id)],
+    tx: ["Transaction to categorise", (d, id) => (state.tx || []).find((x) => x.id === id)],
+  };
+  function startReview() {
+    const queue = reviewQueue(state.data);
+    if (!queue.length) return;
+    state.review = { queue, at: 0, tally: { completed: 0, rescheduled: 0, reviewed: 0 }, changed: false };
+    paintReview();
+    $("reviewDlg").showModal();
+  }
+  function paintReview() {
+    const R = state.review, d = state.data, body = $("reviewBody");
+    if (!R) return;
+    const total = R.queue.length, finished = R.at >= total;
+    $("reviewBar").style.width = `${(Math.min(R.at, total) / total) * 100}%`;
+    if (finished) {
+      const left = urgentCount(d), t = R.tally;
+      $("reviewStep").textContent = `${plural(total, "item")} gone through`;
+      body.innerHTML = `<div class="rv-card"><p class="eyebrow">Review complete</p>
+        <ul class="rv-sum"><li><b>${t.completed}</b>completed</li><li><b>${t.rescheduled}</b>moved to a later day</li><li><b>${t.reviewed}</b>looked at and left as ${t.reviewed === 1 ? "it is" : "they are"}</li><li><b>0</b>sent: nothing is sent from the review</li></ul>
+        <p class="rv-why">${left ? `${plural(left, "item still needs", "items still need")} attention today.` : "Nothing is overdue or due today now."} ${esc(nextCommitment(d))}</p>
+        <div class="rv-acts"><button class="btn primary" type="button" data-action="review-close">Done</button></div></div>`;
+      return;
+    }
+    const q = R.queue[R.at], [group, find] = REVIEW[q.type], x = find(d, q.id);
+    $("reviewStep").textContent = `${R.at + 1} of ${total} · ${group}`;
+    const b = (what, label, cls) => `<button class="btn ${cls || ""}" type="button" data-action="review-do" data-do="${what}">${label}</button>`;
+    const skip = b("skip", "Skip for now", "ghost");
+    let card;
+    if (!x) card = `<h3>This one was already handled.</h3><div class="rv-acts">${b("skip", "Next", "primary")}</div>`;
+    else if (q.type === "inquiry") card = `<h3>${esc(x.name)}${x.company ? ` · ${esc(x.company)}` : ""}</h3><p class="rv-why">${esc(x.source)} · ${ago(x.created_at)}</p><blockquote>${esc(x.message)}</blockquote>
+      ${aiBox(`inq-${x.id}`)}<div class="rv-acts">${b("convert", "Add to pipeline", "primary")}${b("dismiss", "Dismiss")}${aiButton(`inq-${x.id}`, "inquiry_summary", x.id, "Summarize")}${skip}</div>`;
+    else if (q.type === "call") card = `<h3>Did the call with ${esc(x.name)} happen?</h3><p class="rv-why">${x.business ? `${esc(x.business)} · ` : ""}Call date ${niceDate(x.call_at)}, still marked as booked.</p>
+      <div class="rv-acts">${b("held", "Call held", "primary")}${b("no_show", "No-show")}${skip}</div>`;
+    else if (q.type === "followup") card = `<h3>${esc(x.follow_up_note || "Follow up")}</h3><p class="rv-why">${esc(x.name)}${x.business ? ` · ${esc(x.business)}` : ""} · ${due(x.follow_up_at).long}</p>
+      <div class="rv-acts">${b("done", "Done", "primary")}${b("tomorrow", "Tomorrow")}${b("week", "In a week")}${skip}</div>`;
+    else if (q.type === "task") card = `<h3>${esc(x.title)}</h3><p class="rv-why">Your task · ${due(x.due_at).long}</p>
+      <div class="rv-acts">${b("task-done", "Done", "primary")}${b("task-tomorrow", "Tomorrow")}${skip}</div>`;
+    else card = `<h3>${esc(x.label)}</h3><p class="rv-why">${money(x.amount_cents)} left the balance on ${niceDate(x.date)}. Was it a business expense, or money you took out?</p>
+      <div class="rv-acts">${b("expense", "Business expense", "primary")}${b("transfer_out", "Transfer out")}${skip}</div>`;
+    body.innerHTML = `<div class="rv-card"><p class="eyebrow">${group}</p>${card}</div>`;
+    const first = body.querySelector(".rv-acts .btn");
+    if (first && $("reviewDlg").open) first.focus();
+  }
+  async function reviewDo(what) {
+    const R = state.review, q = R.queue[R.at], d = state.data;
+    const lead = (body) => call("/api/leads/" + q.id, "PATCH", body);
+    const held = () => { const row = d.stale.find((s) => s.id === q.id); return lead({ status: "held", ...(row && row.follow_up_at ? {} : { follow_up_at: addDays(d.today, FOLLOW_PLAN.held[0]), follow_up_note: FOLLOW_PLAN.held[1] }) }); };
+    const run = {
+      convert: () => call(`/api/inbox/${q.id}/convert`, "POST"), dismiss: () => call(`/api/inbox/${q.id}/dismiss`, "POST"),
+      held, no_show: () => lead({ status: "no_show" }),
+      done: () => lead({ follow_up_at: "", follow_up_note: "" }), tomorrow: () => lead({ follow_up_at: addDays(d.today, 1) }), week: () => lead({ follow_up_at: addDays(d.today, 7) }),
+      "task-done": () => call("/api/tasks/" + q.id, "PATCH", { done: true }), "task-tomorrow": () => call("/api/tasks/" + q.id, "PATCH", { due_at: addDays(d.today, 1) }),
+      expense: () => call("/api/transactions/" + q.id, "PATCH", { kind: "expense" }), transfer_out: () => call("/api/transactions/" + q.id, "PATCH", { kind: "transfer_out" }),
+    }[what];
+    if (run) { await run(); R.changed = true; } // a failure throws here: the item stays up and nothing is counted
+    R.tally[!run ? "reviewed" : ["tomorrow", "week", "task-tomorrow"].includes(what) ? "rescheduled" : "completed"]++;
+    R.at++;
+    if (R.at >= R.queue.length && R.changed) await load(); // the closing count is read from fresh data
+    paintReview();
+  }
+  function closeReview() {
+    const R = state.review;
+    state.review = null;
+    if ($("reviewDlg").open) $("reviewDlg").close();
+    if (R && R.changed) load();
+  }
+
   function queueHtml() {
     const d = state.data, t = d.today;
     const upcoming = d.followups.filter((f) => f.follow_up_at <= addDays(t, 7));
@@ -705,7 +906,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
           <div class="q-main"><span class="who">${esc(i.name)}${i.company ? `<span> · ${esc(i.company)}</span>` : ""}</span>
             <p>${esc(i.source)}</p><p class="q-quote">${esc(i.message)}</p></div>
           <div class="q-acts"><button class="btn sm primary" type="button" data-action="inbox-convert" data-id="${i.id}" data-fk="conv-${i.id}">Add to pipeline</button>
-            <button class="btn sm" type="button" data-action="inbox-dismiss" data-id="${i.id}" data-fk="dis-${i.id}">Dismiss</button></div>
+            <button class="btn sm" type="button" data-action="inbox-dismiss" data-id="${i.id}" data-fk="dis-${i.id}">Dismiss</button>
+            ${aiButton(`inq-${i.id}`, "inquiry_summary", i.id, "Summarize")}</div>
+          ${aiBox(`inq-${i.id}`)}
         </div>`).join("");
     }
     if (d.stale.length) {
@@ -767,7 +970,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       </tbody><tfoot><tr><td colspan="3">All logged hours, including calls that didn't turn into paid work</td><td class="r">${money(overall)}</td></tr></tfoot></table>`;
   }
 
-  // ----- The chart: the running total of paid work across the period, stepping up at each payment -----
+  // ----- The chart: the running balance across the period, stepping at each entry. Every point can be chosen. -----
   let geo = null, chartSig = "";
   function niceScale(max, ticks) {
     const raw = max / ticks, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
@@ -778,26 +981,29 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const el = $("chart"), d = state.data;
     if (!el || !d) return;
     const m = moneyPath();
-    // The drawing-in animation plays only when the numbers are new, not on every refresh.
     if (!m.steps.length && !m.start) {
-      el.innerHTML = `<p class="chart-note">No money recorded yet. Mark a lead Paid and the line starts here.</p>`;
+      el.innerHTML = `<p class="chart-note">No money recorded yet. Mark a lead Paid, or add a transaction, and the line starts here.</p>`;
       geo = null;
       $("chartRead").textContent = "";
+      $("chartPick").innerHTML = "";
       return;
     }
+    // The drawing-in animation plays only when the numbers are new, not on every refresh.
     const sig = state.range + m.start + m.steps.map((x) => x.day + ":" + x.total).join();
     const fresh = sig !== chartSig;
     chartSig = sig;
     const W = Math.max(280, Math.round(el.clientWidth)), H = Math.max(180, Math.round(el.clientHeight));
     const x0 = 14, x1 = W - 64, y0 = 34, y1 = H - 28;
-    // shortcut: the scale starts at $0, so a balance below zero would run off the bottom; add a lower bound when withdrawals can exceed the balance.
-    const { top, step } = niceScale(Math.max(m.start / 100, ...m.steps.map((x) => x.total / 100), 100), H < 260 ? 3 : 4);
-    const px = (day) => x0 + (day / m.span) * (x1 - x0), py = (cents) => y1 - (cents / 100 / top) * (y1 - y0);
+    // The scale runs from the lowest balance to the highest, so a balance below zero stays inside the plot.
+    const high = Math.max(m.start / 100, ...m.steps.map((x) => x.total / 100), 100), low = Math.min(0, m.low / 100);
+    const { step } = niceScale(high - low, H < 260 ? 3 : 4);
+    const bottom = Math.floor(low / step + 1e-9) * step, top = Math.ceil(high / step - 1e-9) * step;
+    const px = (day) => x0 + (day / m.span) * (x1 - x0), py = (cents) => y1 - ((cents / 100 - bottom) / (top - bottom)) * (y1 - y0);
 
     let grid = "";
-    for (let v = 0; v <= top + 1e-6; v += step) {
+    for (let v = bottom; v <= top + 1e-6; v += step) {
       const y = Math.round(py(v * 100)) + .5;
-      grid += `<line class="g-grid" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/><text class="g-axis" x="${x1 + 10}" y="${y + 4}">${usd(v)}</text>`;
+      grid += `<line class="g-grid${bottom < 0 && Math.abs(v) < 1e-6 ? " is-zero" : ""}" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/><text class="g-axis" x="${x1 + 10}" y="${y + 4}">${v < 0 ? "−" : ""}${usd(Math.abs(v))}</text>`;
     }
     // Flat until an entry, then a short eased rise that lands exactly on its day at its exact value. The curve only
     // softens the corner inside that one day; every day's balance is the real one.
@@ -809,45 +1015,50 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       lastX = toX; lastY = toY;
     }
     line += `H${x1}`;
-    const pays = m.steps.map((x) => `<circle class="g-pay${x.entry.kind === "earning" ? "" : " is-transfer"}" cx="${px(x.day).toFixed(1)}" cy="${py(x.total).toFixed(1)}" r="3.5"/>`).join("");
+    const pays = m.steps.map((x) => `<circle class="g-pay${x.entry.kind === "income" ? "" : " is-transfer"}" cx="${px(x.day).toFixed(1)}" cy="${py(x.total).toFixed(1)}" r="4"/>`).join("");
     const marks = m.span < 3 ? [0, 1] : [0, 1 / 3, 2 / 3, 1];
     const dates = marks.map((f, i) => `<text class="g-axis" text-anchor="${i === 0 ? "start" : f === 1 ? "end" : "middle"}" x="${px(f * m.span).toFixed(1)}" y="${H - 8}">${f === 1 ? "Today" : niceDate(addDays(m.first, Math.round(f * m.span)))}</text>`).join("");
-    const endY = py(m.total).toFixed(1);
     // The balance going in and the balance now, as small labels above the line's two ends.
     const tag = (x, y, cents) => {
       const text = money(cents), w = text.length * 8 + 18, left = Math.max(2, Math.min(W - w - 2, x - w / 2)), top = Math.max(2, y - 34);
       return `<g class="g-tag"><rect x="${left.toFixed(1)}" y="${top.toFixed(1)}" width="${w}" height="24" rx="8"/><text x="${(left + w / 2).toFixed(1)}" y="${(top + 16.5).toFixed(1)}">${text}</text></g>`;
     };
-    const tags = tag(x0 + 28, py(m.start), m.start) + tag(x1, py(m.total), m.total);
     el.innerHTML = `<svg${fresh ? ` class="fresh"` : ""} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <defs><linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ga0"/><stop offset="1" class="ga1"/></linearGradient></defs>
       ${grid}
       <path class="g-area" d="${line}V${y1}H${x0}Z"/><path class="g-line" pathLength="1" d="${line}"/>
       ${pays}
-      <circle class="g-dot" cx="${x1}" cy="${endY}" r="4"/>
+      <circle class="g-dot" cx="${x1}" cy="${py(m.total).toFixed(1)}" r="4"/>
       ${dates}
-      ${tags}
-      <g class="g-x" id="gx" visibility="hidden"><line id="gxv" y1="${y0}" y2="${y1}"/><circle class="g-dot" id="gxd" r="5"/></g>
+      ${tag(x0 + 28, py(m.start), m.start) + tag(x1, py(m.total), m.total)}
+      <g class="g-x" id="gx" visibility="hidden"><line id="gxv" y1="${y0}" y2="${y1}"/><circle class="g-dot" id="gxd" r="5.5"/></g>
     </svg>`;
     geo = { m, px, py, at: -1 };
-    hoverDay(-1);
-    el.onpointermove = (e) => {
+    const days = [...new Set(m.steps.map((x) => x.day))];
+    const picked = () => (state.pick ? dayDiff(state.pick, m.first) : -1);
+    /** The day under the pointer; within a thumb's width of an entry it lands on that entry. */
+    const dayAt = (e) => {
       const x = e.clientX - el.getBoundingClientRect().left;
-      let day = Math.max(0, Math.min(m.span, Math.round(((x - x0) / (x1 - x0)) * m.span)));
-      for (const pay of m.steps) if (Math.abs(px(pay.day) - x) < 14) day = pay.day; // close to a payment, land on it
-      hoverDay(day);
+      let day = Math.max(0, Math.min(m.span, Math.round(((x - x0) / (x1 - x0)) * m.span))), near = 18;
+      for (const s of m.steps) { const gap = Math.abs(px(s.day) - x); if (gap < near) { near = gap; day = s.day; } }
+      return day;
     };
-    el.onpointerdown = el.onpointermove; // a tap shows the value too, not only a drag
-    el.onpointerleave = (e) => { if (e.pointerType === "mouse") hoverDay(-1); }; // after a tap the value stays until the next tap
-    el.onblur = () => hoverDay(-1);
+    el.onpointermove = (e) => { if (e.pointerType === "mouse") hoverDay(dayAt(e)); };
+    // A click or tap chooses the entry there and keeps it shown; away from any entry it clears the choice.
+    el.onpointerdown = (e) => { const day = dayAt(e); pickDay(days.includes(day) ? day : null); if (!days.includes(day)) hoverDay(day); };
+    el.onpointerleave = (e) => { if (e.pointerType === "mouse") hoverDay(picked()); };
+    el.onblur = () => hoverDay(picked());
     el.onkeydown = (e) => {
-      const days = [...new Set(m.steps.map((x) => x.day))];
-      if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || !days.length) return;
+      if (e.key === "Escape" && state.pick) { e.stopPropagation(); return pickDay(null); }
+      const move = { ArrowLeft: -1, ArrowRight: 1, Home: -1e9, End: 1e9 }[e.key];
+      if (!move || !days.length) return;
       e.preventDefault();
-      // The first press lands on the latest payment; after that the arrows step through the payments.
-      const i = days.indexOf(geo.at);
-      hoverDay(days[i < 0 ? days.length - 1 : Math.max(0, Math.min(days.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)))]);
+      // The first press lands on the latest entry; after that the arrows step through them.
+      const i = days.indexOf(picked());
+      pickDay(days[i < 0 ? days.length - 1 : Math.max(0, Math.min(days.length - 1, i + move))]);
     };
+    paintPick();
+    hoverDay(picked());
   }
   /** Move the crosshair to a day of the period, or hide it (-1) and say what the line covers. */
   function hoverDay(day) {
@@ -857,7 +1068,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const { m, px, py } = geo;
     if (day < 0) {
       gx.setAttribute("visibility", "hidden");
-      read.innerHTML = `<span>${plural(m.steps.length, m.transfers ? "entry" : "payment", m.transfers ? "entries" : "payments")} ${inPeriod()}</span>`;
+      read.innerHTML = `<span>${plural(m.steps.length, "entry", "entries")} ${inPeriod()}</span>`;
       return;
     }
     const sofar = m.steps.filter((x) => x.day <= day), total = sofar.length ? sofar[sofar.length - 1].total : m.start;
@@ -865,13 +1076,40 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     gx.setAttribute("visibility", "visible");
     $("gxv").setAttribute("x1", x); $("gxv").setAttribute("x2", x);
     $("gxd").setAttribute("cx", x); $("gxd").setAttribute("cy", py(total).toFixed(1));
-    read.innerHTML = `<span>${niceDate(addDays(m.first, day))} · ${m.transfers ? "balance" : "total"} <b>${money(total)}</b></span>`
-      + sofar.filter((pay) => pay.day === day).map(({ entry }) => entry.kind === "earning"
-        ? `<span class="plus"><b>${signed(entry)}</b> ${esc(entry.label)}</span>`
-        : `<span><b>${signed(entry)}</b> ${TRANSFER[entry.kind]}</span>`).join("");
+    read.innerHTML = `<span>${day === m.span ? "Today" : niceDate(addDays(m.first, day))} · balance <b>${money(total)}</b></span>`
+      + sofar.filter((s) => s.day === day).map(({ entry }) => `<span${entry.kind === "income" ? ` class="plus"` : ""}><b>${signed(entry)}</b> ${esc(entry.kind === "income" ? entry.label : KIND[entry.kind][0])}</span>`).join("");
+  }
+  /** Choose a point on the line (a day of the period), or clear the choice with null. */
+  function pickDay(day) {
+    if (!geo) return;
+    state.pick = day == null ? null : addDays(geo.m.first, day);
+    paintPick();
+    hoverDay(day == null ? -1 : day);
+  }
+  /** Under the chart: what changed the balance at the chosen point, with its client and a way to the table row. */
+  function paintPick() {
+    const box = $("chartPick");
+    if (!box || !geo) return;
+    const { m } = geo, hits = state.pick ? m.steps.filter((s) => s.entry.date === state.pick) : [];
+    if (!hits.length) {
+      state.pick = null;
+      box.innerHTML = m.steps.length ? `<p class="pick-hint">Select a point on the line to see what changed the balance.</p>` : "";
+      return;
+    }
+    box.innerHTML = `<div class="pick-h"><b>${niceDate(state.pick)}</b><span>Balance after: <b class="num">${money(hits[hits.length - 1].total)}</b></span>
+        <button class="btn ghost sm" type="button" data-action="pick-clear">Clear</button></div>
+      <ul>${hits.map(({ entry: e }) => `<li><b class="amt${HeurialMoney.SIGN[e.kind] < 0 ? " out" : ""}">${signed(e)}</b>
+        <span class="kind" style="--c:var(${KIND[e.kind][1]})">${KIND[e.kind][0]}</span><span class="pick-what">${esc(e.label)}${e.derived ? " (read from the lead)" : ""}</span>
+        ${e.lead ? `<button class="who" type="button" data-action="open" data-id="${e.lead.id}">${esc(e.lead.name)}${e.lead.business ? `<span> · ${esc(e.lead.business)}</span>` : ""}</button>` : ""}
+        <button class="btn sm" type="button" data-action="tx-show" data-key="${e.key}">${state.view === "money" ? "Show in the table" : "Open in Money"}</button></li>`).join("")}</ul>`;
   }
 
   // ----- Pipeline -----
+  /** Open leads and what was proposed to them, as two large figures above the board. */
+  function leadSum(d, note) {
+    const open = d.leads.filter((l) => OPEN.includes(l.status));
+    return `<div class="lead-sum"><p><b>${open.length}</b>open ${open.length === 1 ? "lead" : "leads"}</p><p><b>${money(open.reduce((a, l) => a + l.value_cents, 0))}</b>proposed</p>${note ? `<span>${note}</span>` : ""}</div>`;
+  }
   function viewPipeline() {
     const d = state.data;
     const by = (st) => d.leads.filter((l) => l.status === st);
@@ -883,8 +1121,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       </section>`;
     }).join("");
     return `<div class="vw pl">
-      ${leadSum(d, `${plural(d.leads.length, "lead")} booked ${inPeriod()}. Drag a card to another column, or use its Move menu.`)}
-      <div class="board" data-scroll="board">${lanes}</div>
+      ${leadSum(d, `${plural(d.leads.length, "lead")} booked ${inPeriod()}`)}
+      <div class="board-wrap"><div class="board" data-scroll="board" tabindex="0" aria-label="Lead board: six stages, scroll sideways to see them all">${lanes}</div></div>
     </div>`;
   }
   /** One lead on the board: a dot for how urgent it is, the name, the business, and what happens next. */
@@ -1100,39 +1338,42 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const d = state.data, sv = services(), demo = cfg.mode === "demo";
     const dark = (document.documentElement.dataset.theme || "light") === "dark";
     const st = (on) => (demo ? ["--warn", "Sample data"] : !sv ? ["--mute", "Unknown"] : on ? ["--up", "Connected"] : ["--mute", "Not connected"]);
+    // One line each: what it is, whether it is on, and the one thing you can do. Setup steps open on request.
     const rows = [
-      ["leads", "Website inquiry form", `New inquiries from the website appear in Tasks. ${plural(d.inbox.length, "inquiry", "inquiries")} waiting now.`, demo ? ["--warn", "Sample data"] : ["--up", "Active"], "",
+      ["leads", "Website inquiry form", `${plural(d.inbox.length, "inquiry", "inquiries")} waiting in Tasks.`, demo ? ["--warn", "Sample data"] : ["--up", "Active"], "",
         `<button class="btn sm" type="button" data-action="view" data-view="tasks" data-fk="c-ov">Open Tasks</button>`],
-      ["mail", "Daily summary email", "A morning email listing new inquiries, calls to update and follow-ups due.", st(sv && sv.digest),
+      ["mail", "Daily summary email", "Each morning: inquiries, calls to record, follow-ups and tasks due.", st(sv && sv.digest),
         "Needs <code>DIGEST_FROM</code> (a sender verified in Catalyst Mail), <code>DIGEST_TO</code>, and the daily job.",
         `<button class="btn sm" type="button" data-action="digest" data-fk="c-digest">Preview</button>`],
-      ["send", "Email to leads", "Send email from a lead's Messages tab. Until it's connected, emails you write are saved to the log and you send them yourself.", st(sv && sv.email),
+      ["send", "Email to leads", "Send from a client's Messages tab. Off: emails are logged and you send them yourself.", st(sv && sv.email),
         "Needs <code>MESSAGES_FROM</code>: a sender verified in Catalyst Mail.", ""],
-      ["sms", "Text messages", "Send texts from a lead's Messages tab through Twilio.", st(sv && sv.sms),
+      ["sms", "Text messages", "Send texts from a client's Messages tab through Twilio.", st(sv && sv.sms),
         "Needs <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> and <code>TWILIO_FROM</code> (your Twilio number). Another text service can use <code>MESSAGE_WEBHOOK_URL</code> instead.", ""],
-      ["inbound", "Incoming texts", "Replies to your Twilio number land in the right lead's thread, matched by phone number.", st(sv && sv.twilio),
+      ["inbound", "Incoming texts", "Replies land in the right client's thread, matched by phone number.", st(sv && sv.twilio),
         "Needs <code>TWILIO_AUTH_TOKEN</code> and <code>TWILIO_WEBHOOK_URL</code>: the pipeline function's <code>/twilio/sms</code> address, also set as the number's incoming-message webhook in Twilio.", ""],
-      ["mail", "Incoming email", "Replies sent to your inbound address land in the right lead's thread, matched by email address.", st(sv && sv.inbound),
+      ["mail", "Incoming email", "Replies land in the right client's thread, matched by email address.", st(sv && sv.inbound),
         "Needs <code>INBOUND_KEY</code>. Point your mail provider's inbound webhook (Postmark, Mailgun or SendGrid) at the pipeline function's <code>/inbound/email?key=…</code> address.", ""],
-      ["spark", "AI reply drafts", "Claude drafts your next email or text from the thread. You read it, edit it and approve it. Nothing is sent on its own.", st(sv && sv.ai),
+      ["spark", "AI drafts and summaries", "Drafts, summaries and task suggestions. Nothing is sent or added until you approve it.", st(sv && sv.ai && sv.assist !== false),
         "Needs <code>ANTHROPIC_API_KEY</code> on the pipeline function.", ""],
       ["note", "Message log", "Where notes, calls, emails and texts are stored.", st(sv && sv.messages),
         "Needs the <code>Messages</code> table in the Catalyst Data Store.", ""],
+      ["wallet", "Money and payments", "Transactions, and each client payment as its own record.", st(sv && sv.money),
+        "Needs the <code>Transactions</code> table, with its <code>lead_id</code> column for client payments.", ""],
     ];
     const row = ([ic, name, desc, [c, label], how, action]) => `<div class="conn"><div class="conn-ico">${icon(ic)}</div><h3>${name}</h3>
-      <p>${desc}</p>${how && !demo && label !== "Connected" ? `<p class="how">${how}</p>` : ""}
+      <p>${desc}</p>${how && !demo && label !== "Connected" ? `<details class="how"><summary>How to connect</summary><p>${how}</p></details>` : ""}
       <div class="conn-side"><span class="tag" style="--c:var(${c})">${label}</span>${action}</div></div>`;
     return `<div class="vw pane">
-      <div class="pane-head"><h2>Workspace and connections</h2><span class="pane-meta">${demo ? "On this page everything runs on sample data. The real tracker shows what's connected."
-        : !sv ? "This version of the back end doesn't report what's connected. Deploy the current pipeline function to see it."
-        : "What the tracker is connected to right now. Settings live on the Catalyst pipeline function; steps are in catalyst/TRACKER-SETUP.md."}</span></div>
+      <div class="pane-head"><h2>Workspace and connections</h2><span class="pane-meta">${demo ? "Sample data. The real tracker shows what is connected."
+        : !sv ? "This back end doesn't report what is connected. Deploy the current pipeline function."
+        : "Set on the Catalyst pipeline function. Steps: catalyst/TRACKER-SETUP.md."}</span></div>
       <div class="pane-body"><div class="conn-list">
         <h3 class="sub-head">Workspace</h3>
-        <div class="conn"><div class="conn-ico">${icon(dark ? "moon" : "sun")}</div><h3>Appearance</h3><p>${dark ? "Dark" : "Light"} mode is on.</p>
+        <div class="conn"><div class="conn-ico">${icon(dark ? "moon" : "sun")}</div><h3>Appearance</h3><p>${dark ? "Dark" : "Light"} look.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="theme" data-fk="c-theme">Switch to ${dark ? "light" : "dark"}</button></div></div>
-        <div class="conn"><div class="conn-ico">${icon("down")}</div><h3>Export</h3><p>Download the leads booked ${inPeriod()} as a spreadsheet file (CSV).</p>
+        <div class="conn"><div class="conn-ico">${icon("down")}</div><h3>Export</h3><p>Leads booked ${inPeriod()}, as a CSV file.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="export" data-fk="c-export">Export CSV</button></div></div>
-        ${cfg.auth ? `<div class="conn"><div class="conn-ico">${icon("out")}</div><h3>Session</h3><p>You're signed in on this browser.</p>
+        ${cfg.auth ? `<div class="conn"><div class="conn-ico">${icon("out")}</div><h3>Session</h3><p>Signed in on this browser.</p>
           <div class="conn-side"><button class="btn sm" type="button" data-action="signout" data-fk="c-out">Sign out</button></div></div>` : ""}
         <h3 class="sub-head">Connections</h3>
         ${rows.map(row).join("")}
@@ -1249,6 +1490,53 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       case "digest": return openDigest(button);
       case "export": return exportCsv();
       case "new-lead": return d ? openLead(null) : undefined;
+      case "main": {
+        const section = sectionOf(state.view)[0];
+        if (!d) return;
+        if (section !== "Money" && section !== "Tasks") return openLead(null);
+        const field = $("view").querySelector(`[data-fk="${section === "Money" ? "x-amt" : "k-title"}"]`);
+        if (field) { field.scrollIntoView({ block: "center" }); field.focus(); }
+        return;
+      }
+      case "next-skip": state.nextAt = (state.nextAt + 1) % Math.max(1, state.next.length); return renderView();
+      case "pick-clear": pickDay(null); return $("chart") && $("chart").focus();
+      case "tx-show": return showTx(el.dataset.key);
+      case "review-start": return startReview();
+      case "review-close": return closeReview();
+      case "review-do": return act(button, () => reviewDo(el.dataset.do));
+      case "assist": return runAssist(el.dataset.key, el.dataset.kind, id);
+      case "assist-close": delete state.ai[el.dataset.key]; return paintAi();
+      case "assist-add": return act(button, async () => {
+        const t = state.ai[el.dataset.key].result.tasks[Number(el.dataset.i)];
+        await call("/api/tasks", "POST", { title: t.title, due_at: t.due_at });
+        t.added = true;
+        toast("Task added");
+        await load();
+        paintAi();
+      });
+      case "backfill": return act(button, async () => {
+        const r = await call("/api/payments/backfill", "POST");
+        toast(r.failed ? `${plural(r.created, "payment")} recorded, ${r.failed} couldn't be: the Transactions table may need its lead_id column.` : `${plural(r.created, "payment")} recorded from ${r.created === 1 ? "its lead" : "their leads"}`, Boolean(r.failed));
+        await load();
+      });
+      case "task-due": return act(button, async () => {
+        const next = addDays(d.today, Number(el.dataset.days));
+        await call("/api/tasks/" + id, "PATCH", { due_at: next });
+        toast(`Task moved to ${niceDate(next)}`);
+        await load();
+      });
+      case "prop-fu": return act(button, async () => {
+        const next = addDays(d.today, FOLLOW_PLAN.proposal[0]);
+        await call("/api/leads/" + id, "PATCH", { follow_up_at: next, follow_up_note: FOLLOW_PLAN.proposal[1] });
+        toast(`Follow-up set for ${niceDate(next)}`);
+        await load();
+      });
+      case "msg-confirm": return act(button, async () => {
+        await call(`/api/messages/${id}/approve`, "POST", { send: false });
+        toast("Marked as sent by you");
+        await loadThread();
+        await load();
+      });
       case "open": return openById(id, el.dataset.tab);
       case "insp-close": return closeInspector();
       case "tab": return showTab(el.dataset.tab);
@@ -1337,8 +1625,11 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         if (!text) { toast("The draft is empty. Write something or discard it.", true); return; }
         const send = el.dataset.send === "1";
         return act(button, async () => {
-          await call(`/api/messages/${id}/approve`, "POST", { subject: subject ? subject.value : "", body: text, send });
-          toast(send ? `${ch === "email" ? "Email" : "Text"} sent to ${to}` : "Saved to the log as sent");
+          let r;
+          // A failed send is kept in the thread as "not sent", with the text as it was, ready to retry.
+          try { r = await call(`/api/messages/${id}/approve`, "POST", { subject: subject ? subject.value : "", body: text, send }); }
+          catch (err) { await loadThread(); throw err; }
+          sentNote(r, send ? `${ch === "email" ? "Email" : "Text"} sent to ${to}` : "Saved to the log as sent");
           await loadThread();
           await load();
         });
@@ -1354,6 +1645,27 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function onChange(e) {
     const el = e.target.closest("[data-change]");
     if (el && el.dataset.change === "move") moveLead(el.dataset.id, el.value);
+    if (el && el.dataset.change === "tx-kind" && el.value) {
+      el.disabled = true;
+      call("/api/transactions/" + el.dataset.id, "PATCH", { kind: el.value })
+        .then(() => toast(`Saved as ${KIND[el.value][0].toLowerCase()}`), (err) => toast(err.message || "Couldn't save the category.", true))
+        .finally(load);
+    }
+  }
+  /** Go to an entry's row in the Money table and mark it for a moment. */
+  let txTimer = 0;
+  function showTx(key) {
+    state.txFocus = key;
+    state.moneyTab = "all";
+    clearTimeout(txTimer);
+    txTimer = setTimeout(() => { state.txFocus = ""; }, 2600);
+    const land = () => { const row = $("tx-" + key); if (row) row.scrollIntoView({ block: "center" }); };
+    if (state.view !== "money") { setView("money"); setTimeout(land, 450); } else { renderView(); land(); }
+  }
+  /** After a send: say it went, and say so plainly if the log couldn't be updated to match. */
+  function sentNote(r, text) {
+    if (r && r.recorded === false) toast("It was sent, but the log couldn't be updated and still says sending. Don't send it again: use Mark as sent.", true);
+    else toast(text);
   }
   function onInput(e) {
     const el = e.target.closest("[data-input]");
@@ -1369,7 +1681,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     renderView();
     try {
       const r = await call("/api/leads/" + id, "PATCH", body);
-      savedNote(r, `${lead.name} moved to ${STATUS[status].label}${body.follow_up_at ? `. Follow-up set for ${niceDate(body.follow_up_at)}.` : ""}`);
+      savedNote(r, `${lead.name} moved to ${STATUS[status].label}${body.follow_up_at ? `. Follow-up set for ${niceDate(body.follow_up_at)}` : ""}`);
     } catch (err) {
       lead.status = before;
       toast(err.message || "Couldn't move the lead.", true);
@@ -1454,8 +1766,10 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
 
   /** True if it's fine to replace or close what's in the panel. */
   async function leaveDirty() {
-    if (!state.dirty) return true;
-    return confirmBox({ title: "Discard unsaved changes?", text: "You've edited this lead without saving.", action: "Discard changes", danger: true });
+    if (!state.dirty && !state.ctxDirty) return true;
+    const ok = await confirmBox({ title: "Discard unsaved changes?", text: "You've edited this lead without saving.", action: "Discard changes", danger: true });
+    if (ok) state.ctxDirty = false;
+    return ok;
   }
 
   async function openById(id, tab) {
@@ -1471,8 +1785,8 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (!same && !(await leaveDirty())) return;
     state.lead = lead;
     state.isNew = !lead;
-    if (!same) { state.dirty = false; state.thread = null; state.leadTime = null; }
-    state.tab = lead ? (tab || (same ? state.tab : "details")) : "details";
+    if (!same) { state.dirty = false; state.ctxDirty = false; state.thread = null; state.leadTime = null; }
+    state.tab = lead ? (tab || (same ? state.tab : "timeline")) : "details";
     $("insp").hidden = false;
     paintInspector(!same);
     showTab(state.tab);
@@ -1483,7 +1797,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   async function closeInspector() {
     if ($("insp").hidden || !(await leaveDirty())) return;
     const id = state.lead && state.lead.id;
-    state.lead = null; state.isNew = false; state.dirty = false;
+    state.lead = null; state.isNew = false; state.dirty = false; state.ctxDirty = false;
     $("insp").hidden = true;
     renderView();
     const back = id && [...$("view").querySelectorAll("[data-fk]")].find((x) => ["row-" + id, "card-" + id, "who-" + id].includes(x.dataset.fk));
@@ -1508,8 +1822,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("inspStats").hidden = !lead;
     $("inspTabs").hidden = !lead;
     if (lead) {
-      const perHour = lead.status === "paid" && lead.hours > 0 && lead.value_cents ? money(lead.value_cents / lead.hours) : "–";
-      $("inspStats").innerHTML = [["Value", lead.value_cents ? money(lead.value_cents) : "–"], ["Hours", lead.hours ? hrs(lead.hours) : "–"], ["Per hour", perHour], ["Follow-up", lead.follow_up_at ? dueTag(lead.follow_up_at) : "–"]]
+      // What was proposed and what was actually received are different numbers, and are never added together.
+      const got = receivedFrom(lead).reduce((sum, e) => sum + e.cents, 0);
+      $("inspStats").innerHTML = [["Proposed", lead.value_cents ? money(lead.value_cents) : "–"], ["Received", got ? money(got) : "–"], ["Hours", lead.hours ? hrs(lead.hours) : "–"], ["Follow-up", lead.follow_up_at ? dueTag(lead.follow_up_at) : "–"]]
         .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
       const msgN = state.thread ? state.thread.length : d && d.messages ? d.messages.filter((m) => m.lead_id === lead.id).length : 0;
       const timeN = state.leadTime ? state.leadTime.length : state.time ? state.time.filter((t) => t.lead_id === lead.id).length : 0;
@@ -1530,7 +1845,9 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       state.dirty = false;
       paintFormState("");
     }
+    if (!state.ctxDirty) { $("ctxForm").notes.value = lead ? lead.notes : ""; paintCtx(""); }
     paintComposer();
+    if (lead && !state.isNew && state.tab === "timeline") paintTimeline();
   }
   /** "Paid on" sits beside the value for paid leads only. A lead that is just becoming paid starts on today. */
   function paintPaidField() {
@@ -1538,11 +1855,15 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("paidField").hidden = !paid;
     f.value.closest(".field").classList.toggle("wide", !paid);
     if (paid && !f.paid_at.value && !(state.lead && !state.isNew && state.lead.status === "paid")) f.paid_at.value = state.data.today;
+    $("paidHint").hidden = !(state.lead && !state.isNew && receivedFrom(state.lead).some((e) => !e.derived));
   }
   /** What to say after a save. The lead itself saved; a Leads table with no paid_at column can't keep its paid date. */
   function savedNote(r, text) {
-    const undated = Boolean(r && r.paid_at_saved === false);
-    toast(undated ? `${text.replace(/\.?$/, ".")} The paid date wasn't saved: the Leads table may still need its paid_at column.` : text, undated);
+    const undated = Boolean(r && r.paid_at_saved === false), unpaid = Boolean(r && r.payment_saved === false);
+    const notes = [undated && "The paid date wasn't saved: the Leads table may still need its paid_at column.",
+      unpaid && "The payment wasn't recorded on Money: the Transactions table may need its lead_id column.",
+      r && r.payment_saved === true && "Its payment is recorded on Money."].filter(Boolean);
+    toast([text.replace(/\.?$/, notes.length ? "." : ""), ...notes].join(" "), undated || unpaid);
   }
   let savedTimer = 0;
   function paintFormState(error) {
@@ -1562,12 +1883,61 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
   function showTab(tab) {
     if (!state.lead || state.isNew) tab = "details";
     state.tab = tab;
-    for (const [key, panel] of [["details", "leadForm"], ["messages", "msgPanel"], ["time", "timePanel"]]) {
+    for (const [key, , panel] of TABS) {
       $("tab-" + key).setAttribute("aria-selected", String(key === tab));
       $(panel).hidden = key !== tab;
     }
+    if (tab === "timeline") { paintTimeline(); loadThread(); loadLeadTime(); }
     if (tab === "messages") { paintComposer(); loadThread(); }
     if (tab === "time") { $("leadTimeForm").entry_date.value = $("leadTimeForm").entry_date.value || state.data.today; loadLeadTime(); }
+  }
+
+  // Timeline tab: one client's whole story in date order, from records the tracker already has.
+  function timelineEvents(lead) {
+    const today = state.data.today, ev = [];
+    const add = (when, ic, title, text, cls) => ev.push({ when, ic, title, text: text || "", cls: cls || "" });
+    if (lead.booked_at) add(lead.booked_at, "leads", "Call booked", `Source: ${lead.source}`);
+    if (lead.call_at) add(lead.call_at, "phone", lead.call_at > today ? "Call scheduled" : lead.status === "booked" ? "Call date passed, no outcome recorded" : lead.status === "no_show" ? "Call: no-show" : "Call held", "", lead.call_at > today ? "ahead" : "");
+    for (const m of state.thread || []) {
+      const [label, ic] = CHANNEL[m.channel] || CHANNEL.note;
+      const title = m.status === "draft" ? `${label} draft waiting for your approval` : m.status === "failed" ? `${label} not sent: sending failed`
+        : m.channel === "note" ? "Note" : `${label} ${m.direction === "in" ? "from them" : "from me"}${m.status === "sent" ? " · sent" : ""}`;
+      add(m.created_at, ic, title, `${m.subject ? `${m.subject}: ` : ""}${m.body}`);
+    }
+    for (const t of state.leadTime || []) add(t.entry_date, "time", `Logged ${hrs(t.hours)} h`, t.note);
+    for (const e of moneyEntries().filter((x) => x.kind === "income" && x.lead_id === lead.id)) {
+      add(e.date, "wallet", `${e.date > today ? "Payment scheduled" : "Payment received"} · ${money(e.cents)}`, e.derived ? "Read from the lead: not yet recorded as a payment" : e.label, e.date > today ? "ahead" : "paid");
+    }
+    if (lead.follow_up_at) add(lead.follow_up_at, "tasks", "Next action", lead.follow_up_note || "Follow up", lead.follow_up_at < today ? "late" : "ahead");
+    return ev.sort((a, b) => a.when.localeCompare(b.when));
+  }
+  function paintTimeline() {
+    const lead = state.lead;
+    if (!lead || state.isNew) return;
+    const got = receivedFrom(lead), sum = got.reduce((s, e) => s + e.cents, 0);
+    $("tlFacts").innerHTML = [
+      ["Stage", tag(lead.status)],
+      ["Proposed", lead.value_cents ? `<b class="num">${money(lead.value_cents)}</b> quoted, not money received` : "No value set"],
+      ["Received", sum ? `<b class="num">${money(sum)}</b> ${got.length === 1 ? `on ${niceDate(got[0].date)}` : `in ${got.length} payments`}` : "Nothing yet"],
+      ["Next action", lead.follow_up_at ? `${esc(lead.follow_up_note || "Follow up")} ${dueTag(lead.follow_up_at)}` : `None set <button class="more" type="button" data-action="tab" data-tab="details">Set one in Details</button>`],
+    ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+    const catchKey = `lead-${lead.id}-catch_up`, taskKey = `lead-${lead.id}-extract_tasks`;
+    $("tlAi").innerHTML = has("assist")
+      ? `<div class="tl-ai-btns">${aiButton(catchKey, "catch_up", lead.id, "Catch me up")}${aiButton(taskKey, "extract_tasks", lead.id, "Tasks from my notes")}</div>${aiBox(catchKey)}${aiBox(taskKey)}`
+      : "";
+    const today = state.data.today, ev = timelineEvents(lead);
+    let split = false;
+    $("tl").innerHTML = ev.map((e) => {
+      const ahead = e.when.slice(0, 10) > today, mark = ahead && !split ? `<li class="tl-now">Today, ${niceDate(today)}</li>` : "";
+      if (ahead) split = true;
+      return `${mark}<li class="tl-i ${e.cls}"><time datetime="${esc(e.when)}">${niceDate(e.when.slice(0, 10))}</time><i>${icon(e.ic)}</i><div><b>${esc(e.title)}</b>${e.text ? `<p>${esc(e.text)}</p>` : ""}</div></li>`;
+    }).join("") + (state.thread && state.leadTime ? "" : `<li class="tl-now">Loading messages and time…</li>`);
+  }
+  /** The context note's own Saving / Saved / Failed line. The text stays in the box whatever happens. */
+  function paintCtx(note, isError) {
+    $("ctxNote").textContent = note || (state.ctxDirty ? "Unsaved changes" : "");
+    $("ctxNote").classList.toggle("err", Boolean(isError));
+    $("ctxSave").disabled = !state.ctxDirty;
   }
 
   // Messages tab
@@ -1580,6 +1950,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       if (!state.lead || state.lead.id !== lead.id) return;
       state.thread = items;
       paintThread();
+      if (state.tab === "timeline") paintTimeline();
     } catch {
       $("thread").innerHTML = `<li class="thread-empty">Couldn't load messages.</li>`;
     }
@@ -1596,28 +1967,31 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       const [label] = CHANNEL[m.channel] || CHANNEL.email;
       const k = kept[m.id] || {}, to = m.channel === "email" ? lead.email : lead.phone;
       const canSend = !demo && to && (m.channel === "email" ? sv.email : sv.sms);
+      const failed = m.status === "failed";
       const note = demo ? "Sample data: nothing is sent from this page."
         : !to ? `Add ${m.channel === "email" ? "an email address" : "a phone number"} in Details to send it.`
         : canSend ? `Sends to ${to} when you approve it.`
         : `${m.channel === "email" ? "Email" : "Text"} sending isn't connected. Send it yourself, then mark it sent.`;
       return `<li class="msg mine draft" data-id="${m.id}" data-channel="${m.channel}">
-        <div class="msg-meta"><b>${icon("spark")}${label} draft</b><span>Written by AI · not sent</span><time datetime="${esc(m.created_at)}">${stamp(m.created_at)}</time></div>
+        <div class="msg-meta"><b>${icon(failed ? "send" : "spark")}${label}${failed ? "" : " draft"}</b><span>${failed ? "Sending failed · not sent" : "Written by AI · not sent"}</span><time datetime="${esc(m.created_at)}">${stamp(m.created_at)}</time></div>
         ${m.channel === "email" ? `<input class="in" name="dsubject" maxlength="200" aria-label="Draft subject" value="${esc(k.subject ?? m.subject)}">` : ""}
         <textarea class="in" rows="5" maxlength="4000" aria-label="Draft ${label.toLowerCase()}">${esc(k.body ?? m.body)}</textarea>
         <div class="draft-foot"><span class="form-note">${esc(note)}</span>
           <button class="btn ghost sm" type="button" data-action="draft-discard" data-id="${m.id}">Discard</button>
           ${!canSend && to ? `<button class="btn sm" type="button" data-action="draft-open" data-id="${m.id}">Open in ${m.channel === "email" ? "mail" : "text"} app</button>` : ""}
-          <button class="btn primary sm" type="button" data-action="draft-approve" data-id="${m.id}" data-send="${canSend ? 1 : 0}">${canSend ? `${icon("send")}Approve and send` : `${icon("check")}Mark as sent`}</button></div></li>`;
+          <button class="btn primary sm" type="button" data-action="draft-approve" data-id="${m.id}" data-send="${canSend ? 1 : 0}">${canSend ? `${icon("send")}${failed ? "Try sending again" : "Approve and send"}` : `${icon("check")}Mark as sent`}</button></div></li>`;
     };
     list.innerHTML = items.length ? items.map((m) => {
-      if (m.status === "draft") return draft(m);
+      if (m.status === "draft" || m.status === "failed") return draft(m);
       const [label, ic] = CHANNEL[m.channel] || CHANNEL.note;
       const who = m.channel === "note" ? "" : m.direction === "in" ? "From them" : "From me";
-      const how = m.status === "sent" ? "Sent" : m.status === "received" ? (m.sender ? `Received from ${esc(m.sender)}` : "Received") : m.channel === "note" ? "" : "Logged, not sent from here";
+      const unsure = m.status === "sending";
+      const how = unsure ? "Sent or still sending: the result wasn't recorded" : m.status === "sent" ? "Sent" : m.status === "received" ? (m.sender ? `Received from ${esc(m.sender)}` : "Received") : m.channel === "note" ? "" : "Logged, not sent from here";
       return `<li class="msg ${m.channel === "note" ? "note" : m.direction === "in" ? "theirs" : "mine"}">
         <div class="msg-meta"><b>${icon(ic)}${label}</b><span>${[who, how].filter(Boolean).join(" · ")}</span><time datetime="${esc(m.created_at)}">${stamp(m.created_at)}</time>
           <button class="btn ghost sm icon" type="button" data-action="msg-del" data-id="${m.id}" aria-label="Delete this ${label.toLowerCase()}">${icon("x")}</button></div>
-        ${m.subject ? `<p class="msg-subj">${esc(m.subject)}</p>` : ""}<p class="msg-body">${esc(m.body)}</p></li>`;
+        ${m.subject ? `<p class="msg-subj">${esc(m.subject)}</p>` : ""}<p class="msg-body">${esc(m.body)}</p>
+        ${unsure ? `<div class="draft-foot"><span class="form-note">Check with them before sending anything again.</span><button class="btn sm" type="button" data-action="msg-confirm" data-id="${m.id}">${icon("check")}Mark as sent</button></div>` : ""}</li>`;
     }).join("") : `<li class="thread-empty">Nothing logged with this lead yet.<br>Write a note, log a call, or write an email or text below.</li>`;
     list.scrollTop = list.scrollHeight;
     $("msgCount").hidden = !items.length; $("msgCount").textContent = items.length;
@@ -1667,6 +2041,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       const list = await call(`/api/leads/${lead.id}/time`);
       if (!state.lead || state.lead.id !== lead.id) return;
       state.leadTime = list;
+      if (state.tab === "timeline") paintTimeline();
       $("tList").innerHTML = list.length ? list.map((t) => `
         <li><span class="num">${niceDate(t.entry_date)}</span><b class="num">${hrs(t.hours)} h</b><span class="n" title="${esc(t.note)}">${esc(t.note || "–")}</span>
         <button class="btn ghost sm icon" type="button" data-action="time-del" data-id="${t.id}" aria-label="Delete ${hrs(t.hours)} hours on ${niceDate(t.entry_date)}">${icon("x")}</button></li>`).join("")
@@ -1742,7 +2117,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     $("delBtn").addEventListener("click", async () => {
       const lead = state.lead;
       if (!lead) return;
-      const ok = await confirmBox({ title: `Delete ${lead.name}?`, text: "This removes the lead with its messages and logged time. It can't be undone.", action: "Delete lead", danger: true });
+      const ok = await confirmBox({ title: `Delete ${lead.name}?`, text: "This removes the lead with its messages and logged time. Payments already recorded stay on Money. It can't be undone.", action: "Delete lead", danger: true });
       if (!ok) return;
       act($("delBtn"), async () => {
         await call("/api/leads/" + lead.id, "DELETE");
@@ -1752,6 +2127,28 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
         await load();
       });
     });
+
+    const ctx = $("ctxForm");
+    ctx.addEventListener("input", () => { state.ctxDirty = true; paintCtx(""); });
+    ctx.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const lead = state.lead, text = ctx.notes.value;
+      if (!lead || !state.ctxDirty || $("ctxSave").dataset.busy) return;
+      $("ctxSave").dataset.busy = "1"; $("ctxSave").disabled = true;
+      paintCtx("Saving…");
+      try {
+        await call("/api/leads/" + lead.id, "PATCH", { notes: text });
+        state.ctxDirty = false;
+        if (!state.dirty) f.notes.value = text;
+        paintCtx("Saved");
+        await load();
+        paintCtx("Saved");
+      } catch (err) {
+        paintCtx(`Not saved: ${err.message || "try again"}. Your text is still here.`, true);
+        $("ctxSave").disabled = false;
+      } finally { delete $("ctxSave").dataset.busy; }
+    });
+    $("reviewDlg").addEventListener("close", () => { if (state.review) closeReview(); });
 
     const c = $("composeForm");
     c.addEventListener("change", paintComposer);
@@ -1767,8 +2164,11 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
       const to = ch === "email" ? lead.email : lead.phone;
       sending = true;
       await act($("composeBtn"), async () => {
-        const r = await call("/api/messages", "POST", { lead_id: lead.id, channel: ch, direction: ch === "note" ? "out" : c.direction.value, subject: c.subject.value, body: text, send: willSend });
-        toast(r.status === "sent" ? `${ch === "email" ? "Email" : "Text"} sent to ${to}` : "Saved to the log");
+        let r;
+        // If sending fails, the message is kept in the thread as "not sent", so nothing typed is lost.
+        try { r = await call("/api/messages", "POST", { lead_id: lead.id, channel: ch, direction: ch === "note" ? "out" : c.direction.value, subject: c.subject.value, body: text, send: willSend }); }
+        catch (err) { if (willSend) { await loadThread(); if ((state.thread || []).some((m) => m.status === "failed" && m.body === text)) { c.body.value = ""; c.subject.value = ""; } } throw err; }
+        sentNote(r, r.status === "sent" ? `${ch === "email" ? "Email" : "Text"} sent to ${to}` : "Saved to the log");
         c.body.value = ""; c.subject.value = ""; c.logonly.checked = false;
         await loadThread();
         await load();
@@ -1814,11 +2214,15 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     const err = $("txAddErr"), amount = Number(form.amount.value);
     const fail = (message, field) => { err.textContent = message; err.hidden = false; field.focus(); };
     if (!(amount > 0)) return fail("Enter an amount above 0.", form.amount);
-    if (!form.label.value.trim()) return fail("Add a short description.", form.label);
+    const client = form.kind.value === "income" ? form.lead_id.value : "";
+    if (form.lead_id.value && !client) return fail("Only income can be linked to a client. Choose No client, or change the type.", form.lead_id);
+    // A client's payment can go without a description: it is named after them.
+    const label = form.label.value.trim() || (client ? `Payment from ${form.lead_id.selectedOptions[0].textContent.split(" · ")[0]}` : "");
+    if (!label) return fail("Add a short description.", form.label);
     err.hidden = true;
     act(form.querySelector('[type="submit"]'), async () => {
-      await call("/api/transactions", "POST", { kind: form.kind.value, date: form.date.value, amount, label: form.label.value });
-      form.amount.value = ""; form.label.value = "";
+      await call("/api/transactions", "POST", { kind: form.kind.value, date: form.date.value, amount, label, ...(client ? { lead_id: client } : {}) });
+      form.amount.value = ""; form.label.value = ""; form.lead_id.value = "";
       form.date.value = state.data.today; // back to today, so the next entry isn't dated ahead by accident
       toast("Transaction added");
       await load();
@@ -1855,6 +2259,7 @@ ${cfg.auth ? `<div class="signin" id="signin" hidden>
     if (d && q) for (const l of d.leads.filter((x) => matches(x, q)).slice(0, 7)) items.push({ group: "Leads", ic: "leads", label: l.name, hint: [l.business, STATUS[l.status].label].filter(Boolean).join(" · "), run: () => openById(l.id) });
     const commands = [
       ["Actions", "plus", "New lead", "N", () => { if (state.data) openLead(null); }],
+      ["Actions", "tasks", "Start daily review", "", () => { setView("tasks"); startReview(); }],
       ["Actions", "time", "Log time", "", () => { setView("time"); const el = $("view").querySelector('[data-fk="t-lead"]'); if (el) el.focus(); }],
       ...Object.keys(VIEWS).map((key, i) => ["Go to", VIEWS[key][1], VIEWS[key][0], String(i + 1), () => setView(key)]),
       ["Actions", "refresh", "Refresh data", "", () => load()],

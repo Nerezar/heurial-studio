@@ -1,5 +1,6 @@
 import { readSessionCookie, sameOrigin, sessionValid } from "@/lib/admin-auth";
 import { handleError, readObject, reply, RequestError } from "@/lib/http";
+import { pipelineBase } from "@/lib/login-throttle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,9 @@ const ROUTES: [string, RegExp][] = [
   ["POST", /^messages\/\d{1,20}\/approve$/],
   ["DELETE", /^messages\/\d{1,20}$/],
   ["POST", /^transactions$/],
+  ["PATCH", /^transactions\/\d{1,20}$/],
+  ["POST", /^payments\/backfill$/],
+  ["POST", /^assist$/],
   ["DELETE", /^transactions\/\d{1,20}$/],
   ["POST", /^tasks$/],
   ["PATCH", /^tasks\/\d{1,20}$/],
@@ -31,13 +35,6 @@ const ROUTES: [string, RegExp][] = [
   ["POST", /^push\/(subscribe|unsubscribe|test)$/],
 ];
 
-function pipelineUrl() {
-  const url = process.env.PIPELINE_FUNCTION_URL?.trim() ?? "";
-  if (url.startsWith("https://")) return url;
-  if (process.env.NODE_ENV === "development" && url.startsWith("http://127.0.0.1")) return url;
-  return "";
-}
-
 async function forward(request: Request, context: { params: Promise<{ path: string[] }> }) {
   try {
     if (!sessionValid(readSessionCookie(request))) throw new RequestError(401, "Please sign in.");
@@ -47,7 +44,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
     const path = (await context.params).path.join("/");
     if (!ROUTES.some(([m, re]) => m === method && re.test(path))) throw new RequestError(404, "Not found.");
 
-    const base = pipelineUrl();
+    const base = pipelineBase();
     const key = process.env.PIPELINE_FUNCTION_KEY?.trim();
     if (!base || !key) throw new RequestError(503, "The tracker isn’t connected yet (PIPELINE_FUNCTION_URL and PIPELINE_FUNCTION_KEY).");
 
@@ -71,7 +68,7 @@ async function forward(request: Request, context: { params: Promise<{ path: stri
         method,
         headers: { "X-Heurial-Key": key, ...(body ? { "Content-Type": "application/json" } : {}) },
         body,
-        signal: AbortSignal.timeout(path.endsWith("/draft") ? 45_000 : 15_000), // an AI draft takes longer
+        signal: AbortSignal.timeout(path.endsWith("/draft") || path === "assist" ? 45_000 : 15_000), // AI takes longer
         cache: "no-store",
       });
     } catch {

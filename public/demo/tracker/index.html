@@ -90,12 +90,15 @@ const demo = (() => {
     msg("Elena Petrova", "out", "call", "", "Walked through the scope. She wants the monthly report left out of phase one.", 2, 11),
     msg("Aisha Rahman", "in", "sms", "", "The reminders are working great. Thank you!", 1, 9),
   ];
-  // Sample money moved in and out, to show how the chart keeps it apart from earnings. The real tracker has no
-  // transactions yet: its chart is paid leads only until they are connected.
+  // Sample money: each paid lead's payment as its own record, plus money moved in and out, to show how the chart
+  // keeps transfers apart from earnings. The last one is an older entry with no category, as a real tracker may have.
   const transactions = [
-    { ROWID: id(), tx_date: day(-80), amount_cents: 50000, kind: "deposit", label: "Owner deposit (sample)" },
-    { ROWID: id(), tx_date: day(-24), amount_cents: 30000, kind: "withdrawal", label: "Software subscriptions (sample)" },
-    { ROWID: id(), tx_date: day(-9), amount_cents: 100000, kind: "deposit", label: "Owner deposit (sample)" },
+    ...leads.filter((l) => l.status === "paid").map((l) => ({ ...core.paymentFromLead(l, l.ROWID, l.paid_at), ROWID: id() })),
+    { ROWID: id(), tx_date: day(-80), amount_cents: 50000, kind: "transfer_in", label: "Owner deposit (sample)" },
+    { ROWID: id(), tx_date: day(-24), amount_cents: 30000, kind: "expense", label: "Software subscriptions (sample)" },
+    { ROWID: id(), tx_date: day(-15), amount_cents: 40000, kind: "transfer_out", label: "Owner draw (sample)" },
+    { ROWID: id(), tx_date: day(-9), amount_cents: 100000, kind: "transfer_in", label: "Owner deposit (sample)" },
+    { ROWID: id(), tx_date: day(-4), amount_cents: 12000, kind: "withdrawal", label: "Card charge (sample)" },
   ];
   // Sample tasks of your own, beside the ones the tracker raises from leads.
   const tasks = [
@@ -115,14 +118,46 @@ async function api(path, method = "GET", body) {
   const p = url.pathname.replace(/^\/+|\/+$/g, "");
   const today = demo.today;
   const find = (rows, id) => rows.find((r) => String(r.ROWID) === String(id));
-  const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries, messageRows: demo.messages });
+  const all = () => ({ leadRows: demo.leads, timeRows: demo.time, inquiryRows: demo.inquiries, messageRows: demo.messages, taskRows: demo.tasks });
+  // The payment for a paid lead, written once, as the real back end does.
+  const pay = (row) => {
+    if (!core.needsPayment(row, row.ROWID, row.paid_at, demo.transactions)) return {};
+    demo.transactions.push({ ...core.paymentFromLead(row, row.ROWID, row.paid_at), ROWID: demo.id() });
+    return { payment_saved: true };
+  };
   // Nothing is connected on this page, and it says so.
   const services = { messages: true, digest: false, email: false, sms: false, inbound: false, twilio: false, ai: false, money: true, tasks: true };
   const wrap = (fn) => { try { return fn(); } catch (e) { if (e instanceof core.Bad) throw bad(e.message, e.status); throw e; } };
   let m;
 
   if (method === "GET" && p === "data") return wrap(() => ({ ...core.summarize({ ...all(), range: url.searchParams.get("range") || "30", today }), services, demo: true, transactions: demo.transactions.map(core.transactionFromRow), tasks: core.tasksFromRows(demo.tasks) }));
-  if (method === "POST" && p === "transactions") return wrap(() => { const row = { ...core.cleanTransaction(body, today), ROWID: demo.id() }; demo.transactions.push(row); return { id: row.ROWID }; });
+  if (method === "POST" && p === "transactions") return wrap(() => {
+    const row = { ...core.cleanTransaction(body, today), ROWID: demo.id() };
+    if (row.lead_id && !find(demo.leads, row.lead_id)) throw bad("Not found.", 404);
+    demo.transactions.push(row); return { id: row.ROWID };
+  });
+  if ((m = p.match(/^transactions\/(\d+)$/)) && method === "PATCH") return wrap(() => {
+    const row = find(demo.transactions, m[1]);
+    if (!row) throw bad("That entry no longer exists.", 404);
+    const { kind } = core.cleanTransactionKind(body);
+    if (row.lead_id && kind !== "income") throw bad("A client's payment stays income. Delete it if it was entered by mistake.");
+    row.kind = kind; return { ok: true };
+  });
+  if (method === "POST" && p === "payments/backfill") {
+    let created = 0, undated = 0;
+    for (const l of demo.leads) { if (l.status !== "paid" || !(l.value_cents > 0)) continue; if (!core.isDate(l.paid_at || "")) undated++; else if (pay(l).payment_saved) created++; }
+    return { created, undated, failed: 0 };
+  }
+  // Summaries and task suggestions on this page are fixed sample text, never AI. The sources are the real sample records.
+  if (method === "POST" && p === "assist") {
+    const sources = await core.assistSources(body, { inquiry: async (id) => find(demo.inquiries, id), messages: async () => demo.messages,
+      lead: async (id) => { const row = find(demo.leads, id); if (!row) throw new core.Bad("Not found.", 404); return row; } }).catch((e) => { throw bad(e.message, e.status); });
+    const sample = { inquiry_summary: "Sample output. On the real tracker, Claude sums up what this person needs in two or three sentences and says what a first reply should cover.",
+      catch_up: "Sample output. On the real tracker, Claude says where things stand with this client, what they last said and what you planned next, using only the records below.",
+      extract_tasks: "Sample output. On the real tracker, Claude lists the things your notes say you need to do. You choose which to add." }[body.kind];
+    if (!sample) throw bad("Unknown request.");
+    return core.cleanAssist(body.kind, { text: sample, tasks: body.kind === "extract_tasks" ? [{ title: "Sample suggestion: send what the notes promised", due_at: "" }] : [] }, sources);
+  }
   if ((m = p.match(/^transactions\/(\d+)$/)) && method === "DELETE") { const i = demo.transactions.findIndex((t) => String(t.ROWID) === m[1]); if (i >= 0) demo.transactions.splice(i, 1); return { ok: true }; }
   if (method === "POST" && p === "tasks") return wrap(() => { const row = { ...core.cleanTask(body, today), ROWID: demo.id() }; demo.tasks.push(row); return { id: row.ROWID }; });
   if ((m = p.match(/^tasks\/(\d+)$/)) && (method === "PATCH" || method === "DELETE")) return wrap(() => {
@@ -132,12 +167,12 @@ async function api(path, method = "GET", body) {
     Object.assign(demo.tasks[i], core.cleanTask(body, today, true));
     return { ok: true };
   });
-  if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.withPaidDate(core.cleanLead(body, false, today), null, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID }; });
+  if (method === "POST" && p === "leads") return wrap(() => { const row = { ...core.withPaidDate(core.cleanLead(body, false, today), null, today), inquiry_id: "", ROWID: demo.id() }; demo.leads.push(row); return { id: row.ROWID, ...pay(row) }; });
   if ((m = p.match(/^leads\/(\d+)$/))) {
     const row = find(demo.leads, m[1]);
     if (!row) throw bad("Not found.", 404);
     if (method === "GET") { const hours = demo.time.filter((t) => String(t.lead_id) === m[1]).reduce((s, t) => s + t.hours, 0); return core.leadFromRow(row, { [m[1]]: hours }); }
-    if (method === "PATCH") { Object.assign(row, wrap(() => core.withPaidDate(core.cleanLead(body, true, today), row, today))); return { ok: true }; }
+    if (method === "PATCH") { Object.assign(row, wrap(() => core.withPaidDate(core.cleanLead(body, true, today), row, today))); return { ok: true, ...pay(row) }; }
     if (method === "DELETE") { demo.leads.splice(demo.leads.indexOf(row), 1); for (let i = demo.time.length - 1; i >= 0; i--) if (String(demo.time[i].lead_id) === m[1]) demo.time.splice(i, 1);
       for (let i = demo.messages.length - 1; i >= 0; i--) if (String(demo.messages[i].lead_id) === m[1]) demo.messages.splice(i, 1); return { ok: true }; }
   }
@@ -188,7 +223,7 @@ async function api(path, method = "GET", body) {
     return { ok: true, leadId };
   }
   if (method === "POST" && p === "digest") {
-    const d = core.buildDigest(core.summarize({ ...all(), range: "7", today }), { trackerUrl: "" });
+    const d = core.buildDigest(core.summarize({ ...all(), range: "7", today }), { trackerUrl: "", tasks: core.tasksFromRows(demo.tasks) });
     return { ...d, sent: false };
   }
   throw bad("Not found.", 404);
