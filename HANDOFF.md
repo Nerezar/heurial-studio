@@ -4,6 +4,23 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **Autopilot Foundation, branch `foundation` (2026-11-18), pushed, not merged, not deployed.** Stacked on
+  `autopilot`. Customer accounts inside the existing `pipeline` function (`accounts.js`, routes `app/*`): sign up
+  with a business name and email, sign in by a one-time emailed link (15 minutes, only its hash stored), a store
+  wrapper that keeps each business's rows apart (`scoped`), and Stripe test-mode plans: Checkout to subscribe, the
+  customer portal to change, and a signed webhook that alone sets the plan (paused when unpaid, none when canceled,
+  older events ignored). Site: `lib/app-auth.ts` (signed cookie `heurial_app`), `app/api/app/[...path]`, page at
+  `/app` (`public/app/`). Tests: 5 new in `accounts.test.js` (45 pipeline, 17 tracker). Checked locally in the
+  preview: sign-up, the printed link signs in and leaves the address bar, plan buttons, a Stripe failure shows a
+  plain message, sign-out, 375px wide. **Not done:** real Stripe test checkout (needs the owner's test keys and
+  prices), tables and env vars in Development (`catalyst/AUTOPILOT-SETUP.md`), moving my business to tenant #1,
+  Autopilot screens on real data (Engine step).
+- **Autopilot demo made for older owners (2026-11-18, branch `autopilot`).** Plain words everywhere (all 30
+  automations and the 8 categories renamed, e.g. "Text back when I miss a call"), four sections instead of six
+  (Home, Check messages, My automations, Settings), 17px text and 44px+ buttons, On/Off written next to each switch,
+  a "waiting for your OK" banner on Home, and "Book a free call" (the site's booking link) in the sidebar for
+  done-with-you setup. No help phone number is shown because the business doesn't have one listed. Checked in the
+  preview at desktop and 375px.
 - **Clip Desk removed from `autopilot` (2026-11-18).** The owner wants to sell to older small-business owners, not
   clippers. The Tools page now has the tracker and Autopilot only; `public/clipdesk/` and its test are gone, and
   `/clipdesk` no longer redirects. Clip Desk is still intact on branch `clip-desk` if it's ever wanted. Don't merge

@@ -53,7 +53,7 @@ test("plan runs only enabled, unlocked automations for the trigger, and follows 
   assert.equal(night[0].at, at("2026-11-19", "08:00"));
   // Opted-out contacts get no texts.
   const out = core.plan("missed_call", { ...base, enabled, contact: { optedOut: true } });
-  assert.deepEqual(out.map((s) => [s.status, s.reason]), [["skipped", "Opted out of texts"]]);
+  assert.deepEqual(out.map((s) => [s.status, s.reason]), [["skipped", "They asked not to be texted"]]);
 });
 
 test("AI automations wait for approval by default, use a credit each, and stop when credits run out", () => {

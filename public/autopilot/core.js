@@ -6,48 +6,48 @@
    Plans unlock automations: Starter 8, Pro 19, Business all 30. */
 (function (root) {
   const PLANS = [
-    { id: "starter", name: "Starter", credits: 100, note: "The basics that stop leads slipping away." },
-    { id: "pro", name: "Pro", credits: 500, note: "Follow-ups, reviews and money on autopilot." },
-    { id: "business", name: "Business", credits: 2000, note: "Everything, including AI content and reports." },
+    { id: "starter", name: "Starter", credits: 100, note: "The basics, so no new customer slips through." },
+    { id: "pro", name: "Pro", credits: 500, note: "Follow-ups, reviews and unpaid bills handled for you." },
+    { id: "business", name: "Business", credits: 2000, note: "Everything, including reports and posts written for you." },
   ];
 
-  const CATEGORIES = ["Leads", "Follow-up", "Appointments", "Reviews", "Money", "Reports", "Repeat business", "Website"];
+  const CATEGORIES = ["New customers", "Following up", "Appointments", "Reviews", "Getting paid", "Reports for me", "Bringing customers back", "Website and posts"];
 
   // trigger ids: missed_call, web_inquiry, email_in, proposal_quiet, lead_quiet, call_ended, lead_stale,
   // appointment_soon, appointment_missed, job_paid, review_posted, invoice_overdue, receipt_in, schedule, question
   const A = (id, name, category, plan, trigger, channel, ai, description, template = "") =>
     ({ id, name, category, plan, trigger, channel, ai, description, template });
   const CATALOG = [
-    A("missed-call", "Missed-call text-back", "Leads", "starter", "missed_call", "text", false, "A missed call gets a text within a minute, and the caller becomes a lead.", "Hi {first_name}, sorry I missed your call. This is {business}. What can I help with?"),
-    A("web-reply", "Instant reply to web inquiries", "Leads", "starter", "web_inquiry", "email", false, "Every website inquiry gets an answer straight away, day or night.", "Hi {first_name}, thanks for getting in touch with {business}. I'll reply properly within a few hours. If it's easier to talk, book a time here: {booking_link}"),
-    A("email-lead", "Inbound email becomes a lead", "Leads", "starter", "email_in", "tracker", false, "Emails sent to your forwarding address become leads with the thread attached."),
-    A("hot-alert", "Owner alert for hot leads", "Leads", "starter", "web_inquiry", "owner", false, "You get a text when a new lead asks for a quote or mentions a date.", "New lead: {first_name} wants {topic}. Reply soon."),
-    A("lead-source", "Lead source tracking", "Leads", "pro", "web_inquiry", "tracker", false, "Every lead is tagged with where it came from, so you know which ads and pages pay."),
-    A("quote-followup", "Quote follow-up sequence", "Follow-up", "pro", "proposal_quiet", "email", true, "A quote with no reply gets a nudge on day 2, 5 and 10, each written for that customer."),
-    A("revive", "Revive quiet leads", "Follow-up", "pro", "lead_quiet", "email", true, "Leads that went quiet get a short, personal check-in at 30, 60 and 90 days."),
-    A("call-recap", "Post-call recap email", "Follow-up", "pro", "call_ended", "email", true, "After a call, a recap of what you agreed and the next step is drafted for you."),
-    A("stale-cleanup", "Stale lead cleanup", "Follow-up", "business", "lead_stale", "tracker", false, "Leads with no activity in 120 days are closed with a reason, so your board stays honest."),
-    A("reminders", "Appointment reminders", "Appointments", "starter", "appointment_soon", "text", false, "A text the day before every appointment, with the time and address.", "Hi {first_name}, a reminder from {business}: see you {when}. Reply C to confirm or R to reschedule."),
-    A("confirm", "Confirm or reschedule by text", "Appointments", "starter", "appointment_soon", "text", false, "Customers reply C to confirm or R to get your booking link. Their answer lands on the appointment."),
-    A("no-show", "No-show follow-up", "Appointments", "pro", "appointment_missed", "text", false, "A missed appointment gets a friendly text with a link to book again.", "Hi {first_name}, sorry we missed you today. Pick a new time here: {booking_link}"),
-    A("booking-link", "Booking link in every reply", "Appointments", "pro", "web_inquiry", "email", false, "Your booking link is added to every first reply, so people can skip the back and forth."),
-    A("review-ask", "Review request after a paid job", "Reviews", "starter", "job_paid", "text", false, "Every paid customer gets a thank-you and a link to leave a Google review.", "Thanks for choosing {business}, {first_name}. If you have a minute, a review helps a lot: {review_link}"),
-    A("review-reply", "Review reply drafts", "Reviews", "pro", "review_posted", "owner", true, "Each new review gets a reply drafted in your voice, ready for you to post."),
-    A("testimonial", "Testimonial collector", "Reviews", "business", "review_posted", "email", false, "Customers who leave 5 stars are asked if you can quote them on your site.", "Thank you for the kind review, {first_name}. Would you mind if I quoted it on my website?"),
-    A("invoice-chase", "Invoice reminders", "Money", "pro", "invoice_overdue", "email", false, "Overdue invoices get polite reminders at 3, 7 and 14 days, then you're told.", "Hi {first_name}, a quick reminder that invoice {invoice} for {amount} is now due. You can pay here: {pay_link}"),
-    A("paid-thanks", "Thank-you when a payment comes in", "Money", "pro", "job_paid", "email", false, "A receipt and a thank-you go out as soon as a payment lands.", "Thanks, {first_name}. I've received {amount}. It was a pleasure working with you."),
-    A("receipts", "Receipt sorter", "Money", "business", "receipt_in", "tracker", true, "Forward a receipt to your address and it's filed under the right expense."),
-    A("expense-summary", "Monthly expense summary", "Money", "business", "schedule", "owner", false, "On the 1st, where your money went last month, by category."),
-    A("daily-brief", "Daily briefing", "Reports", "starter", "schedule", "owner", false, "Every morning: new leads, follow-ups due, appointments and anything waiting on you."),
-    A("weekly-numbers", "Weekly numbers email", "Reports", "pro", "schedule", "owner", false, "Every Monday: calls, leads, jobs won, revenue and reviews, against the week before."),
-    A("monthly-report", "Monthly owner report", "Reports", "business", "schedule", "owner", true, "A one-page summary of the month, written in plain English, with what to fix next."),
-    A("birthdays", "Birthday and anniversary notes", "Repeat business", "business", "schedule", "email", false, "A short note on a customer's birthday or the anniversary of their first job.", "Happy birthday from everyone at {business}, {first_name}."),
-    A("referral", "Referral ask after a good review", "Repeat business", "business", "review_posted", "email", false, "Happy customers are asked, once, if they know anyone who could use you.", "Thanks again, {first_name}. If you know anyone who could use {business}, I'd be grateful for the introduction."),
-    A("rebook", "Re-book reminders", "Repeat business", "pro", "schedule", "text", false, "Customers due for their next visit, like a yearly service, get a text with your booking link.", "Hi {first_name}, it's about time for your next visit with {business}. Book here: {booking_link}"),
-    A("seasonal", "Seasonal campaign drafts", "Repeat business", "business", "schedule", "email", true, "Before each season, a campaign email to past customers is drafted for you to approve."),
-    A("site-assistant", "Website assistant", "Website", "business", "question", "web", true, "A chat on your site answers questions from your FAQ and books calls. It hands anything else to you."),
-    A("social-drafts", "Social post drafts from finished jobs", "Website", "business", "job_paid", "owner", true, "A finished job becomes a social post draft, ready for your photos."),
-    A("gbp-posts", "Google Business Profile posts", "Website", "business", "schedule", "owner", true, "A weekly post for your Google profile is drafted from your recent work."),
+    A("missed-call", "Text back when I miss a call", "New customers", "starter", "missed_call", "text", false, "When I can't pick up, the caller gets a text within a minute and is added to my list.", "Hi {first_name}, sorry I missed your call. This is {business}. What can I help with?"),
+    A("web-reply", "Answer website messages right away", "New customers", "starter", "web_inquiry", "email", false, "Anyone who writes in through my website gets a reply straight away, day or night.", "Hi {first_name}, thanks for getting in touch with {business}. I'll reply properly within a few hours. If it's easier to talk, book a time here: {booking_link}"),
+    A("email-lead", "Add emailed requests to my list", "New customers", "starter", "email_in", "tracker", false, "Emails sent to my forwarding address are added to my list, with the whole message."),
+    A("hot-alert", "Text me about urgent requests", "New customers", "starter", "web_inquiry", "owner", false, "I get a text when someone asks for a quote or mentions a date.", "New lead: {first_name} wants {topic}. Reply soon."),
+    A("lead-source", "Track where customers found me", "New customers", "pro", "web_inquiry", "tracker", false, "Each new customer is marked with where they came from, so I know what's working."),
+    A("quote-followup", "Follow up on quotes", "Following up", "pro", "proposal_quiet", "email", true, "If someone doesn't answer a quote, they get a friendly nudge on day 2, 5 and 10."),
+    A("revive", "Check in with people who went quiet", "Following up", "pro", "lead_quiet", "email", true, "People who stopped replying get a short, personal check-in after 30, 60 and 90 days."),
+    A("call-recap", "Send a summary after a call", "Following up", "pro", "call_ended", "email", true, "After a call, a short email of what we agreed is written for me to check."),
+    A("stale-cleanup", "Tidy up old requests", "Following up", "business", "lead_stale", "tracker", false, "Requests with no news for 4 months are closed, so my list stays short."),
+    A("reminders", "Remind customers the day before", "Appointments", "starter", "appointment_soon", "text", false, "Customers get a text the day before their appointment, with the time.", "Hi {first_name}, a reminder from {business}: see you {when}. Reply C to confirm or R to reschedule."),
+    A("confirm", "Let customers confirm by text", "Appointments", "starter", "appointment_soon", "text", false, "Customers reply C to confirm or R to pick a new time."),
+    A("no-show", "Follow up on missed appointments", "Appointments", "pro", "appointment_missed", "text", false, "If someone misses an appointment, they get a kind text with a link to rebook.", "Hi {first_name}, sorry we missed you today. Pick a new time here: {booking_link}"),
+    A("booking-link", "Add my booking link to replies", "Appointments", "pro", "web_inquiry", "email", false, "My booking link goes in every first reply, so people can pick a time themselves."),
+    A("review-ask", "Ask happy customers for a review", "Reviews", "starter", "job_paid", "text", false, "After a customer pays, they get a thank-you and a link to leave a Google review.", "Thanks for choosing {business}, {first_name}. If you have a minute, a review helps a lot: {review_link}"),
+    A("review-reply", "Write replies to my reviews", "Reviews", "pro", "review_posted", "owner", true, "Each new review gets a reply written for me to check and post."),
+    A("testimonial", "Ask to quote great reviews", "Reviews", "business", "review_posted", "email", false, "Customers who leave 5 stars are asked if I can use their words on my website.", "Thank you for the kind review, {first_name}. Would you mind if I quoted it on my website?"),
+    A("invoice-chase", "Remind people about unpaid bills", "Getting paid", "pro", "invoice_overdue", "email", false, "Late bills get polite reminders after 3, 7 and 14 days. Then I'm told.", "Hi {first_name}, a quick reminder that invoice {invoice} for {amount} is now due. You can pay here: {pay_link}"),
+    A("paid-thanks", "Say thank you when someone pays", "Getting paid", "pro", "job_paid", "email", false, "A receipt and a thank-you go out as soon as a payment comes in.", "Thanks, {first_name}. I've received {amount}. It was a pleasure working with you."),
+    A("receipts", "Sort my receipts", "Getting paid", "business", "receipt_in", "tracker", true, "I forward a receipt and it's filed under the right expense."),
+    A("expense-summary", "Monthly spending summary", "Getting paid", "business", "schedule", "owner", false, "On the 1st, I get where my money went last month."),
+    A("daily-brief", "Morning summary for me", "Reports for me", "starter", "schedule", "owner", false, "Every morning: new requests, follow-ups and appointments for the day."),
+    A("weekly-numbers", "Weekly numbers for me", "Reports for me", "pro", "schedule", "owner", false, "Every Monday: calls, new customers, jobs won and money in, compared with last week."),
+    A("monthly-report", "Monthly report for me", "Reports for me", "business", "schedule", "owner", true, "A one-page summary of my month in plain English, with what to fix next."),
+    A("birthdays", "Birthday notes to customers", "Bringing customers back", "business", "schedule", "email", false, "A short note on a customer's birthday or the anniversary of their first job.", "Happy birthday from everyone at {business}, {first_name}."),
+    A("referral", "Ask for referrals", "Bringing customers back", "business", "review_posted", "email", false, "Happy customers are asked once if they know anyone who could use me.", "Thanks again, {first_name}. If you know anyone who could use {business}, I'd be grateful for the introduction."),
+    A("rebook", "Remind customers when they're due again", "Bringing customers back", "pro", "schedule", "text", false, "Customers due for their next visit get a message with my booking link.", "Hi {first_name}, it's about time for your next visit with {business}. Book here: {booking_link}"),
+    A("seasonal", "Seasonal offers to past customers", "Bringing customers back", "business", "schedule", "email", true, "Before each season, an email to past customers is written for me to check."),
+    A("site-assistant", "Answer questions on my website", "Website and posts", "business", "question", "web", true, "A chat on my website answers common questions and books calls. Anything else comes to me."),
+    A("social-drafts", "Write social posts about my jobs", "Website and posts", "business", "job_paid", "owner", true, "A finished job becomes a social post, written for me to add photos to."),
+    A("gbp-posts", "Write my Google posts", "Website and posts", "business", "schedule", "owner", true, "A weekly post for my Google listing is written from my recent work."),
   ];
 
   const rank = (plan) => PLANS.findIndex((p) => p.id === plan);
@@ -108,8 +108,8 @@
     for (const a of CATALOG) {
       if (a.trigger !== trigger || !unlocked(a, ctx.plan) || !ctx.enabled[a.id]) continue;
       const settings = ctx.settings[a.id] || {};
-      if (a.channel === "text" && ctx.contact.optedOut) { steps.push({ automation: a, status: "skipped", reason: "Opted out of texts" }); continue; }
-      if (a.ai && credits <= 0) { steps.push({ automation: a, status: "waiting", reason: "No AI drafts left this month" }); continue; }
+      if (a.channel === "text" && ctx.contact.optedOut) { steps.push({ automation: a, status: "skipped", reason: "They asked not to be texted" }); continue; }
+      if (a.ai && credits <= 0) { steps.push({ automation: a, status: "waiting", reason: "No written messages left this month" }); continue; }
       if (a.ai) credits--;
       const approve = settings.approve ?? a.ai;
       if (approve) { steps.push({ automation: a, status: "approval", ai: a.ai }); continue; }
