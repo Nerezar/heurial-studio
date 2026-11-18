@@ -4,6 +4,18 @@ Durable rules are in `CLAUDE.md`. This file is current status only.
 
 ## Where things stand
 - Folder: `~/heurial-dev/heurial-design`
+- **LIVE 2026-11-17 night: main `6ad05e7`, the workspace pass, site and Catalyst together.** Site deployed with
+  `catalyst deploy slate heurial --production -m "Workspace pass main 6ad05e7" -ni` from a detached, clean checkout
+  of `origin/main` after tsc, eslint, 10 money tests, 39 pipeline tests and `next build`. This closes the gap noted
+  in the next entry: the live page and the live function now match. Checked live: `/`, `/products`, `/contact` 200;
+  `/admin` redirects to `/admin/index.html?v=8ef7fb0719`; the admin API answers "Please sign in." (401) on `/data`
+  and on the new `/assist` route; the served `tracker.js` and `money.js` are the new ones; the sample-data page at
+  its versioned address shows Your next move, the $7,445 balance and the chart with no console errors.
+  **Not checked: the signed-in tracker.** The first sign-in, the first lead marked Paid (it should say "Its
+  payment is recorded on Money") and the first transaction are the first end-to-end tests of the new routes, and
+  the first wrong password is the first use of `LoginAttempts`. Nothing sends real messages unless the owner does.
+  A browser that still holds a very old copy of the bare `/demo/tracker/index.html` (no `?v=`) can show a broken
+  page until refreshed; every link on the site uses the versioned address, so visitors are not affected.
 - **Production Catalyst has the workspace pass; the SITE DOES NOT YET (2026-11-17 night).** Console deployment
   "Workspace pass (6ad05e7)", Serverless and CloudScale ticked, Job Scheduling and Settings unticked. The diff was
   exactly `pipeline` Updated, `Transactions.lead_id` Added and `LoginAttempts` Added with its six columns;
